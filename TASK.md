@@ -1,0 +1,100 @@
+# LP-0002: Private M-of-N Multisig [OPEN]
+`Logos Circle: N/A`
+
+## Overview
+A proof-of-concept public M-of-N multisig exists for LEZ (lez-multisig), but it is architecturally incompatible with shielded (private) accounts. Member accounts must be fresh zero-nonce keypairs claimed by the multisig program — a constraint that private accounts, which are owned by the privacy protocol and increment nonce on every use, cannot satisfy.
+
+This prize is for a private M-of-N multisig primitive for LEZ: one where members hold shielded accounts, proposals and approvals leave no public trace of who voted, and on-chain state reveals only that a threshold was met — not which members approved.
+
+## Motivation
+Multisigs are critical infrastructure for DAOs, shared treasuries, and protocol governance. But a multisig that exposes its member list and approval history on-chain is a surveillance surface: it reveals voting patterns, enables social pressure, and links member identities to governance decisions. For a privacy-first ecosystem like Logos, a public multisig is a second-class primitive.
+
+The lez-multisig PoC explicitly notes in its design documents that private multisig support "would require shielded voting and ZK threshold proofs" — a fundamentally different architecture. This prize builds that architecture.
+
+A competitive prize is the right mechanism because the design space is large: choice of threshold proof scheme, how to handle the LEZ nonce constraint, nullifier design to prevent double-voting, and the trade-off between proof size and verifier gas cost all admit multiple valid approaches.
+
+## Success Criteria
+
+### Functionality
+- Any M-of-N member holding a shielded LEZ account can submit an approval without revealing their identity to on-chain observers or other members.
+- The on-chain verifier confirms a threshold of M approvals was reached without recording which members approved.
+- A member cannot approve the same proposal twice (double-vote prevention via nullifiers or equivalent).
+- A completed execution is unlinkable to any individual member's shielded account.
+- Proof generation runs client-side on a standard laptop.
+- A reference integration is delivered: a working demo of a threshold-gated action (e.g., treasury transfer or parameter change) on LEZ testnet using shielded member accounts.
+- At least 5 distinct multisig instances are created on LEZ testnet by parties outside the submitting team, with at least one proposal submitted, approved by threshold, and executed in each.
+- Full documentation and a clean public repository are delivered.
+
+### Usability
+- Provide a module/SDK that can be used to build Logos modules for interacting with the program.
+- Provide a Logos Basecamp app GUI with local build instructions, downloadable assets, and loadable in Logos app (Basecamp).
+- Provide an IDL for the LEZ program, using the [SPEL framework](https://github.com/logos-co/spel).
+
+### Reliability
+- The system handles proof generation failures gracefully and surfaces a clear error to the member.
+- A partial set of approvals (fewer than M) is preserved and resumable across client restarts.
+- The verifier program returns deterministic, documented error codes for all invalid-proof and double-vote scenarios.
+
+### Performance
+- Document the compute unit (CU) cost of each on-chain operation on LEZ devnet/testnet. Note: LEZ's per-transaction compute budget may change during testnet.
+
+### Supportability
+- The program is deployed and tested on LEZ devnet/testnet.
+- End-to-end integration tests run against a LEZ sequencer (standalone mode) and are included in CI.
+- CI must be green on the default branch.
+- A README documents end-to-end usage: deployment steps, program addresses, and step-by-step instructions for interacting with the program via CLI and Basecamp app.
+- A reproducible end-to-end demo script is provided and works against a real local sequencer with `RISC0_DEV_MODE=0`.
+- A recorded video demo of the end-to-end flow is included in the submission; the recording must show terminal output (including proof generation) to confirm `RISC0_DEV_MODE=0` was active.
+
+## Scope
+
+### In Scope
+- ZK circuit(s) implementing threshold membership proof and double-vote prevention, targeting the Risc0 proving stack.
+- A LEZ verifier program (Rust) that accepts threshold proofs and gates execution.
+- A client-side SDK or CLI for proof generation and proposal submission by shielded account holders.
+- A reference integration on LEZ testnet demonstrating M-of-N threshold approval of at least one on-chain action.
+- Documentation covering: cryptographic approach, nullifier/anti-replay scheme, trusted setup (if any), LEZ account model compatibility, security assumptions, and integration guide.
+
+### Out of Scope
+- Public (non-shielded) multisig — the lez-multisig PoC covers that use case.
+- Hiding the proposal content (only member identity and vote are private; the proposed action may be public).
+- A polished consumer UI — a working demo is sufficient.
+- Ongoing maintenance or security audits beyond initial delivery.
+
+## Prize Structure
+- **Total Prize:** $1,200
+- **Effort:** Large
+
+## Eligibility
+Open to any individual or team. Submissions must be original work. Teams must hold the rights to all submitted code and agree to license it under MIT or Apache-2.0.
+
+## Submission Requirements
+- Public repository with all circuit code, LEZ program code, and client-side tooling under MIT or Apache-2.0.
+- Verifier program deployed on LEZ testnet with a verified program ID.
+- End-to-end demo video in which the builder narrates what they built and why, walks through the architecture and key implementation decisions, and demonstrates M-of-N approval and execution using shielded member accounts. A silent screencast is not sufficient (see [demo requirements](https://ns.com/README.md#evaluation-policies)).
+- Write-up covering: threshold proof scheme, nullifier design, LEZ account model compatibility (specifically how the nonce and `program_owner` constraints are handled), security assumptions, known limitations, and integration instructions.
+- Proof generation time and on-chain verification gas cost benchmarks.
+
+## Evaluation Process
+Submissions are evaluated first-come-first-served against the success criteria. The first submission that satisfies all criteria wins.
+
+Evaluators will independently clone the repository and run the demo script from a clean environment; the script must succeed without modification. Evaluators may also ask technical follow-up questions to verify authorship and understanding of the implementation.
+
+The following policies apply to all prizes (see [evaluation policies](https://ns.com/README.md#evaluation-policies)):
+
+- **Submissions:** each builder (or team) is allowed a maximum of **3 submissions** per prize, with at most **one submission/review per week**.
+- **Feedback:** initial evaluation feedback is limited to a pass/fail indication against the success criteria.
+
+## Resources
+- [lez-multisig](https://github.com/jimmy-claw/lez-multisig) — public multisig PoC; architecture notes describe why private accounts are incompatible
+- [Logos Execution Zone repo](https://github.com/logos-blockchain/logos-execution-zone/)
+- [Risc0 proving system](https://dev.risczero.com/)
+- [Semaphore — ZK anonymous signalling and nullifier design](https://semaphore.pse.dev/)
+- [MACI — Minimum Anti-Collusion Infrastructure](https://privacy-scaling-explorations.github.io/maci/)
+- [Threshold signature schemes (FROST)](https://eprint.iacr.org/2020/852)
+
+## Potential for Subsequent λPrizes
+This prize targets the current LEZ testnet. Should a future testnet version introduce breaking changes, a subsequent λPrize may be opened to cover the necessary adaptation and redeployment.
+
+## Reference
+https://ns.com/earn/lp-0002-private-m-of-n-multisig
