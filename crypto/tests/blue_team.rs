@@ -195,17 +195,19 @@ fn nullifier_bit_distribution_looks_random() {
 
 #[test]
 fn identity_debug_redacts_for_many_inputs() {
-    let mut rng = rand::thread_rng();
-    let mut random_sk_arr = [0u8; 32];
-    let mut random_salt_arr = [0u8; 32];
-    rng.fill_bytes(&mut random_sk_arr);
-    rng.fill_bytes(&mut random_salt_arr);
-
-    let cases: [([u8; 32], [u8; 32]); 4] = [
+    // The Debug impl renders `Identity { sk: "[REDACTED]", salt: "[REDACTED]" }`.
+    // The lowercase 2-char hex pair `"de"` appears in `Identity`, so any
+    // sk/salt whose hex encoding contains a `"de"` window would *appear*
+    // leaked even though the redaction is correct — a false-positive
+    // collision with the metadata string. A *random* sk/salt has a
+    // non-trivial chance of triggering this, so this test uses deterministic
+    // byte patterns that explicitly avoid the `"de"` window.
+    let cases: [([u8; 32], [u8; 32]); 5] = [
         ([0x00; 32], [0x00; 32]),
         ([0xFF; 32], [0xFF; 32]),
         ([0xAB; 32], [0xCD; 32]),
-        (random_sk_arr, random_salt_arr),
+        ([0xA1; 32], [0xB2; 32]),
+        ([0x12; 32], [0x34; 32]),
     ];
 
     for (sk, salt) in cases.iter() {
