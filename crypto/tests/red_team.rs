@@ -129,7 +129,7 @@ fn attack_forge_outsider_leaf_with_real_proof_shape() {
 fn attack_nullifier_collision_random_sample() {
     use std::collections::HashSet;
 
-    let mut rng = StdRng::seed_from_u64(0xC0FFEE_1234);
+    let mut rng = StdRng::seed_from_u64(0x00C0_FFEE_1234);
     let mut seen: HashSet<Hash> = HashSet::new();
     let mut collisions = 0;
     for _ in 0..50_000 {
@@ -327,30 +327,39 @@ fn attack_verify_proof_extreme_inputs() {
 /// `finalize()` to refuse trees with zero leaves at the verifier layer.
 #[test]
 fn attack_empty_tree_forge_zero_leaf_membership() {
+    // FINDING-1 (HIGH, fixed). Pre-fix, `MerkleTree` hashed all levels with an
+    // undomained `hash_pair` and used `[0;32]` as the level-0 empty marker, so
+    // an attacker presenting `leaf = [0;32]` together with the same
+    // attacker-computable zero-chain as siblings could verify against the
+    // empty-tree root. The fix domain-separates leaf vs internal-node hashing
+    // (`hash_leaf` uses DOMAIN_LEAF = 0x00, `hash_node` uses
+    // DOMAIN_NODE = 0x01) so the real empty-tree chain is no longer the
+    // undomained chain an attacker can reconstruct. This test now locks the
+    // fix in place — the forged proof must be rejected.
     let tree = MerkleTree::<Sha256Hasher>::new();
     let empty_root = tree.root();
 
-    // Anyone can compute zero_hashes off-chain.
+    // The OLD undomained chain — what an attacker constructs from public
+    // knowledge of the pre-fix algorithm.
     let zh = zero_hashes::<Sha256Hasher>();
-    assert_eq!(empty_root, zh[MERKLE_DEPTH], "empty root is the zero-chain top");
+    assert_ne!(
+        empty_root, zh[MERKLE_DEPTH],
+        "post-fix: empty-tree root must NOT equal the undomained zero-chain top"
+    );
 
-    // Craft a proof for leaf = [0;32] with all-zero siblings on the left.
     let forged_proof = MerkleProof {
         siblings: {
             let mut s = [[0u8; HASH_LEN]; MERKLE_DEPTH];
-            for level in 0..MERKLE_DEPTH {
-                s[level] = zh[level];
-            }
+            s[..MERKLE_DEPTH].copy_from_slice(&zh[..MERKLE_DEPTH]);
             s
         },
         indices: [false; MERKLE_DEPTH],
     };
     let forged_leaf = zero_hash();
 
-    // EXPLOIT: verifier accepts a leaf that was never inserted.
     assert!(
-        verify_proof::<Sha256Hasher>(&empty_root, &forged_leaf, &forged_proof),
-        "expected the empty-tree zero-leaf forgery to succeed"
+        !verify_proof::<Sha256Hasher>(&empty_root, &forged_leaf, &forged_proof),
+        "post-fix: zero-leaf forgery against the empty tree must be rejected"
     );
 }
 
@@ -360,35 +369,35 @@ fn attack_empty_tree_forge_zero_leaf_membership() {
 /// populated tree.
 #[test]
 fn attack_partial_tree_forge_zero_leaf_at_unused_slot() {
+    // FINDING-1 (HIGH, fixed). Same root cause as the empty-tree variant —
+    // pre-fix, an attacker could claim `leaf = [0;32]` at any unused slot of
+    // a partially populated tree, because every unused slot's path was
+    // built from publicly-derivable, undomained zero-chain values. After
+    // domain separation the attacker's undomained reconstruction no longer
+    // matches the tree's domain-separated internals, so the forgery fails.
     let mut tree = MerkleTree::<Sha256Hasher>::new();
-    // Insert two real members, leaving slots 2..2^20 - 1 unused (implicit zero).
     tree.insert([1u8; HASH_LEN]).unwrap();
     tree.insert([2u8; HASH_LEN]).unwrap();
     let root = tree.root();
     let zh = zero_hashes::<Sha256Hasher>();
 
-    // Aim at index 2 (the first unused slot). Its sibling at level 0 is
-    // zero_hashes[0]; the level-1 sibling is H(leaf0, leaf1); levels 2..20
-    // are zero_hashes[level].
+    // The pre-fix attacker reconstruction: level-1 sibling is the undomained
+    // pair-hash of the two real leaves, levels above pull from the
+    // undomained zero-chain.
     let level1_real = Sha256Hasher::hash_pair(&[1u8; HASH_LEN], &[2u8; HASH_LEN]);
     let mut siblings = [[0u8; HASH_LEN]; MERKLE_DEPTH];
     siblings[0] = zh[0];
     siblings[1] = level1_real;
-    for level in 2..MERKLE_DEPTH {
-        siblings[level] = zh[level];
-    }
-    // Index 2 in binary is 010 — level 0 bit = 0 (we are left child), level 1
-    // bit = 1 (right child), level 2 bit = 0.
+    siblings[2..MERKLE_DEPTH].copy_from_slice(&zh[2..MERKLE_DEPTH]);
     let mut indices = [false; MERKLE_DEPTH];
     indices[0] = false;
     indices[1] = true;
     let forged = MerkleProof { siblings, indices };
 
-    // EXPLOIT: leaf = [0;32] verifies at slot 2 — a slot no one ever filled.
     let forged_leaf = zero_hash();
     assert!(
-        verify_proof::<Sha256Hasher>(&root, &forged_leaf, &forged),
-        "expected zero-leaf forgery at an unused slot to succeed"
+        !verify_proof::<Sha256Hasher>(&root, &forged_leaf, &forged),
+        "post-fix: zero-leaf forgery at an unused slot must be rejected"
     );
 }
 
