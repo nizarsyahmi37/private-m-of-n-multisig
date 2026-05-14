@@ -13,3 +13,4 @@ thiserror = { workspace = true }
 [dev-dependencies]
 rand = { workspace = true }
 hex = { workspace = true }
+proptest = "1"
