@@ -1,0 +1,20 @@
+[workspace]
+resolver = "2"
+members = ["crypto"]
+
+[workspace.package]
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/nizarsyahmi37/private-m-of-n-multisig"
+rust-version = "1.80"
+
+[workspace.dependencies]
+sha2 = "0.10"
+rand = "0.8"
+hex = "0.4"
+thiserror = "1"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
