@@ -73,13 +73,7 @@ impl Proposal {
     /// gate on it before submission.
     pub fn validate_action_bytes(action_bytes: &[u8]) -> Result<(), CoreError> {
         if action_bytes.len() > MAX_ACTION_BYTES_LEN {
-            // No dedicated error code is allocated for "action_bytes too
-            // long" yet; the verifier handles this at the `Propose` entry
-            // and surfaces it via E1xxx. For the shared-type layer the
-            // closest in-class code is `InstanceNotActive` — but reusing
-            // it would collide with a different failure. Future revision:
-            // add `E1002 ActionBytesTooLong` and re-export it here.
-            Err(CoreError::InstanceNotActive)
+            Err(CoreError::ActionBytesTooLong)
         } else {
             Ok(())
         }
