@@ -5,3 +5,6 @@ Cargo.lock.tmp
 *.swp
 .idea/
 .vscode/
+/mutants.out
+/mutants.out.old
+**/*.proptest-regressions
