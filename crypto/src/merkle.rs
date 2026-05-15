@@ -152,7 +152,20 @@ impl<H: Hasher> Default for MerkleTree<H> {
 /// `leaf` is the raw commitment (`H(sk ‖ salt)`); domain-separated leaf
 /// hashing is applied internally so callers never need to remember the
 /// `DOMAIN_LEAF` byte.
+///
+/// Returns `false` if `leaf == [0; HASH_LEN]`. This is FINDING-1b (round-2
+/// blue-team residual). The level-0 empty-slot marker is `hash_leaf(&[0;32])`
+/// by construction, so against an empty tree the all-zero leaf combined with
+/// the real post-fix marker chain as siblings would re-derive the empty root.
+/// Under SHA-256 preimage resistance no honest member can ever produce
+/// `H(sk ‖ salt) == [0;32]`, so this guard rejects only an adversarial
+/// presentation, never a legitimate one. Defense-in-depth alongside the
+/// on-chain `finalize_instance` 0-member check and the Risc0 circuit's
+/// `leaf = H(sk ‖ salt)` binding.
 pub fn verify_proof<H: Hasher>(root: &Hash, leaf: &Hash, proof: &MerkleProof) -> bool {
+    if leaf == &[0u8; HASH_LEN] {
+        return false;
+    }
     let mut current = H::hash_leaf(leaf);
     for level in 0..MERKLE_DEPTH {
         let sibling = &proof.siblings[level];
@@ -202,8 +215,11 @@ mod tests {
 
     #[test]
     fn proof_for_each_of_many_leaves_round_trips() {
+        // Start at 1: `leaf(0) == [0;HASH_LEN]` collides with the FINDING-1b
+        // guard in `verify_proof` (no honest member can produce that bytes
+        // anyway under SHA-256 preimage resistance).
         let mut t = MerkleTree::<Sha256Hasher>::new();
-        let leaves: Vec<Hash> = (0..17).map(leaf).collect();
+        let leaves: Vec<Hash> = (1..=17).map(leaf).collect();
         for l in &leaves {
             t.insert(*l).unwrap();
         }
@@ -330,6 +346,41 @@ mod tests {
         assert_ne!(
             Sha256Hasher::hash_leaf(&some_bytes),
             Sha256Hasher::hash_node(&some_bytes, &some_bytes)
+        );
+    }
+
+    #[test]
+    fn empty_tree_real_marker_chain_forgery_is_rejected() {
+        // Regression for FINDING-1b (round-2 blue-team residual).
+        //
+        // Against an empty tree, an attacker who supplies the REAL post-fix
+        // marker chain as siblings (not the pre-fix undomained chain) would
+        // otherwise close the walk back on the empty root:
+        //   current = hash_leaf([0;32]) = m[0]
+        //   level 0: hash_node(m[0], m[0]) = m[1]
+        //   level k: hash_node(m[k], m[k]) = m[k+1]
+        //   level 19 ⇒ m[20] = empty_root  → verifier accepts
+        //
+        // The guard `leaf == [0;32]` in `verify_proof` closes this. Honest
+        // members can never produce leaf = [0;32] because that would require
+        // breaking SHA-256 preimage on `H(sk ‖ salt) == [0;32]`.
+        let tree = MerkleTree::<Sha256Hasher>::new();
+        let mut real_marker_chain = [[0u8; HASH_LEN]; MERKLE_DEPTH + 1];
+        real_marker_chain[0] = Sha256Hasher::hash_leaf(&[0u8; HASH_LEN]);
+        for k in 1..=MERKLE_DEPTH {
+            let prev = real_marker_chain[k - 1];
+            real_marker_chain[k] = Sha256Hasher::hash_node(&prev, &prev);
+        }
+        let mut siblings = [[0u8; HASH_LEN]; MERKLE_DEPTH];
+        siblings.copy_from_slice(&real_marker_chain[..MERKLE_DEPTH]);
+
+        let proof = MerkleProof {
+            siblings,
+            indices: [false; MERKLE_DEPTH],
+        };
+        assert!(
+            !verify_proof::<Sha256Hasher>(&tree.root(), &[0u8; HASH_LEN], &proof),
+            "FINDING-1b: empty-tree forgery with the real marker chain must be rejected"
         );
     }
 }
