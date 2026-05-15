@@ -15,7 +15,7 @@ pub mod identity;
 pub mod merkle;
 pub mod nullifier;
 
-pub use hash::{Hash, Hasher, Sha256Hasher, HASH_LEN};
-pub use identity::{Identity, IdentityCommitment};
-pub use merkle::{MerkleError, MerkleProof, MerkleTree, MERKLE_DEPTH};
+pub use hash::{Hash, Hasher, Sha256Hasher, DOMAIN_LEAF, DOMAIN_NODE, HASH_LEN};
+pub use identity::{Identity, IdentityCommitment, SALT_LEN, SK_LEN};
+pub use merkle::{verify_proof, MerkleError, MerkleProof, MerkleTree, MAX_LEAVES, MERKLE_DEPTH};
 pub use nullifier::nullifier;

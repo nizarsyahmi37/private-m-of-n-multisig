@@ -9,6 +9,7 @@
 //! into the Risc0 guest, where `secrecy` adds avoidable weight.
 
 use crate::hash::{Hash, Hasher, HASH_LEN};
+use crate::nullifier;
 
 pub const SK_LEN: usize = 32;
 pub const SALT_LEN: usize = 32;
@@ -29,6 +30,14 @@ impl Identity {
         buf[..SK_LEN].copy_from_slice(&self.sk);
         buf[SK_LEN..].copy_from_slice(&self.salt);
         IdentityCommitment(H::hash(&buf))
+    }
+
+    /// Derive this identity's nullifier for `proposal_id`. Keeps `sk` inside
+    /// `Identity` at the call site instead of forcing callers to pass
+    /// `&identity.sk` directly — slightly easier to audit which call sites
+    /// actually touch the secret.
+    pub fn nullifier<H: Hasher>(&self, proposal_id: &Hash) -> Hash {
+        nullifier::<H>(&self.sk, proposal_id)
     }
 }
 
@@ -94,5 +103,15 @@ mod tests {
         assert!(rendered.contains("[REDACTED]"));
         assert!(!rendered.contains("ab"));
         assert!(!rendered.contains("cd"));
+    }
+
+    #[test]
+    fn nullifier_helper_matches_free_function() {
+        let id = Identity::new([0x11; 32], [0x22; 32]);
+        let pid = [0x33; 32];
+        assert_eq!(
+            id.nullifier::<Sha256Hasher>(&pid),
+            crate::nullifier::<Sha256Hasher>(&id.sk, &pid)
+        );
     }
 }
