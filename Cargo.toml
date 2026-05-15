@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crypto"]
+members = ["crypto", "private_multisig_core"]
 
 [workspace.package]
 edition = "2021"
@@ -13,6 +13,7 @@ sha2 = "0.10"
 rand = "0.8"
 hex = "0.4"
 thiserror = "1"
+borsh = { version = "1", default-features = false, features = ["derive"] }
 
 [profile.release]
 opt-level = 3
