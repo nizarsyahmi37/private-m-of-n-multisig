@@ -86,6 +86,17 @@ impl ChainId {
 
     /// Lift an integer chain id (the most common LEZ encoding) into the
     /// canonical 32-byte form. Little-endian, right-padded with zeros.
+    ///
+    /// # Warning — zero aliasing
+    ///
+    /// `ChainId::from_u64(0) == ChainId::new([0; 32])`, so callers that treat
+    /// the all-zero 32-byte value as an "uninitialized" sentinel will accept
+    /// a real chain whose id is literally `0` as such. The LEZ chain-id
+    /// allocations in scope for this prize do not use `0`, but if a
+    /// downstream consumer needs an injective sentinel they should reserve
+    /// a non-zero value (e.g. `ChainId::new([0xFF; 32])`) for "uninitialized"
+    /// rather than relying on the all-zero pattern. Documented as
+    /// THREAT_MODEL FINDING-3 (informational, accepted residual).
     pub fn from_u64(id: u64) -> Self {
         let mut bytes = [0u8; 32];
         bytes[..8].copy_from_slice(&id.to_le_bytes());
