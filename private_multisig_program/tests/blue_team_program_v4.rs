@@ -929,11 +929,11 @@ fn v4_pack_approve_witness_with_5000_member_tree() {
 #[test]
 fn v4_image_id_unchanged_after_helper_addition() {
     // Pinned hex from `tests/image_id_stability.rs::PINNED_IMAGE_ID_HEX`.
-    // Shifted when the SPEL verifier guest landed (adding `nssa_core` +
-    // `spel-framework` + `serde` to the methods/guest dep graph changes
-    // the unified guest build's compile environment).
+    // Shifted again when the verifier handlers gained real logic and the
+    // guest crate enabled `private_multisig_core/std` for `MultisigState` +
+    // `Proposal` to be reachable.
     const PINNED_IMAGE_ID_HEX: &str =
-        "b03a41cec2c21dc1ab721450447c49d199c43a6c6dfd9d479ffc4a29480eda7b";
+        "e0ae822d4a6f9a3c5289e25aff994934f95dec1d4e57e151ab56a1c68aae7cf0";
 
     let actual = image_id_hex();
     assert_eq!(

@@ -154,7 +154,7 @@ fn happy_witness(i: usize) -> (Identity, Witness, [u8; 32]) {
 /// If `image_id_stability.rs` is updated for a legitimate ABI bump, update
 /// here too; both pins must move together.
 const PINNED_IMAGE_ID_HEX_V3: &str =
-    "b03a41cec2c21dc1ab721450447c49d199c43a6c6dfd9d479ffc4a29480eda7b";
+    "e0ae822d4a6f9a3c5289e25aff994934f95dec1d4e57e151ab56a1c68aae7cf0";
 
 // ===========================================================================
 // 1. image_id_hex() — lowercase, length 64, restricted alphabet.

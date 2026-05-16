@@ -30,7 +30,7 @@
 //!   independent pin of the canonical hex sentinel from
 //!   `image_id_stability.rs`)
 //! - explicit little-endian pin for `APPROVE_CIRCUIT_IMAGE_ID[0]` derived
-//!   from the hex sentinel `b03a41ce…`
+//!   from the hex sentinel `e0ae822d…`
 //! - per-field byte slice assertion (each `[0..32)`, `[32..64)`, `[64..96)`
 //!   isolably checked so a failure tells you which field drifted)
 //! - explicit no-leak sentinel: a witness with a recognizable `0xDEADBEEF…`
@@ -426,30 +426,30 @@ fn v3_image_id_hex_decodes_to_image_id_words() {
 }
 
 // ---------------------------------------------------------------------------
-// 6. Endianness pin: first 4 bytes of the canonical hex `b0 3a 41 ce`
-//    interpret as LE u32 == 0xce413ab0 == 3_460_381_360.
+// 6. Endianness pin: first 4 bytes of the canonical hex `e0 ae 82 2d`
+//    interpret as LE u32 == 0x2d82aee0 == 763_539_168.
 //
-//    The image-id shifted when the SPEL verifier guest was added to the
-//    methods crate (adding `nssa_core` + `spel-framework` + `serde` to the
-//    guest crate's dep graph changes the unified guest build's compile
-//    environment, which propagates into every binary's image-id). The new
-//    pinned hex lives in image_id_stability.rs as `PINNED_IMAGE_ID_HEX`.
+//    The image-id shifted again when the SPEL verifier handlers (create,
+//    propose, execute) gained real logic and the guest crate enabled
+//    `private_multisig_core/std` so `MultisigState` + `Proposal` are
+//    reachable. The new pinned hex lives in image_id_stability.rs as
+//    `PINNED_IMAGE_ID_HEX`.
 // ---------------------------------------------------------------------------
 
 #[test]
 fn v3_image_id_word_array_endianness_is_little_endian() {
     // The canonical hex sentinel in image_id_stability.rs starts with
-    // "b03a41ce…". As LITTLE-endian u32 that is:
-    //   byte[0]=0xb0, byte[1]=0x3a, byte[2]=0x41, byte[3]=0xce
-    //   → u32 = 0xce413ab0 = 3,460,381,360
+    // "e0ae822d…". As LITTLE-endian u32 that is:
+    //   byte[0]=0xe0, byte[1]=0xae, byte[2]=0x82, byte[3]=0x2d
+    //   → u32 = 0x2d82aee0 = 763,539,168
     // If the hex helper ever serialized as big-endian instead, the first
-    // word would be 0xb03a41ce = 2,956,673,486, and this test would fail.
+    // word would be 0xe0ae822d = 3,769,860,141, and this test would fail.
     assert_eq!(
-        APPROVE_CIRCUIT_IMAGE_ID[0], 3_460_381_360u32,
-        "endianness pin failed: APPROVE_CIRCUIT_IMAGE_ID[0] = {}, expected 3_460_381_360 \
-         (which is 0x{:08x}, the LE interpretation of the hex prefix b0 3a 41 ce)",
+        APPROVE_CIRCUIT_IMAGE_ID[0], 763_539_168u32,
+        "endianness pin failed: APPROVE_CIRCUIT_IMAGE_ID[0] = {}, expected 763_539_168 \
+         (which is 0x{:08x}, the LE interpretation of the hex prefix e0 ae 82 2d)",
         APPROVE_CIRCUIT_IMAGE_ID[0],
-        0xce41_3ab0u32,
+        0x2d82_aee0u32,
     );
 
     // Cross-check the LE interpretation explicitly: pull the first 4 bytes
@@ -464,7 +464,7 @@ fn v3_image_id_word_array_endianness_is_little_endian() {
         .try_into()
         .expect("4-byte prefix array");
     let le = u32::from_le_bytes(prefix_arr);
-    assert_eq!(le, 3_460_381_360u32, "LE re-decode of hex prefix disagreed");
+    assert_eq!(le, 763_539_168u32, "LE re-decode of hex prefix disagreed");
     assert_eq!(
         le, APPROVE_CIRCUIT_IMAGE_ID[0],
         "hex prefix LE decode disagreed with APPROVE_CIRCUIT_IMAGE_ID[0]"
@@ -788,14 +788,14 @@ fn v3_image_id_word_array_is_pinned_constant() {
     // Same value as `PINNED_IMAGE_ID_WORDS` in image_id_stability.rs.
     // Duplicated here intentionally — the redundancy is the point.
     const EXPECTED: [u32; 8] = [
-        3_460_381_360,
-        3_239_953_090,
-        1_343_517_355,
-        3_511_254_084,
-        1_815_790_745,
-        1_201_536_365,
-        692_780_191,
-        2_077_888_072,
+        763_539_168,
+        1_016_753_994,
+        1_524_795_730,
+        877_238_783,
+        502_029_817,
+        1_373_722_446,
+        3_332_462_251,
+        4_034_702_986,
     ];
 
     assert_eq!(
@@ -806,7 +806,7 @@ fn v3_image_id_word_array_is_pinned_constant() {
 
     // Cross-check element 0 stays exactly the LE-decoded value of the
     // canonical hex sentinel prefix (defensive duplication of test 6).
-    assert_eq!(EXPECTED[0], 3_460_381_360u32);
+    assert_eq!(EXPECTED[0], 763_539_168u32);
 }
 
 // ---------------------------------------------------------------------------

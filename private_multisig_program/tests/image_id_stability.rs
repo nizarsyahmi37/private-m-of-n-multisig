@@ -68,7 +68,7 @@ use private_multisig_program::{
 /// `APPROVE_CIRCUIT_IMAGE_ID` (each `u32` written little-endian, words
 /// concatenated). Any drift here is an on-chain ABI break.
 const PINNED_IMAGE_ID_HEX: &str =
-    "b03a41cec2c21dc1ab721450447c49d199c43a6c6dfd9d479ffc4a29480eda7b";
+    "e0ae822d4a6f9a3c5289e25aff994934f95dec1d4e57e151ab56a1c68aae7cf0";
 
 /// The pinned on-chain ABI: `[u32; 8]` form of the approve-circuit image-id.
 ///
@@ -76,8 +76,8 @@ const PINNED_IMAGE_ID_HEX: &str =
 /// the word ordering cannot silently change the on-chain interpretation
 /// while the hex string coincidentally still matches.
 const PINNED_IMAGE_ID_WORDS: [u32; 8] = [
-    3460381360, 3239953090, 1343517355, 3511254084, 1815790745, 1201536365, 692780191,
-    2077888072,
+    763539168, 1016753994, 1524795730, 877238783, 502029817, 1373722446, 3332462251,
+    4034702986,
 ];
 
 /// Lower bound on a reasonable approve-circuit ELF size. The guest is small
