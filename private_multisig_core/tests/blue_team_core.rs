@@ -408,6 +408,7 @@ fn core_error_code_unique_per_variant() {
         CoreError::InstanceNotActive,
         CoreError::ProposalExpiredOrExecuted,
         CoreError::ActionBytesTooLong,
+        CoreError::InvalidThreshold,
         CoreError::InvalidReceipt,
         CoreError::ImageIdMismatch,
         CoreError::RootMismatch,

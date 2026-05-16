@@ -340,6 +340,11 @@ fn abi_pinned_error_code_table() {
             1002,
             "E1002: action bytes too long",
         ),
+        (
+            CoreError::InvalidThreshold,
+            1003,
+            "E1003: invalid threshold",
+        ),
         (CoreError::InvalidReceipt, 2000, "E2000: invalid receipt"),
         (CoreError::ImageIdMismatch, 2001, "E2001: image id mismatch"),
         (CoreError::RootMismatch, 2002, "E2002: root mismatch"),
@@ -371,7 +376,7 @@ fn abi_pinned_error_code_table() {
     }
     // Lock in the cardinality too — if a new variant is added without a
     // matching table entry, this catches it.
-    assert_eq!(table.len(), 10, "CoreError variant count drifted");
+    assert_eq!(table.len(), 11, "CoreError variant count drifted");
 }
 
 // ---------------------------------------------------------------------------

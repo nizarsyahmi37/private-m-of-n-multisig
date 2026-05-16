@@ -27,6 +27,8 @@ pub enum CoreError {
     ProposalExpiredOrExecuted,
     #[error("E1002: action bytes too long")]
     ActionBytesTooLong,
+    #[error("E1003: invalid threshold")]
+    InvalidThreshold,
 
     #[error("E2000: invalid receipt")]
     InvalidReceipt,
@@ -54,6 +56,7 @@ impl CoreError {
             Self::InstanceNotActive => 1000,
             Self::ProposalExpiredOrExecuted => 1001,
             Self::ActionBytesTooLong => 1002,
+            Self::InvalidThreshold => 1003,
             Self::InvalidReceipt => 2000,
             Self::ImageIdMismatch => 2001,
             Self::RootMismatch => 2002,
@@ -71,6 +74,7 @@ impl CoreError {
             1000 => Some(Self::InstanceNotActive),
             1001 => Some(Self::ProposalExpiredOrExecuted),
             1002 => Some(Self::ActionBytesTooLong),
+            1003 => Some(Self::InvalidThreshold),
             2000 => Some(Self::InvalidReceipt),
             2001 => Some(Self::ImageIdMismatch),
             2002 => Some(Self::RootMismatch),
@@ -96,6 +100,7 @@ mod tests {
         assert_eq!(CoreError::InstanceNotActive.code(), 1000);
         assert_eq!(CoreError::ProposalExpiredOrExecuted.code(), 1001);
         assert_eq!(CoreError::ActionBytesTooLong.code(), 1002);
+        assert_eq!(CoreError::InvalidThreshold.code(), 1003);
         assert_eq!(CoreError::InvalidReceipt.code(), 2000);
         assert_eq!(CoreError::ImageIdMismatch.code(), 2001);
         assert_eq!(CoreError::RootMismatch.code(), 2002);
@@ -111,6 +116,7 @@ mod tests {
             CoreError::InstanceNotActive,
             CoreError::ProposalExpiredOrExecuted,
             CoreError::ActionBytesTooLong,
+            CoreError::InvalidThreshold,
             CoreError::InvalidReceipt,
             CoreError::ImageIdMismatch,
             CoreError::RootMismatch,
@@ -128,8 +134,8 @@ mod tests {
     fn from_code_rejects_unknown() {
         assert_eq!(CoreError::from_code(0), None);
         assert_eq!(CoreError::from_code(999), None);
-        // 1002 is now ActionBytesTooLong (FINDING-2); 1003 is the next unused.
-        assert_eq!(CoreError::from_code(1003), None);
+        // 1003 is now InvalidThreshold (FINDING-V2-A); 1004 is the next unused.
+        assert_eq!(CoreError::from_code(1004), None);
         assert_eq!(CoreError::from_code(2999), None);
         assert_eq!(CoreError::from_code(5000), None);
         assert_eq!(CoreError::from_code(u32::MAX), None);

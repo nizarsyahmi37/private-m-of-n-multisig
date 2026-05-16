@@ -50,6 +50,35 @@ pub struct MultisigState {
     pub proposal_count: u64,
 }
 
+impl MultisigState {
+    /// Validate the threshold parameters. The Borsh layer cannot reject
+    /// `m == 0`, `n == 0`, or `m > n` because they're all type-legal — the
+    /// verifier program calls this on every `CreateMultisig` and the SDK
+    /// gates pre-submission with it. Returns `CoreError::InvalidThreshold`
+    /// (E1003) on any of:
+    ///
+    /// - `m == 0`: zero-of-N is meaningless; anyone passes the threshold
+    ///   without a proof.
+    /// - `n == 0`: zero members means no one can ever approve, so the
+    ///   instance can never execute. Deny at creation rather than letting
+    ///   funds get stuck.
+    /// - `u32::from(m) > n`: threshold higher than membership count means
+    ///   the instance can never reach `m` approvals.
+    pub fn validate_threshold(m: u8, n: u32) -> Result<(), CoreError> {
+        if m == 0 || n == 0 || u32::from(m) > n {
+            Err(CoreError::InvalidThreshold)
+        } else {
+            Ok(())
+        }
+    }
+
+    /// Convenience wrapper that validates the `(m, n)` carried by this
+    /// state. Equivalent to `Self::validate_threshold(self.m, self.n)`.
+    pub fn validate(&self) -> Result<(), CoreError> {
+        Self::validate_threshold(self.m, self.n)
+    }
+}
+
 /// One proposal under a multisig instance. The action and target stay
 /// write-once after `Propose`; only `approvals_count` and `executed`
 /// change as the lifecycle proceeds.
@@ -203,5 +232,61 @@ mod tests {
     fn max_action_bytes_len_matches_plan_md() {
         // PLAN.md step 2 explicitly says 4 KiB.
         assert_eq!(MAX_ACTION_BYTES_LEN, 4096);
+    }
+
+    #[test]
+    fn validate_threshold_accepts_valid_pairs() {
+        for (m, n) in [(1u8, 1u32), (1, 5), (3, 5), (5, 5), (255, 255), (255, 1024)] {
+            assert!(
+                MultisigState::validate_threshold(m, n).is_ok(),
+                "m={m} n={n} should be valid"
+            );
+        }
+    }
+
+    #[test]
+    fn validate_threshold_rejects_m_zero() {
+        for n in [0u32, 1, 5, 100] {
+            assert_eq!(
+                MultisigState::validate_threshold(0, n),
+                Err(CoreError::InvalidThreshold),
+                "m=0 n={n} should be rejected"
+            );
+        }
+    }
+
+    #[test]
+    fn validate_threshold_rejects_n_zero() {
+        for m in [0u8, 1, 100, 255] {
+            assert_eq!(
+                MultisigState::validate_threshold(m, 0),
+                Err(CoreError::InvalidThreshold),
+                "m={m} n=0 should be rejected"
+            );
+        }
+    }
+
+    #[test]
+    fn validate_threshold_rejects_m_greater_than_n() {
+        for (m, n) in [(5u8, 4u32), (10, 1), (255, 254), (2, 1)] {
+            assert_eq!(
+                MultisigState::validate_threshold(m, n),
+                Err(CoreError::InvalidThreshold),
+                "m={m} n={n} should be rejected"
+            );
+        }
+    }
+
+    #[test]
+    fn validate_method_uses_threshold_helper() {
+        let bad = sample_state();
+        // sample_state has m=3, n=5 — that's valid.
+        assert!(bad.validate().is_ok());
+
+        let invalid = MultisigState {
+            m: 0,
+            ..sample_state()
+        };
+        assert_eq!(invalid.validate(), Err(CoreError::InvalidThreshold));
     }
 }
