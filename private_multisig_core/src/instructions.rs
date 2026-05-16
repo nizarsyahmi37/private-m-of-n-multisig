@@ -17,7 +17,7 @@
 
 use borsh::{BorshDeserialize, BorshSerialize};
 
-use crate::pda::{AccountId, CreateKey};
+use crate::{AccountId, CreateKey};
 use crate::proof::ApprovePublicInputs;
 
 /// Top-level instruction dispatched by the SPEL verifier program. Borsh-

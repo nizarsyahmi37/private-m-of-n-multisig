@@ -620,6 +620,7 @@ fn sdk_consumer_doc_audit() {
     }
 
     // Each (file, needle, label) probes one re-exported pub item.
+    let lib = include_str!("../src/lib.rs");
     let pda = include_str!("../src/pda.rs");
     let proof = include_str!("../src/proof.rs");
     let state = include_str!("../src/state.rs");
@@ -665,9 +666,11 @@ fn sdk_consumer_doc_audit() {
     // stays accurate), but don't fail the test today; the SDK can ship
     // without these and the doc gaps are nits, not blockers.
     let undocumented = [
-        (pda, "pub type ProgramId", "ProgramId"),
-        (pda, "pub type AccountId", "AccountId"),
-        (pda, "pub type CreateKey", "CreateKey"),
+        // The type aliases moved to lib.rs in the no_std refactor so the guest
+        // can see them without compiling the std-gated `pda` module.
+        (lib, "pub type ProgramId", "ProgramId"),
+        (lib, "pub type AccountId", "AccountId"),
+        (lib, "pub type CreateKey", "CreateKey"),
         (instructions, "pub enum Instruction", "Instruction"),
     ];
     let mut still_missing = Vec::new();

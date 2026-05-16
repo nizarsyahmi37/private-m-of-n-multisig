@@ -20,7 +20,7 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 
 use crate::error::CoreError;
-use crate::pda::{AccountId, CreateKey};
+use crate::{AccountId, CreateKey};
 
 /// Maximum inline `action_bytes` length. Larger payloads must be committed
 /// via `H(action_bytes)` only with the bytes stored in a content-addressed

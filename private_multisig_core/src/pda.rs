@@ -27,15 +27,7 @@
 
 use crypto::Sha256Hasher;
 
-/// 32-byte LEZ program identifier. Mirrors the runtime's program-id type.
-pub type ProgramId = [u8; 32];
-/// 32-byte LEZ account address — the value returned by every PDA derivation
-/// helper in this module.
-pub type AccountId = [u8; 32];
-/// 32-byte caller-chosen salt that distinguishes a multisig instance from
-/// every other `(program_id, create_key)` pair. Stored in `MultisigState`
-/// and threaded through every child PDA derivation.
-pub type CreateKey = [u8; 32];
+use crate::{AccountId, CreateKey, ProgramId};
 
 /// Seed for the per-multisig `MultisigState` account.
 pub const SEED_MULTISIG_STATE: &[u8; 13] = b"pmsig_state__";

@@ -510,16 +510,17 @@ fn v4_attack_10a_public_surface_is_complete() {
 
     // (b) Module-only (intentionally NOT re-exported, per round-2 audit):
     //  - private_multisig_core::pda::derive_pda
-    //  - private_multisig_core::pda::ProgramId / AccountId / CreateKey type aliases
     // Reach each via full path so a future `pub use` accidentally hiding
     // them would be caught by failing resolution.
     let _module_only: fn(&[u8; 32], &[u8; 13], &[&[u8]]) -> [u8; 32] =
         private_multisig_core::pda::derive_pda;
 
-    // Type-alias smoke checks.
-    let _pid: private_multisig_core::pda::ProgramId = [0u8; 32];
-    let _ack: private_multisig_core::pda::AccountId = [0u8; 32];
-    let _ck: private_multisig_core::pda::CreateKey = [0u8; 32];
+    // Type-alias smoke checks. After the no_std refactor these live at the
+    // crate root (so the guest can see them without bringing in the gated
+    // `pda` module).
+    let _pid: private_multisig_core::ProgramId = [0u8; 32];
+    let _ack: private_multisig_core::AccountId = [0u8; 32];
+    let _ck: private_multisig_core::CreateKey = [0u8; 32];
 
     // (c) Type re-exports — call each constructor at the crate root.
     let _e: CoreError = CoreError::AlreadyExecuted;

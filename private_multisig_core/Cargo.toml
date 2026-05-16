@@ -6,10 +6,20 @@ license.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 
+[features]
+default = ["std"]
+# `std` pulls in the full host-side surface: `MultisigState`, `Proposal`,
+# `NullifierEntry`, `Vault`, the `Instruction` enum, PDA derivation helpers,
+# `CoreError`, and the threshold / action-bytes validators. Without `std`,
+# only the guest-required subset is reachable: `ApprovePublicInputs`,
+# `ChainId`, `derive_proposal_id`, and the `APPROVE_PUBLIC_INPUTS_LEN`
+# constant.
+std = ["crypto/std", "dep:thiserror"]
+
 [dependencies]
-crypto = { path = "../crypto" }
+crypto = { path = "../crypto", default-features = false }
 borsh = { workspace = true }
-thiserror = { workspace = true }
+thiserror = { workspace = true, optional = true }
 
 [dev-dependencies]
 hex = { workspace = true }

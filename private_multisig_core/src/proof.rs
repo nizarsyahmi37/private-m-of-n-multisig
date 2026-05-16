@@ -15,7 +15,7 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use crypto::{Hasher, Sha256Hasher};
 
-use crate::pda::AccountId;
+use crate::AccountId;
 
 /// Canonical wire size of the public-inputs bundle:
 /// `members_root (32) || proposal_id (32) || nullifier (32) = 96`.
