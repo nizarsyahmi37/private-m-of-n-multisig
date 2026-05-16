@@ -1,5 +1,12 @@
 //! Host-side program crate for LP-0002 Private M-of-N Multisig.
 //!
+//! ## What this crate exposes
+//!
+//! - `APPROVE_CIRCUIT_ELF`, `APPROVE_CIRCUIT_IMAGE_ID` — Risc0 artifacts
+//! - `image_id_hex()` — release-note / pin-by-string helper
+//! - `APPROVE_WITNESS_LEN`, `pack_approve_witness(…)` — the canonical
+//!   host → guest wire format helper
+//!
 //! Re-exports the Risc0 guest image-id and ELF under typed names so the SDK
 //! and the verifier program can talk about "the approve circuit" without
 //! threading the `methods` crate name everywhere. PLAN.md step 4 references
@@ -41,6 +48,59 @@ pub fn image_id_hex() -> String {
     out
 }
 
+/// Total wire size of the host → guest witness stream for the approve
+/// circuit, in bytes:
+///
+/// ```text
+/// public_prefix(64) ‖ sk(32) ‖ salt(32) ‖ siblings_flat(20×32 = 640) ‖ directions(20) = 788
+/// ```
+///
+/// Pinned here so the SDK can size its buffer once and so any future
+/// refactor that grows or shrinks the witness wire breaks loudly.
+pub const APPROVE_WITNESS_LEN: usize = 788;
+
+/// Pack a witness for the approve circuit into the canonical 788-byte
+/// wire format the guest expects.
+///
+/// The byte layout is:
+///
+/// ```text
+/// [0..32)    members_root
+/// [32..64)   proposal_id
+/// [64..96)   sk        ── the approving member's secret
+/// [96..128)  salt      ── the approving member's commitment salt
+/// [128..768) siblings_flat  ── 20 × 32 bytes, level-0 first
+/// [768..788) directions     ── 20 bytes, each 0 or 1, level-0 first
+/// ```
+///
+/// Hand the result to `ExecutorEnv::builder().write_slice(&witness)` once
+/// (or write each named slice five times in the same order — both produce
+/// identical journals, see `witness_wire_format::wire_round_trip_repack_via_independent_packer`).
+///
+/// `members_root` and `proposal_id` are typically computed via
+/// `private_multisig_core` (`MerkleTree::root` and `derive_proposal_id`
+/// respectively).
+pub fn pack_approve_witness(
+    identity: &crypto::Identity,
+    proof: &crypto::MerkleProof,
+    members_root: &[u8; 32],
+    proposal_id: &[u8; 32],
+) -> [u8; APPROVE_WITNESS_LEN] {
+    let mut out = [0u8; APPROVE_WITNESS_LEN];
+    out[..32].copy_from_slice(members_root);
+    out[32..64].copy_from_slice(proposal_id);
+    out[64..96].copy_from_slice(&identity.sk);
+    out[96..128].copy_from_slice(&identity.salt);
+    for (level, sibling) in proof.siblings.iter().enumerate() {
+        let start = 128 + level * 32;
+        out[start..start + 32].copy_from_slice(sibling);
+    }
+    for (level, bit) in proof.indices.iter().enumerate() {
+        out[768 + level] = u8::from(*bit);
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -70,5 +130,43 @@ mod tests {
             !APPROVE_CIRCUIT_ELF.is_empty(),
             "approve_circuit ELF must not be empty"
         );
+    }
+
+    #[test]
+    fn approve_witness_len_pinned_at_788_bytes() {
+        // 64 (prefix) + 32 (sk) + 32 (salt) + 20*32 (siblings) + 20 (directions)
+        assert_eq!(APPROVE_WITNESS_LEN, 64 + 32 + 32 + 20 * 32 + 20);
+        assert_eq!(APPROVE_WITNESS_LEN, 788);
+    }
+
+    #[test]
+    fn pack_approve_witness_layout_pins_each_slot() {
+        let identity = crypto::Identity::new([0xAA; 32], [0xBB; 32]);
+        let mut siblings = [[0u8; 32]; crypto::MERKLE_DEPTH];
+        for (i, sib) in siblings.iter_mut().enumerate() {
+            sib[0] = i as u8;
+        }
+        let mut indices = [false; crypto::MERKLE_DEPTH];
+        indices[0] = true;
+        indices[3] = true;
+        let proof = crypto::MerkleProof { siblings, indices };
+        let members_root = [0xCC; 32];
+        let proposal_id = [0xDD; 32];
+
+        let buf = pack_approve_witness(&identity, &proof, &members_root, &proposal_id);
+
+        assert_eq!(buf.len(), APPROVE_WITNESS_LEN);
+        assert_eq!(&buf[..32], &members_root);
+        assert_eq!(&buf[32..64], &proposal_id);
+        assert_eq!(&buf[64..96], &identity.sk);
+        assert_eq!(&buf[96..128], &identity.salt);
+        // Level-0 sibling first byte sits at offset 128.
+        assert_eq!(buf[128], 0);
+        // Level-19 sibling first byte sits at offset 128 + 19*32 = 736.
+        assert_eq!(buf[736], 19);
+        // Direction bytes are 0 or 1, level-0 first.
+        assert_eq!(buf[768], 1);
+        assert_eq!(buf[768 + 3], 1);
+        assert_eq!(buf[768 + 1], 0);
     }
 }
