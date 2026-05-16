@@ -591,6 +591,7 @@ name = "private_multisig_core"
 version = "0.1.0"
 dependencies = [
  "borsh",
+ "criterion",
  "crypto",
  "hex",
  "rand 0.8.6",
