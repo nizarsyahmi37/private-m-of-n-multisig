@@ -20,6 +20,10 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use crate::pda::{AccountId, CreateKey};
 use crate::proof::ApprovePublicInputs;
 
+/// Top-level instruction dispatched by the SPEL verifier program. Borsh-
+/// serialized with a single-byte discriminant: `CreateMultisig=0`,
+/// `Propose=1`, `Approve=2`, `Execute=3`. Discriminants are part of the
+/// on-chain ABI and must never be reordered; new variants append.
 #[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub enum Instruction {
     /// Initialize a new multisig instance under `create_key`, frozen at

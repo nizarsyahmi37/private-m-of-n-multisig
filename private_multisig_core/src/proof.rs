@@ -80,6 +80,9 @@ impl ApprovePublicInputs {
 pub struct ChainId(pub [u8; 32]);
 
 impl ChainId {
+    /// Wrap a raw 32-byte chain identifier without lifting from a smaller
+    /// numeric type. Use this when the chain id source already has a
+    /// canonical 32-byte form (e.g. a SHA-256 of a domain string).
     pub const fn new(bytes: [u8; 32]) -> Self {
         Self(bytes)
     }
@@ -103,6 +106,9 @@ impl ChainId {
         Self(bytes)
     }
 
+    /// Borrow the underlying 32-byte chain-id payload for inclusion in the
+    /// `proposal_id` preimage. The returned reference always has fixed
+    /// length 32; callers do not need to validate.
     pub const fn as_bytes(&self) -> &[u8; 32] {
         &self.0
     }
