@@ -25,7 +25,6 @@
 //! lez-multisig source shows otherwise, only `derive_pda` needs to change —
 //! every public helper is layered on top.
 
-use borsh::{BorshDeserialize, BorshSerialize};
 use crypto::Sha256Hasher;
 
 pub type ProgramId = [u8; 32];
@@ -42,12 +41,6 @@ pub const SEED_VAULT: &[u8; 13] = b"pmsig_vault__";
 /// Seed for the per-(proposal, nullifier) `NullifierEntry` PDA. Init-fails-if-
 /// exists at this address is the on-chain double-vote check.
 pub const SEED_NULLIFIER: &[u8; 13] = b"pmsig_nulli__";
-
-/// Untyped wrapper that's serializable for inclusion in instructions or
-/// state. Kept distinct from `AccountId` so callers can't accidentally pass
-/// an unrelated key.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, BorshSerialize, BorshDeserialize)]
-pub struct PdaSeed(pub [u8; 13]);
 
 /// `SHA-256(program_id ‖ seed ‖ extras…)`. Single source of truth for the
 /// derivation, layered helpers below specialize it for each account class.
