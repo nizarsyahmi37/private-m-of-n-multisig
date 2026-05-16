@@ -21,10 +21,16 @@ path = "src/bin/private_multisig.rs"
 
 [dependencies]
 risc0-zkvm = { version = "3.0", default-features = false, features = ["std"] }
-crypto = { path = "../../crypto", default-features = false }
-private_multisig_core = { path = "../../private_multisig_core", default-features = false }
+# The approve_circuit guest uses only the no_std-safe subset of `crypto` and
+# `private_multisig_core`. The SPEL verifier needs the full `std` surface
+# (state types, validators, derive helpers). Cargo unifies features within a
+# single crate's dep table, so both binaries see the std-enabled API. The
+# approve_circuit's ELF dead-code-eliminates anything it doesn't import.
+crypto = { path = "../../crypto" }
+private_multisig_core = { path = "../../private_multisig_core" }
 spel-framework = { git = "https://github.com/logos-co/spel", tag = "v0.3.0" }
 nssa_core = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.2.0-rc3" }
+borsh = { version = "1", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 

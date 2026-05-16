@@ -48,6 +48,7 @@ checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
 name = "approve_circuit_guest"
 version = "0.1.0"
 dependencies = [
+ "borsh",
  "crypto",
  "nssa_core",
  "private_multisig_core",
@@ -628,6 +629,7 @@ name = "crypto"
 version = "0.1.0"
 dependencies = [
  "sha2",
+ "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -1936,6 +1938,7 @@ version = "0.1.0"
 dependencies = [
  "borsh",
  "crypto",
+ "thiserror 1.0.69",
 ]
 
 [[package]]
