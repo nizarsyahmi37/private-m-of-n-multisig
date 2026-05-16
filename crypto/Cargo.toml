@@ -6,9 +6,18 @@ license.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 
+[features]
+default = ["std"]
+# `std` pulls in the full host-side surface: `MerkleTree`, `MerkleError`, and
+# the SHA-256 std-targeted code paths. Without `std`, only the guest-required
+# subset is reachable: `Hasher`, `Sha256Hasher`, `hash_leaf`, `hash_node`,
+# `Identity`, `IdentityCommitment`, `MerkleProof`, `verify_proof`,
+# `nullifier`, and the domain / size constants.
+std = ["sha2/std", "dep:thiserror"]
+
 [dependencies]
 sha2 = { workspace = true }
-thiserror = { workspace = true }
+thiserror = { workspace = true, optional = true }
 
 [dev-dependencies]
 rand = { workspace = true }

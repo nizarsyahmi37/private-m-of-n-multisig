@@ -29,6 +29,7 @@ use crate::hash::{Hash, Hasher, HASH_LEN};
 pub const MERKLE_DEPTH: usize = 20;
 pub const MAX_LEAVES: usize = 1 << MERKLE_DEPTH;
 
+#[cfg(feature = "std")]
 #[derive(Debug, thiserror::Error)]
 pub enum MerkleError {
     #[error("tree is full (capacity {0})")]
@@ -43,6 +44,7 @@ pub struct MerkleProof {
     pub indices: [bool; MERKLE_DEPTH],
 }
 
+#[cfg(feature = "std")]
 #[derive(Clone)]
 pub struct MerkleTree<H: Hasher> {
     leaves: Vec<Hash>,
@@ -50,6 +52,7 @@ pub struct MerkleTree<H: Hasher> {
     _phantom: core::marker::PhantomData<H>,
 }
 
+#[cfg(feature = "std")]
 impl<H: Hasher> MerkleTree<H> {
     pub fn new() -> Self {
         let mut zero_hashes = [[0u8; HASH_LEN]; MERKLE_DEPTH + 1];
@@ -140,6 +143,7 @@ impl<H: Hasher> MerkleTree<H> {
     }
 }
 
+#[cfg(feature = "std")]
 impl<H: Hasher> Default for MerkleTree<H> {
     fn default() -> Self {
         Self::new()

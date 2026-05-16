@@ -9,7 +9,7 @@ repository = "https://github.com/nizarsyahmi37/private-m-of-n-multisig"
 rust-version = "1.80"
 
 [workspace.dependencies]
-sha2 = "0.10"
+sha2 = { version = "0.10", default-features = false }
 rand = "0.8"
 hex = "0.4"
 thiserror = "1"
