@@ -30,7 +30,7 @@
 //!   independent pin of the canonical hex sentinel from
 //!   `image_id_stability.rs`)
 //! - explicit little-endian pin for `APPROVE_CIRCUIT_IMAGE_ID[0]` derived
-//!   from the hex sentinel `5569a424…`
+//!   from the hex sentinel `b03a41ce…`
 //! - per-field byte slice assertion (each `[0..32)`, `[32..64)`, `[64..96)`
 //!   isolably checked so a failure tells you which field drifted)
 //! - explicit no-leak sentinel: a witness with a recognizable `0xDEADBEEF…`
@@ -426,24 +426,30 @@ fn v3_image_id_hex_decodes_to_image_id_words() {
 }
 
 // ---------------------------------------------------------------------------
-// 6. Endianness pin: first 4 bytes of the canonical hex `55 69 a4 24`
-//    interpret as LE u32 == 0x24a46955 == 614_754_645.
+// 6. Endianness pin: first 4 bytes of the canonical hex `b0 3a 41 ce`
+//    interpret as LE u32 == 0xce413ab0 == 3_460_381_360.
+//
+//    The image-id shifted when the SPEL verifier guest was added to the
+//    methods crate (adding `nssa_core` + `spel-framework` + `serde` to the
+//    guest crate's dep graph changes the unified guest build's compile
+//    environment, which propagates into every binary's image-id). The new
+//    pinned hex lives in image_id_stability.rs as `PINNED_IMAGE_ID_HEX`.
 // ---------------------------------------------------------------------------
 
 #[test]
 fn v3_image_id_word_array_endianness_is_little_endian() {
     // The canonical hex sentinel in image_id_stability.rs starts with
-    // "5569a424…". As LITTLE-endian u32 that is:
-    //   byte[0]=0x55, byte[1]=0x69, byte[2]=0xa4, byte[3]=0x24
-    //   → u32 = 0x24a46955 = 614,754,645
+    // "b03a41ce…". As LITTLE-endian u32 that is:
+    //   byte[0]=0xb0, byte[1]=0x3a, byte[2]=0x41, byte[3]=0xce
+    //   → u32 = 0xce413ab0 = 3,460,381,360
     // If the hex helper ever serialized as big-endian instead, the first
-    // word would be 0x5569a424 = 1,432,847,396, and this test would fail.
+    // word would be 0xb03a41ce = 2,956,673,486, and this test would fail.
     assert_eq!(
-        APPROVE_CIRCUIT_IMAGE_ID[0], 614_754_645u32,
-        "endianness pin failed: APPROVE_CIRCUIT_IMAGE_ID[0] = {}, expected 614_754_645 \
-         (which is 0x{:08x}, the LE interpretation of the hex prefix 55 69 a4 24)",
+        APPROVE_CIRCUIT_IMAGE_ID[0], 3_460_381_360u32,
+        "endianness pin failed: APPROVE_CIRCUIT_IMAGE_ID[0] = {}, expected 3_460_381_360 \
+         (which is 0x{:08x}, the LE interpretation of the hex prefix b0 3a 41 ce)",
         APPROVE_CIRCUIT_IMAGE_ID[0],
-        0x24a4_6955u32,
+        0xce41_3ab0u32,
     );
 
     // Cross-check the LE interpretation explicitly: pull the first 4 bytes
@@ -458,7 +464,7 @@ fn v3_image_id_word_array_endianness_is_little_endian() {
         .try_into()
         .expect("4-byte prefix array");
     let le = u32::from_le_bytes(prefix_arr);
-    assert_eq!(le, 614_754_645u32, "LE re-decode of hex prefix disagreed");
+    assert_eq!(le, 3_460_381_360u32, "LE re-decode of hex prefix disagreed");
     assert_eq!(
         le, APPROVE_CIRCUIT_IMAGE_ID[0],
         "hex prefix LE decode disagreed with APPROVE_CIRCUIT_IMAGE_ID[0]"
@@ -782,14 +788,14 @@ fn v3_image_id_word_array_is_pinned_constant() {
     // Same value as `PINNED_IMAGE_ID_WORDS` in image_id_stability.rs.
     // Duplicated here intentionally — the redundancy is the point.
     const EXPECTED: [u32; 8] = [
-        614_754_645,
-        707_796_743,
-        312_764_044,
-        411_468_421,
-        4_082_658_694,
-        1_096_982_480,
-        3_989_937_086,
-        1_023_746_106,
+        3_460_381_360,
+        3_239_953_090,
+        1_343_517_355,
+        3_511_254_084,
+        1_815_790_745,
+        1_201_536_365,
+        692_780_191,
+        2_077_888_072,
     ];
 
     assert_eq!(
@@ -800,7 +806,7 @@ fn v3_image_id_word_array_is_pinned_constant() {
 
     // Cross-check element 0 stays exactly the LE-decoded value of the
     // canonical hex sentinel prefix (defensive duplication of test 6).
-    assert_eq!(EXPECTED[0], 614_754_645u32);
+    assert_eq!(EXPECTED[0], 3_460_381_360u32);
 }
 
 // ---------------------------------------------------------------------------

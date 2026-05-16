@@ -929,8 +929,11 @@ fn v4_pack_approve_witness_with_5000_member_tree() {
 #[test]
 fn v4_image_id_unchanged_after_helper_addition() {
     // Pinned hex from `tests/image_id_stability.rs::PINNED_IMAGE_ID_HEX`.
+    // Shifted when the SPEL verifier guest landed (adding `nssa_core` +
+    // `spel-framework` + `serde` to the methods/guest dep graph changes
+    // the unified guest build's compile environment).
     const PINNED_IMAGE_ID_HEX: &str =
-        "5569a424071f302a8c66a41285828618866d58f3d09f6241be9bd1ed3a20053d";
+        "b03a41cec2c21dc1ab721450447c49d199c43a6c6dfd9d479ffc4a29480eda7b";
 
     let actual = image_id_hex();
     assert_eq!(
