@@ -1,0 +1,26 @@
+[package]
+name = "approve_circuit_guest"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.80"
+
+# This crate is intentionally NOT a workspace member of the project root —
+# it builds under the Risc0 RISC-V toolchain managed by `cargo-risczero`.
+# `risc0-build` invokes its own cargo on this directory from
+# `methods/build.rs`. The empty `[workspace]` table below prevents Cargo
+# from walking up and picking the parent workspace.
+[workspace]
+
+[[bin]]
+name = "approve_circuit"
+path = "src/bin/approve_circuit.rs"
+
+[dependencies]
+risc0-zkvm = { version = "3.0", default-features = false, features = ["std"] }
+crypto = { path = "../../crypto", default-features = false }
+private_multisig_core = { path = "../../private_multisig_core", default-features = false }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+opt-level = 3
