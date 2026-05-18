@@ -65,6 +65,7 @@ pub use pda::{
 };
 pub use proof::{
     derive_proposal_id, ApprovePublicInputs, ChainId, APPROVE_PUBLIC_INPUTS_LEN,
+    DEPLOYMENT_CHAIN_ID_U64,
 };
 #[cfg(feature = "std")]
 pub use state::{

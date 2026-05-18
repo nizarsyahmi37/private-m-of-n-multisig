@@ -72,6 +72,20 @@ impl ApprovePublicInputs {
     }
 }
 
+/// Canonical chain identifier for THIS deployment. SDK, approve circuit,
+/// and SPEL verifier all derive their `proposal_id` preimage against this
+/// exact value — any drift means the verifier's recompute won't match the
+/// circuit's commit and approvals are rejected as ProposalIdMismatch.
+///
+/// `0xABCD_EF01` is the canonical devnet value the repo's tests have used
+/// since step 2. Lifted here from `methods/guest/src/bin/private_multisig.rs`
+/// so the SDK (step 5) doesn't have to hardcode a drift-prone replica.
+///
+/// Long-term (v2): this should come from a runtime syscall or live in
+/// `MultisigState` so each instance can target a different chain. For the
+/// MVP it stays as a workspace-wide pin.
+pub const DEPLOYMENT_CHAIN_ID_U64: u64 = 0xABCD_EF01;
+
 /// Chain identifier that goes into the `proposal_id` preimage so an
 /// approval generated on devnet cannot replay on testnet/mainnet. 32 bytes
 /// for canonicity even if the underlying LEZ chain-id is shorter (it gets
