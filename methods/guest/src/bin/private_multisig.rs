@@ -22,21 +22,11 @@
 use crypto::{Hasher, Sha256Hasher};
 use private_multisig_core::{
     derive_proposal_id, ChainId, MultisigState, Proposal, APPROVE_PUBLIC_INPUTS_LEN,
+    DEPLOYMENT_CHAIN_ID_U64,
 };
 use spel_framework::prelude::*;
 
 include!("../approve_circuit_image_id.rs");
-
-/// Pinned LEZ chain id for this MVP deployment. Enters the `proposal_id`
-/// preimage so an approval generated against this deployment cannot replay
-/// on any other chain. `0xABCD_EF01` is the canonical devnet value the
-/// repo's tests have been using since step 2; lifting it into a named
-/// constant here just exposes it to the on-chain code.
-///
-/// Long-term: this should come from a runtime syscall or live in
-/// `MultisigState` so each instance can target a different chain. For the
-/// MVP we ship it as a compile-time pin.
-const DEPLOYMENT_CHAIN_ID_U64: u64 = 0xABCD_EF01;
 
 #[lez_program]
 mod private_multisig {
@@ -75,13 +65,13 @@ mod private_multisig {
         };
         let bytes = borsh::to_vec(&body).map_err(|e| {
             SpelError::custom(
-                private_multisig_core::CoreError::InstanceNotActive.code(),
+                private_multisig_core::CoreError::SerializationError.code(),
                 format!("MultisigState serialization failed: {e}"),
             )
         })?;
         state.account.data = bytes.try_into().map_err(|_| {
             SpelError::custom(
-                private_multisig_core::CoreError::InstanceNotActive.code(),
+                private_multisig_core::CoreError::SerializationError.code(),
                 "MultisigState body exceeds account data cap".to_string(),
             )
         })?;
@@ -113,7 +103,7 @@ mod private_multisig {
         let mut state_body: MultisigState =
             borsh::from_slice(&state.account.data).map_err(|e| {
                 SpelError::custom(
-                    private_multisig_core::CoreError::InstanceNotActive.code(),
+                    private_multisig_core::CoreError::SerializationError.code(),
                     format!("MultisigState decode failed: {e}"),
                 )
             })?;
@@ -131,21 +121,21 @@ mod private_multisig {
             .checked_add(1)
             .ok_or_else(|| {
                 SpelError::custom(
-                    private_multisig_core::CoreError::InstanceNotActive.code(),
+                    private_multisig_core::CoreError::ArithmeticOverflow.code(),
                     "proposal_count overflow".to_string(),
                 )
             })?;
         state.account.data = borsh::to_vec(&state_body)
             .map_err(|e| {
                 SpelError::custom(
-                    private_multisig_core::CoreError::InstanceNotActive.code(),
+                    private_multisig_core::CoreError::SerializationError.code(),
                     format!("MultisigState re-encode failed: {e}"),
                 )
             })?
             .try_into()
             .map_err(|_| {
                 SpelError::custom(
-                    private_multisig_core::CoreError::InstanceNotActive.code(),
+                    private_multisig_core::CoreError::SerializationError.code(),
                     "MultisigState body exceeds account data cap".to_string(),
                 )
             })?;
@@ -161,14 +151,14 @@ mod private_multisig {
         proposal.account.data = borsh::to_vec(&proposal_body)
             .map_err(|e| {
                 SpelError::custom(
-                    private_multisig_core::CoreError::InstanceNotActive.code(),
+                    private_multisig_core::CoreError::SerializationError.code(),
                     format!("Proposal serialization failed: {e}"),
                 )
             })?
             .try_into()
             .map_err(|_| {
                 SpelError::custom(
-                    private_multisig_core::CoreError::InstanceNotActive.code(),
+                    private_multisig_core::CoreError::SerializationError.code(),
                     "Proposal body exceeds account data cap".to_string(),
                 )
             })?;
@@ -236,14 +226,14 @@ mod private_multisig {
         let state_body: MultisigState =
             borsh::from_slice(&state.account.data).map_err(|e| {
                 SpelError::custom(
-                    private_multisig_core::CoreError::InstanceNotActive.code(),
+                    private_multisig_core::CoreError::SerializationError.code(),
                     format!("MultisigState decode failed: {e}"),
                 )
             })?;
         let mut proposal_body: Proposal =
             borsh::from_slice(&proposal.account.data).map_err(|e| {
                 SpelError::custom(
-                    private_multisig_core::CoreError::InstanceNotActive.code(),
+                    private_multisig_core::CoreError::SerializationError.code(),
                     format!("Proposal decode failed: {e}"),
                 )
             })?;
@@ -300,7 +290,7 @@ mod private_multisig {
         proposal_body.approvals_count = proposal_body.approvals_count.checked_add(1).ok_or_else(
             || {
                 SpelError::custom(
-                    private_multisig_core::CoreError::InstanceNotActive.code(),
+                    private_multisig_core::CoreError::ArithmeticOverflow.code(),
                     "approvals_count overflow".to_string(),
                 )
             },
@@ -308,14 +298,14 @@ mod private_multisig {
         proposal.account.data = borsh::to_vec(&proposal_body)
             .map_err(|e| {
                 SpelError::custom(
-                    private_multisig_core::CoreError::InstanceNotActive.code(),
+                    private_multisig_core::CoreError::SerializationError.code(),
                     format!("Proposal re-encode failed: {e}"),
                 )
             })?
             .try_into()
             .map_err(|_| {
                 SpelError::custom(
-                    private_multisig_core::CoreError::InstanceNotActive.code(),
+                    private_multisig_core::CoreError::SerializationError.code(),
                     "Proposal body exceeds account data cap".to_string(),
                 )
             })?;
@@ -356,14 +346,14 @@ mod private_multisig {
         let state_body: MultisigState =
             borsh::from_slice(&state.account.data).map_err(|e| {
                 SpelError::custom(
-                    private_multisig_core::CoreError::InstanceNotActive.code(),
+                    private_multisig_core::CoreError::SerializationError.code(),
                     format!("MultisigState decode failed: {e}"),
                 )
             })?;
         let mut proposal_body: Proposal =
             borsh::from_slice(&proposal.account.data).map_err(|e| {
                 SpelError::custom(
-                    private_multisig_core::CoreError::InstanceNotActive.code(),
+                    private_multisig_core::CoreError::SerializationError.code(),
                     format!("Proposal decode failed: {e}"),
                 )
             })?;
@@ -393,14 +383,14 @@ mod private_multisig {
         proposal.account.data = borsh::to_vec(&proposal_body)
             .map_err(|e| {
                 SpelError::custom(
-                    private_multisig_core::CoreError::InstanceNotActive.code(),
+                    private_multisig_core::CoreError::SerializationError.code(),
                     format!("Proposal re-encode failed: {e}"),
                 )
             })?
             .try_into()
             .map_err(|_| {
                 SpelError::custom(
-                    private_multisig_core::CoreError::InstanceNotActive.code(),
+                    private_multisig_core::CoreError::SerializationError.code(),
                     "Proposal body exceeds account data cap".to_string(),
                 )
             })?;
