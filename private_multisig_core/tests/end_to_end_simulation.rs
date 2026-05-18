@@ -143,12 +143,10 @@ fn build_approve_ix_bytes(
     inst: &Instance,
     index: u64,
     inputs: ApprovePublicInputs,
-    receipt: &[u8],
 ) -> Vec<u8> {
     let ix = Instruction::Approve {
         create_key: inst.create_key,
         index,
-        receipt: receipt.to_vec(),
         public_inputs: inputs,
     };
     let bytes = to_vec(&ix).unwrap();
@@ -229,7 +227,7 @@ fn e2e_single_multisig_threshold_3_of_5_happy_path() {
         assert_eq!(ApprovePublicInputs::from_bytes(&canonical), inputs);
 
         let pda = derive_nullifier_entry_pda(&PROGRAM_ID, &proposal_pda, &nullifier);
-        let approve_bytes = build_approve_ix_bytes(&inst, 0, inputs, b"receipt-bytes");
+        let approve_bytes = build_approve_ix_bytes(&inst, 0, inputs);
         assert_eq!(approve_bytes[0], 2, "Approve is variant 2 (member {i})");
         nullifiers.push(nullifier);
         nullifier_pdas.push(pda);
@@ -378,7 +376,7 @@ fn e2e_hundred_multisigs_complete_lifecycle() {
                     "nullifier-entry PDA collision across all 100 instances"
                 );
 
-                let _ = build_approve_ix_bytes(&inst, 0, inputs, b"receipt");
+                let _ = build_approve_ix_bytes(&inst, 0, inputs);
                 approval_count += 1;
             }
 
@@ -446,7 +444,7 @@ fn e2e_many_proposals_in_one_instance() {
                 proposal_id,
                 nullifier,
             };
-            let _ = build_approve_ix_bytes(&inst, k as u64, inputs, b"receipt");
+            let _ = build_approve_ix_bytes(&inst, k as u64, inputs);
 
             let pda = derive_nullifier_entry_pda(&PROGRAM_ID, &proposal_pda, &nullifier);
             assert!(
@@ -641,7 +639,7 @@ fn e2e_instance_with_m_eq_n_requires_unanimous() {
             proposal_id,
             nullifier: n,
         };
-        let _ = build_approve_ix_bytes(&inst, 0, inputs, b"r");
+        let _ = build_approve_ix_bytes(&inst, 0, inputs);
         let pda = derive_nullifier_entry_pda(&PROGRAM_ID, &proposal_pda, &n);
         assert!(nullifiers.insert(n));
         assert!(pdas.insert(pda));
@@ -735,7 +733,7 @@ fn e2e_action_bytes_at_max_size_works() {
         proposal_id,
         nullifier,
     };
-    let _ = build_approve_ix_bytes(&inst, 0, inputs, b"r");
+    let _ = build_approve_ix_bytes(&inst, 0, inputs);
 }
 
 // ---------------------------------------------------------------------------
@@ -882,7 +880,7 @@ fn e2e_thousand_random_full_lifecycles() {
                 "nullifier-entry PDA collision at iter {iter}"
             );
 
-            let _ = build_approve_ix_bytes(&inst, index, inputs, b"r");
+            let _ = build_approve_ix_bytes(&inst, index, inputs);
             total_approvals += 1;
         }
 

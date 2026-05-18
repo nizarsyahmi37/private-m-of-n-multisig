@@ -191,7 +191,6 @@ fn v3_attack_2a_instruction_discriminants_each_pinned() {
     let approve = Instruction::Approve {
         create_key: [0; 32],
         index: 0,
-        receipt: Vec::new(),
         public_inputs: ApprovePublicInputs {
             members_root: [0; 32],
             proposal_id: [0; 32],
@@ -809,17 +808,15 @@ fn v3_attack_12a_core_does_not_link_instruction_create_key_to_state() {
 }
 
 // ============================================================================
-// 13. Approve receipt empty — verifier owns this scope boundary
+// 13. Approve minimal wire size — receipt no longer part of the instruction
 // ============================================================================
 
-/// An `Instruction::Approve { receipt: vec![], .. }` is structurally valid
-/// Borsh. The core layer does not (and should not) reject — receipt
-/// emptiness is the verifier's receipt-verify-syscall responsibility.
-/// Pin both: the encode/decode succeeds, and the resulting bytes are the
-/// "shortest valid Approve" — discriminant(1) + create_key(32) + index(8) +
-/// receipt_len(4 = 0) + public_inputs(96) = 141 bytes.
+/// Round 5 dropped the `receipt: Vec<u8>` field from `Instruction::Approve`
+/// (the receipt is attached host-side via `add_assumption`, never on the
+/// instruction wire). Pin the new minimal Approve wire size as
+/// `discriminant(1) + create_key(32) + index(8) + public_inputs(96) = 137`.
 #[test]
-fn v3_attack_13a_approve_empty_receipt_141_bytes() {
+fn v3_attack_13a_approve_minimal_wire_size_137_bytes() {
     let inputs = ApprovePublicInputs {
         members_root: [0x11; 32],
         proposal_id: [0x22; 32],
@@ -828,36 +825,18 @@ fn v3_attack_13a_approve_empty_receipt_141_bytes() {
     let ix = Instruction::Approve {
         create_key: [0xAA; 32],
         index: 0,
-        receipt: Vec::new(),
         public_inputs: inputs,
     };
     let bytes = to_vec(&ix).unwrap();
     assert_eq!(
         bytes.len(),
-        1 + 32 + 8 + 4 + APPROVE_PUBLIC_INPUTS_LEN,
-        "v3: empty-receipt Approve wire size",
+        1 + 32 + 8 + APPROVE_PUBLIC_INPUTS_LEN,
+        "v3: minimal Approve wire size",
     );
-    assert_eq!(bytes.len(), 141);
-
-    // receipt-length prefix is the 4 bytes after disc+create_key+index.
-    let receipt_len_offset = 1 + 32 + 8;
-    assert_eq!(
-        &bytes[receipt_len_offset..receipt_len_offset + 4],
-        &0u32.to_le_bytes(),
-        "v3: receipt-length prefix must be 0 for empty receipt",
-    );
+    assert_eq!(bytes.len(), 137);
 
     let decoded = Instruction::try_from_slice(&bytes).unwrap();
     assert_eq!(decoded, ix);
-    match decoded {
-        Instruction::Approve { receipt, .. } => {
-            assert!(receipt.is_empty(), "v3: receipt must round-trip empty");
-        }
-        _ => panic!("disc shape mismatch"),
-    }
-    // SCOPE NOTE: the verifier program rejects empty receipts via the
-    // receipt-verify syscall. If a future PR moves that check into core,
-    // this test should be REWRITTEN to assert rejection — flag in the PR.
 }
 
 // ============================================================================

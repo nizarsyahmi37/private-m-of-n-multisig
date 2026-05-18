@@ -299,20 +299,23 @@ fn v4_attack_5a_borsh_cautious_capacity_under_u32_max() {
          — Borsh `cautious` may have regressed; check for `Vec::with_capacity(len as usize)`",
     );
 
-    // (b) Instruction::Approve with u32::MAX receipt len, no payload.
+    // (b) Round 5 dropped Instruction::Approve.receipt — the u32::MAX
+    // length-prefix attack surface is gone. Replace the timing check with
+    // a positive: a truncated Approve (missing trailing public_inputs
+    // bytes) must reject quickly rather than reading past the buffer.
     let mut buf2 = Vec::new();
     buf2.push(2u8); // Approve disc
     buf2.extend_from_slice(&[0xAA; 32]); // create_key
     buf2.extend_from_slice(&0u64.to_le_bytes()); // index
-    buf2.extend_from_slice(&u32::MAX.to_le_bytes()); // receipt vec-len
+    // Intentionally omit the 96-byte public_inputs payload.
 
     let start = Instant::now();
     let res2: Result<Instruction, _> = Instruction::try_from_slice(&buf2);
     let elapsed = start.elapsed();
-    assert!(res2.is_err(), "u32::MAX receipt prefix must reject");
+    assert!(res2.is_err(), "truncated Approve must reject");
     assert!(
         elapsed < Duration::from_millis(200),
-        "v4: Instruction::Approve receipt decode took {elapsed:?}",
+        "v4: Instruction::Approve truncation reject took {elapsed:?}",
     );
 }
 
@@ -446,7 +449,6 @@ fn v4_attack_9a_instruction_discriminant_lt_4() {
         Instruction::Approve {
             create_key: [0; 32],
             index: 0,
-            receipt: Vec::new(),
             public_inputs: ApprovePublicInputs {
                 members_root: [0; 32],
                 proposal_id: [0; 32],
@@ -800,7 +802,6 @@ fn v4_attack_13c_instruction_approve_embeds_public_inputs_byvalue() {
         let ix = Instruction::Approve {
             create_key: random_32(&mut r),
             index: r.gen(),
-            receipt: vec![0xEE; 32],
             public_inputs: inputs,
         };
         let bytes = to_vec(&ix).unwrap();
@@ -981,7 +982,10 @@ fn v4_attack_13h_only_four_discriminants_decode() {
     // lengths and union the discoverable discs.
     decodable_discs.clear();
     for disc in 0u8..=255 {
-        for body_extra in [69usize, 76, 140, 40] {
+        // Round 5 minimums: CreateMultisig=69 (32+32+1+4), Propose=76
+        // (32+8+4+0+32, empty action_bytes), Approve=136 (32+8+96, no
+        // more receipt vec), Execute=40 (32+8).
+        for body_extra in [69usize, 76, 136, 40] {
             let mut buf = vec![disc];
             buf.resize(body_extra + 1, 0u8);
             if Instruction::try_from_slice(&buf).is_ok() {
@@ -989,11 +993,6 @@ fn v4_attack_13h_only_four_discriminants_decode() {
             }
         }
     }
-    // The four valid discs ARE 0, 1, 2, 3 (CreateMultisig, Propose,
-    // Approve, Execute) — at the body lengths chosen, all four should
-    // decode with their minimum payloads (Propose at body 76 with 0 vec
-    // is 32+8+4+32 = 76; Approve at 140 with 0 vec is 32+8+4+96 = 140;
-    // CreateMultisig at 69 = 32+32+1+4; Execute at 40 = 32+8).
     assert_eq!(
         decodable_discs.len(),
         4,

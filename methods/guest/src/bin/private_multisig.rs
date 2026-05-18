@@ -198,7 +198,6 @@ mod private_multisig {
         create_key: [u8; 32],
         index: u64,
         nullifier: [u8; 32],
-        receipt: Vec<u8>,
         public_inputs: Vec<u8>,
     ) -> SpelResult {
         // (1) Wire-format sanity. The public-inputs bundle is fixed-size
@@ -310,14 +309,14 @@ mod private_multisig {
                 )
             })?;
 
-        // Unused-but-required SPEL plumbing arguments. `receipt` is the
-        // raw bytes the host attaches as an assumption to the executor —
-        // the guest itself never re-runs the verifier on them, so they're
-        // not read here. `create_key` is the PDA seed already validated by
-        // the SPEL macro. (The previous `proposal_pda` argument was dropped
-        // because it was attacker-controlled and is now replaced by
-        // `account("proposal")` in the nullifier_entry PDA seed list.)
-        let _ = (create_key, receipt);
+        // `create_key` is a PDA seed already validated by the SPEL macro;
+        // the handler body doesn't otherwise consume it. (Round 5 dropped
+        // the previously-present `proposal_pda` arg in favor of
+        // `account("proposal")` and the `receipt: Vec<u8>` arg in favor of
+        // host-attached `ExecutorEnv::add_assumption(approve_receipt)` —
+        // the receipt is discharged via `env::verify` above and never lived
+        // on the on-chain instruction wire.)
+        let _ = create_key;
 
         Ok(SpelOutput::execute(
             vec![state, proposal, nullifier_entry, submitter],

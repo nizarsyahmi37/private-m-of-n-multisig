@@ -125,21 +125,15 @@ fn core_borsh_round_trip_proptest() {
                     target_program: random_array_32(&mut rng),
                 }
             }
-            2 => {
-                let rlen = rng.gen_range(0..=64);
-                let mut r = vec![0u8; rlen];
-                rng.fill_bytes(&mut r);
-                Instruction::Approve {
-                    create_key: random_array_32(&mut rng),
-                    index: rng.gen(),
-                    receipt: r,
-                    public_inputs: ApprovePublicInputs {
-                        members_root: random_array_32(&mut rng),
-                        proposal_id: random_array_32(&mut rng),
-                        nullifier: random_array_32(&mut rng),
-                    },
-                }
-            }
+            2 => Instruction::Approve {
+                create_key: random_array_32(&mut rng),
+                index: rng.gen(),
+                public_inputs: ApprovePublicInputs {
+                    members_root: random_array_32(&mut rng),
+                    proposal_id: random_array_32(&mut rng),
+                    nullifier: random_array_32(&mut rng),
+                },
+            },
             _ => Instruction::Execute {
                 create_key: random_array_32(&mut rng),
                 index: rng.gen(),
@@ -513,7 +507,6 @@ fn core_instruction_discriminant_stability() {
             Instruction::Approve {
                 create_key: [0; 32],
                 index: 0,
-                receipt: Vec::new(),
                 public_inputs: pi,
             },
             2,

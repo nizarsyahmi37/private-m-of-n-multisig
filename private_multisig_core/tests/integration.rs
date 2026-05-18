@@ -94,7 +94,6 @@ fn full_create_propose_approve_execute_round_trip() {
         let approve_ix = Instruction::Approve {
             create_key: CREATE_KEY,
             index: 0,
-            receipt: b"fake-receipt-bytes".to_vec(),
             public_inputs: inputs,
         };
         let bytes = to_vec(&approve_ix).unwrap();

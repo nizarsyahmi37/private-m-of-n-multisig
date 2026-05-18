@@ -137,7 +137,6 @@ fn one_of_each_instruction() -> Vec<Instruction> {
         Instruction::Approve {
             create_key: [0xAA; 32],
             index: 7,
-            receipt: vec![0xDE, 0xAD, 0xBE, 0xEF, 0x01, 0x02, 0x03, 0x04],
             public_inputs: sample_inputs(),
         },
         Instruction::Execute {
@@ -772,21 +771,27 @@ fn fuzz_borsh_vec_length_prefix_attacks() {
         }
     }
 
-    // (c) Instruction::Approve: discriminant (2) + create_key (32) +
-    // index (8) + receipt vec-len + 1 byte payload + missing pub-inputs.
+    // (c) Round 5 removed Instruction::Approve.receipt — the vec-len attack
+    // surface is gone for Approve. Pin the negative: any bytes that DON'T
+    // match the new fixed-length 137-byte shape (disc + create_key +
+    // index + public_inputs) must reject without panicking. We feed the
+    // old shape (with a phony length prefix in place of public_inputs) and
+    // confirm clean rejection.
     for &len in attack_lens {
         let mut buf = Vec::new();
         buf.push(2u8); // Approve discriminant
         buf.extend_from_slice(&[0xAA; 32]); // create_key
         buf.extend_from_slice(&0u64.to_le_bytes()); // index
-        buf.extend_from_slice(&len.to_le_bytes()); // bogus receipt vec len
-        buf.push(0x00); // 1 byte
+        // Where public_inputs (96 bytes) is expected, supply 4-byte garbage
+        // shaped like a former length prefix — exercises the "what if a
+        // future PR re-adds a Vec" regression detector.
+        buf.extend_from_slice(&len.to_le_bytes());
         match deser_catch::<Instruction>("Instruction", &buf) {
             Err(panic_msg) => panic!(
-                "Instruction::Approve vec-len 0x{len:08x} PANICKED: {panic_msg}"
+                "Instruction::Approve garbage 0x{len:08x} PANICKED: {panic_msg}"
             ),
             Ok(Ok(_)) => panic!(
-                "Instruction::Approve vec-len 0x{len:08x} ACCEPTED"
+                "Instruction::Approve garbage 0x{len:08x} ACCEPTED"
             ),
             Ok(Err(_)) => {}
         }

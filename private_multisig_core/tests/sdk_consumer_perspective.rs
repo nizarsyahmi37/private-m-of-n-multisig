@@ -281,7 +281,13 @@ fn sdk_consumer_serialize_and_deserialize_approve_for_submission() {
     // Pin the number. If a future PR adds a version byte or changes a
     // length prefix width, this assertion catches the wire break before it
     // ships to the verifier.
-    let receipt = vec![0xAEu8; 256];
+    // Round 5 dropped `receipt: Vec<u8>` from Instruction::Approve, so the
+    // on-chain wire is now a fixed 137 bytes (disc + create_key + index +
+    // public_inputs). The receipt itself never crosses the on-chain wire —
+    // the host attaches it as a composition assumption via
+    // ExecutorEnv::add_assumption. The SDK still owns the receipt bytes
+    // locally (see ApprovalSession::Proved.receipt below) for the resume
+    // path, but the SDK-built Instruction::Approve is the minimal shape.
     let inputs = ApprovePublicInputs {
         members_root: [0x11; 32],
         proposal_id: [0x22; 32],
@@ -290,17 +296,16 @@ fn sdk_consumer_serialize_and_deserialize_approve_for_submission() {
     let ix = Instruction::Approve {
         create_key: CREATE_KEY,
         index: 0,
-        receipt: receipt.clone(),
         public_inputs: inputs,
     };
 
     let bytes = to_vec(&ix).expect("serialize Approve");
     assert_eq!(
         bytes.len(),
-        1 + 32 + 8 + 4 + 256 + 96,
-        "wire size drifted from the 397-byte sentinel"
+        1 + 32 + 8 + 96,
+        "wire size drifted from the 137-byte minimal-Approve sentinel"
     );
-    assert_eq!(bytes.len(), 397);
+    assert_eq!(bytes.len(), 137);
 
     // Round-trip back through Borsh — what the verifier will do.
     let decoded = Instruction::try_from_slice(&bytes).expect("deserialize Approve");

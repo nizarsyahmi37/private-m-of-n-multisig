@@ -45,15 +45,20 @@ pub enum Instruction {
         action_bytes: alloc::vec::Vec<u8>,
         target_program: AccountId,
     },
-    /// Submit an approval receipt for proposal `index`. `receipt` is the
-    /// opaque Risc0 receipt bytes (whatever the LEZ receipt-verifier
-    /// syscall consumes — Groth16-wrapped or native, decided in step 1 of
-    /// implementation per PLAN.md). `public_inputs` is the 96-byte tuple
-    /// the verifier cross-checks against on-chain state.
+    /// Submit an approval receipt for proposal `index`. `public_inputs`
+    /// is the 96-byte tuple the verifier cross-checks against on-chain
+    /// state.
+    ///
+    /// The Risc0 receipt itself is NOT carried on the instruction wire —
+    /// it is attached out-of-band by the host via
+    /// `ExecutorEnv::add_assumption(approve_receipt)` and discharged by
+    /// the verifier's `env::verify(APPROVE_CIRCUIT_IMAGE_ID, public_inputs)`
+    /// call. Sending it inline would bloat every approve tx by the receipt
+    /// size (KB-range) with no on-chain consumer — see BLUE-3 in the
+    /// round-5 audit.
     Approve {
         create_key: CreateKey,
         index: u64,
-        receipt: alloc::vec::Vec<u8>,
         public_inputs: ApprovePublicInputs,
     },
     /// Execute proposal `index` if `approvals_count >= m` and `!executed`.
@@ -111,7 +116,6 @@ mod tests {
         let ix = Instruction::Approve {
             create_key: [0xAA; 32],
             index: 7,
-            receipt: vec![0xDE, 0xAD, 0xBE, 0xEF],
             public_inputs: sample_inputs(),
         };
         let bytes = to_vec(&ix).unwrap();
@@ -161,7 +165,6 @@ mod tests {
             first_byte(&Instruction::Approve {
                 create_key: [0; 32],
                 index: 0,
-                receipt: Vec::new(),
                 public_inputs: sample_inputs(),
             }),
             2
@@ -185,7 +188,6 @@ mod tests {
         let ix = Instruction::Approve {
             create_key: [0; 32],
             index: 0,
-            receipt: Vec::new(),
             public_inputs: inputs,
         };
         let bytes = to_vec(&ix).unwrap();

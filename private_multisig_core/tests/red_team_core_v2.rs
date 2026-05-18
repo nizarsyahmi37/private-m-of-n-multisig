@@ -302,12 +302,12 @@ fn v2_attack_3b_instruction_disc0_truncated_body() {
 }
 
 /// Attack v2-3c: Approve instruction with `receipt.len() == 0` is a valid
-/// Borsh encoding. The core layer accepts it. This is by design — the
-/// receipt-emptiness check is the verifier program's responsibility, not
-/// the core type-layer's. Documented here as a known scope boundary so
-/// any future PR that moves that check to the wrong layer fails the test.
+/// Round 5 dropped `receipt` from `Instruction::Approve`. The receipt is
+/// attached host-side via `ExecutorEnv::add_assumption` rather than
+/// carried on the instruction wire. This test now confirms the new
+/// minimal-Approve shape round-trips cleanly and pins the byte length.
 #[test]
-fn v2_attack_3c_approve_empty_receipt_is_core_layer_accept() {
+fn v2_attack_3c_approve_minimal_wire_round_trips() {
     let inputs = ApprovePublicInputs {
         members_root: [0x11; 32],
         proposal_id: [0x22; 32],
@@ -316,16 +316,12 @@ fn v2_attack_3c_approve_empty_receipt_is_core_layer_accept() {
     let ix = Instruction::Approve {
         create_key: [0xAA; 32],
         index: 0,
-        receipt: alloc::vec::Vec::new(),
         public_inputs: inputs,
     };
     let bytes = to_vec(&ix).unwrap();
+    assert_eq!(bytes.len(), 1 + 32 + 8 + 96);
     let decoded = Instruction::try_from_slice(&bytes).unwrap();
-    assert_eq!(decoded, ix, "empty-receipt Approve must round-trip at core");
-    // SCOPE NOTE: this is intentional. The verifier program rejects empty
-    // receipts via the receipt-verify syscall. If a future refactor pushes
-    // that check into core, this test should be REWRITTEN to assert
-    // rejection — flag in the PR.
+    assert_eq!(decoded, ix, "minimal Approve must round-trip");
 }
 
 /// Attack v2-3d: feed an oversize length-prefix on `Proposal.action_bytes`

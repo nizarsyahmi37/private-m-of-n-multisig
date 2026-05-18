@@ -896,51 +896,55 @@ fn attack_12b_proposal_bool_strict() {
     }
 }
 
-/// (12c) Approve instruction with mismatched embedded ApprovePublicInputs
-/// vs. round-trip — confirm the encoding is fixed-length 96 bytes
-/// regardless of receipt size, so an attacker cannot use the
-/// public-inputs section as a smuggling channel for extra bytes.
+/// (12c) Approve instruction wire is fixed-length now that `receipt`
+/// has been dropped (round 5). The Borsh encoding is exactly
+/// `discriminant(1) + create_key(32) + index(8) + public_inputs(96) = 137`
+/// — no length-prefixed Vec field, no smuggling channel.
 #[test]
-fn attack_12c_approve_public_inputs_is_fixed_length_96() {
-    for receipt_len in [0usize, 1, 100, 4096, 16_384] {
-        let receipt = vec![0xEEu8; receipt_len];
-        let inputs = ApprovePublicInputs {
-            members_root: [1; 32],
-            proposal_id: [2; 32],
-            nullifier: [3; 32],
-        };
-        let ix = Instruction::Approve {
-            create_key: [0; 32],
-            index: 0,
-            receipt: receipt.clone(),
-            public_inputs: inputs,
-        };
-        let bytes = to_vec(&ix).unwrap();
-        // discriminant(1) + create_key(32) + index(8) + len(4) + receipt(N) + public_inputs(96)
-        let expected = 1 + 32 + 8 + 4 + receipt_len + APPROVE_PUBLIC_INPUTS_LEN;
-        assert_eq!(bytes.len(), expected, "wire size drift at receipt_len={receipt_len}");
-        let back = Instruction::try_from_slice(&bytes).unwrap();
-        assert_eq!(back, ix);
-    }
+fn attack_12c_approve_wire_is_fixed_length_137() {
+    let inputs = ApprovePublicInputs {
+        members_root: [1; 32],
+        proposal_id: [2; 32],
+        nullifier: [3; 32],
+    };
+    let ix = Instruction::Approve {
+        create_key: [0; 32],
+        index: 0,
+        public_inputs: inputs,
+    };
+    let bytes = to_vec(&ix).unwrap();
+    let expected = 1 + 32 + 8 + APPROVE_PUBLIC_INPUTS_LEN;
+    assert_eq!(bytes.len(), expected, "Approve wire size drift");
+    assert_eq!(bytes.len(), 137);
+    let back = Instruction::try_from_slice(&bytes).unwrap();
+    assert_eq!(back, ix);
 }
 
-/// (12d) Receipt-length-prefix oversize — Borsh wire for Approve has a
-/// Vec<u8> receipt with a u32 length prefix. A malicious claim of
-/// receipt_len = u32::MAX must error cleanly, not allocate u32::MAX bytes
-/// and panic/OOM.
+/// (12d) Round 5 removed the `receipt: Vec<u8>` field from
+/// `Instruction::Approve`, eliminating the length-prefix attack surface
+/// this test originally covered. The test now asserts the negative —
+/// `Instruction::Approve` has no Vec field on the wire — by checking the
+/// byte position immediately after `index` is the first byte of
+/// `public_inputs.members_root`, not a u32 length prefix.
 #[test]
-fn attack_12d_approve_receipt_oversize_length_prefix() {
-    let mut bytes: Vec<u8> = Vec::new();
-    bytes.push(2); // Approve discriminant
-    bytes.extend_from_slice(&[0u8; 32]); // create_key
-    bytes.extend_from_slice(&0u64.to_le_bytes()); // index
-    bytes.extend_from_slice(&u32::MAX.to_le_bytes()); // receipt len = 4GB
-    // No actual receipt bytes follow.
-    let res = catch_unwind(AssertUnwindSafe(|| Instruction::try_from_slice(&bytes)));
-    match res {
-        Ok(decode) => assert!(decode.is_err(), "accepted absurd receipt-length claim"),
-        Err(_) => panic!("PANIC / OOM on oversized receipt length prefix"),
-    }
+fn attack_12d_approve_has_no_length_prefixed_payload() {
+    let inputs = ApprovePublicInputs {
+        members_root: [0xAB; 32],
+        proposal_id: [0xCD; 32],
+        nullifier: [0xEF; 32],
+    };
+    let ix = Instruction::Approve {
+        create_key: [0; 32],
+        index: 0,
+        public_inputs: inputs,
+    };
+    let bytes = to_vec(&ix).unwrap();
+    let after_index = 1 + 32 + 8;
+    assert_eq!(
+        bytes[after_index], 0xAB,
+        "byte immediately after index must be the first byte of members_root, \
+         not a length prefix — `receipt` reintroduced?",
+    );
 }
 
 /// (12e) Confirm `MultisigState` wire size is exactly 77 bytes — the

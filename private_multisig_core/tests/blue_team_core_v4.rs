@@ -281,6 +281,8 @@ fn v4_debug_release_parity_borsh_round_trip() {
     }
 
     // Instruction::Approve — discriminant 0x02, plus packed fields.
+    // Round 5 dropped the `receipt: Vec<u8>` field, so the wire is now
+    // discriminant(1) || create_key(32) || index(8 LE) || public_inputs(96).
     {
         let api = ApprovePublicInputs {
             members_root: [0x11u8; 32],
@@ -290,7 +292,6 @@ fn v4_debug_release_parity_borsh_round_trip() {
         let ix = Instruction::Approve {
             create_key: [0xAAu8; 32],
             index: 7,
-            receipt: vec![0xDE, 0xAD, 0xBE, 0xEF],
             public_inputs: api,
         };
         let bytes = to_vec(&ix).unwrap();
@@ -298,8 +299,6 @@ fn v4_debug_release_parity_borsh_round_trip() {
             "02\
              aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
              0700000000000000\
-             04000000\
-             deadbeef\
              1111111111111111111111111111111111111111111111111111111111111111\
              2222222222222222222222222222222222222222222222222222222222222222\
              3333333333333333333333333333333333333333333333333333333333333333",
@@ -826,11 +825,11 @@ fn v4_release_size_sentinels_pinned() {
     // -> 24 + 32 + 4 + 1 padded to 8 = 64 bytes. Pin the observed value.
     assert_eq!(size_of::<Proposal>(), 64);
 
-    // Instruction: enum size = max(variant) + discriminant, padded. Today
-    // that's 160 bytes (Approve carries a Vec receipt + 96-byte
-    // ApprovePublicInputs + CreateKey + u64 + tag). Pin it; future variant
-    // additions that bump this are visible in a diff.
-    assert_eq!(size_of::<Instruction>(), 160);
+    // Instruction: enum size = max(variant) + discriminant, padded. Round
+    // 5 dropped Approve.receipt so Propose is now the largest variant
+    // (carries action_bytes: Vec<u8>). Today's size is 144 bytes. Pin it;
+    // future variant additions or field-shape changes show up in a diff.
+    assert_eq!(size_of::<Instruction>(), 144);
 }
 
 // ===========================================================================
