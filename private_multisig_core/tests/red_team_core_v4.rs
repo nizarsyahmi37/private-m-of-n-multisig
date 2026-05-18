@@ -511,8 +511,9 @@ fn v4_attack_10a_public_surface_is_complete() {
     // (b) Module-only (intentionally NOT re-exported, per round-2 audit):
     //  - private_multisig_core::pda::derive_pda
     // Reach each via full path so a future `pub use` accidentally hiding
-    // them would be caught by failing resolution.
-    let _module_only: fn(&[u8; 32], &[u8; 13], &[&[u8]]) -> [u8; 32] =
+    // them would be caught by failing resolution. Post-round-5 signature
+    // is `(program_id, &[&[u8; 32]])`.
+    let _module_only: fn(&[u8; 32], &[&[u8; 32]]) -> [u8; 32] =
         private_multisig_core::pda::derive_pda;
 
     // Type-alias smoke checks. After the no_std refactor these live at the

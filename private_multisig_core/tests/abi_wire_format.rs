@@ -226,16 +226,22 @@ fn abi_pinned_approve_public_inputs_borsh_equals_to_bytes() {
 // PDA derivations
 // ---------------------------------------------------------------------------
 
+// Round-5 PDA rewrite: derivation now matches SPEL's compute_pda exactly
+// (SHA-256 of NSSA prefix || program_id || combined_seed, where combined
+// is SHA-256 of all 32-byte sub-seeds for multi-seed inputs). The pinned
+// hexes below are recomputed under the new algorithm; the previous values
+// reflected the OLD `SHA-256(program_id || seed_13B || extras…)` formula
+// which never matched what the on-chain SPEL macro would enforce.
 const ABI_HEX_PDA_MULTISIG_STATE: &str =
-    "35743218835b13a14f96b16e988387a08c41bef036c550388b3cf9dc88e4e95d";
+    "6de3a5cc83e530827b5b8f150028bf92bd4260aa94b101798ad794d72c3f0bb6";
 const ABI_HEX_PDA_PROPOSAL_INDEX_0: &str =
-    "2f231231d1804665e84c956e960c2a3ef77c7f4608923cd051339646345cc0d5";
+    "26dac3f7182879b68a3f5d1c43638f2d78bcbcc53ec2380e85de8538aae5c8c7";
 const ABI_HEX_PDA_PROPOSAL_INDEX_1: &str =
-    "4ea853d6399603b607005ba2ac6f2c922b450e7ad3c0d13c26d0f9a25b7b01f1";
+    "b3a7cf3ee32d5513976781193dcd38a89be6e6f9f7a1ff37e8168b5667cc3e6a";
 const ABI_HEX_PDA_VAULT: &str =
-    "c92e0a9aeae13f0625ffc7dbe36ba1f2b820ecb0d7721afd829199e280c4ce00";
+    "42cdbb8c5935f315a298ee9a4218bfa4aafbf395eb33109bf875926823501179";
 const ABI_HEX_PDA_NULLIFIER_ENTRY: &str =
-    "c6e7baee30cfc0e526892ee31cc0c20b5ae01384492ba6128b64feb93a5f2f1e";
+    "bd2b503a2bb7959f488c4cab651339bd21aa0cd44c691fa78df12f1b559018d8";
 
 #[test]
 fn abi_pinned_pda_multisig_state() {

@@ -262,13 +262,15 @@ fn v3_pdaseed_is_not_in_pda_module() {
     // If V2-C is rolled back, the compiler accepts `use ...::PdaSeed`. We
     // can't express that negative as a runtime assertion, so instead we
     // assert the post-removal positive: `derive_pda` is still callable with
-    // raw byte arrays, exactly as the helpers depend on. A regression that
-    // re-adds `PdaSeed` would land alongside changes to this helper
-    // signature, which would break this test.
+    // the typed-helper inputs and produces the same value as the high-level
+    // wrapper. The round-5 SPEL-compatibility rewrite changed the function
+    // signature to `(program_id, seeds: &[&[u8; 32]])` — this test now uses
+    // pre-padded 32-byte seeds.
     let program_id: [u8; 32] = [0xA1; 32];
-    let seed: &[u8; 13] = SEED_MULTISIG_STATE;
     let create_key: [u8; 32] = [0xB2; 32];
-    let out = derive_pda(&program_id, seed, &[&create_key]);
+    let mut state_lit = [0u8; 32];
+    state_lit[..13].copy_from_slice(SEED_MULTISIG_STATE);
+    let out = derive_pda(&program_id, &[&state_lit, &create_key]);
     // Must be equal to the high-level helper for the same inputs.
     let via_helper = derive_multisig_state_pda(&program_id, &create_key);
     assert_eq!(out, via_helper);
@@ -281,28 +283,27 @@ fn v3_pdaseed_is_not_in_pda_module() {
 
 #[test]
 fn v3_derive_pda_signature_unchanged() {
-    // Sentinel against signature drift: `derive_pda` must keep the exact
-    // signature `(&[u8; 32], &[u8; 13], &[&[u8]]) -> [u8; 32]`. We bind a
-    // fn pointer of that exact type to catch any change.
-    let f: fn(&[u8; 32], &[u8; 13], &[&[u8]]) -> [u8; 32] = derive_pda;
+    // Sentinel against signature drift: post-round-5, `derive_pda` takes
+    // `(program_id, &[&[u8; 32]])` to match SPEL's compute_pda. Bind a fn
+    // pointer of that exact type to catch any future change.
+    let f: fn(&[u8; 32], &[&[u8; 32]]) -> [u8; 32] = derive_pda;
 
     let program_id: [u8; 32] = [0x01; 32];
     let create_key: [u8; 32] = [0x02; 32];
-    let extra1: [u8; 4] = [0xDE, 0xAD, 0xBE, 0xEF];
-    let extra2: [u8; 8] = 7u64.to_le_bytes();
+    let mut prop_lit = [0u8; 32];
+    prop_lit[..13].copy_from_slice(SEED_PROPOSAL);
+    // Extras converted to 32-byte form via right-zero-pad (mirrors SPEL's
+    // ToSeed for short numeric / byte inputs).
+    let mut index_seed = [0u8; 32];
+    index_seed[..8].copy_from_slice(&7u64.to_le_bytes());
 
-    let a = f(&program_id, SEED_PROPOSAL, &[&create_key, &extra1]);
-    let b = f(&program_id, SEED_PROPOSAL, &[&create_key, &extra1]);
+    let a = f(&program_id, &[&prop_lit, &create_key]);
+    let b = f(&program_id, &[&prop_lit, &create_key]);
     assert_eq!(a, b, "derive_pda must be deterministic");
 
-    // Two extras vs one extra must differ (length-prefix-free concat would
-    // be ambiguous otherwise; the helper hashes the byte stream which makes
-    // any input-shape change observable).
-    let c = f(&program_id, SEED_PROPOSAL, &[&create_key]);
-    assert_ne!(a, c, "extras participation in the hash regressed");
-
-    // And one with `extra2` must differ from one without.
-    let d = f(&program_id, SEED_PROPOSAL, &[&create_key, &extra1, &extra2]);
+    // Adding an index seed must change the result (SHA-256 of a different
+    // concat).
+    let d = f(&program_id, &[&prop_lit, &create_key, &index_seed]);
     assert_ne!(a, d);
 }
 

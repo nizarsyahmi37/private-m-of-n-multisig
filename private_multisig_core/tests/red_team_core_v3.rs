@@ -525,84 +525,92 @@ fn v3_attack_6c_validate_method_matches_threshold_function() {
 // lines up with the brief. No separate test (would be tautological).
 
 // ============================================================================
-// 8. derive_pda Vec allocation sanity — pathological inputs
+// 8. derive_pda — SPEL-compatibility shape sanity
 // ============================================================================
+// The round-5 PDA rewrite changed derive_pda's algorithm from
+// `SHA-256(program_id ‖ seed ‖ extras)` to SPEL's
+// `SHA-256(NSSA_PREFIX(32) ‖ program_id(32) ‖ combined(32))` where
+// combined is either the single 32-byte seed or SHA-256(seed_0 ‖ seed_1 ‖ ...).
+// The three OLD round-3 attack tests (8a/8b/8c) verified implementation
+// details of the OLD algorithm (no length prefix, raw-byte concat, etc.)
+// that no longer apply. Replaced below with tests that verify the NEW
+// algorithm's shape invariants.
 
-/// `derive_pda(program_id, seed, extras)` is reached by the four typed
-/// helpers, which pass at most two extras of fixed 32-byte length. The
-/// internal `Vec::with_capacity(total)` allocates ONCE based on the sum of
-/// `program_id.len() + seed.len() + sum(e.len() for e in extras)`. There
-/// is no maliciously-large case reachable from the public API, but the
-/// `pda::derive_pda` symbol is `pub` in the module, so a downstream
-/// caller could feed it arbitrarily many small extras. Sanity-check that
-/// 100 single-byte extras (an unusual but legal call) completes correctly
-/// and matches a manually-computed preimage.
+/// (8a) Multi-seed combine is SHA-256 of the concatenation, NOT XOR /
+/// HKDF / any other reducer. Construct the same combined seed manually
+/// and assert byte-equality.
 #[test]
-fn v3_attack_8a_derive_pda_many_small_extras_sanity() {
+fn v3_attack_8a_derive_pda_multi_seed_combine_is_sha256_concat() {
     use crypto::Hasher;
 
     let program_id = [0x42u8; 32];
-    let seed = SEED_MULTISIG_STATE;
-    let small_extras: Vec<[u8; 1]> = (0..100u8).map(|i| [i]).collect();
-    let refs: Vec<&[u8]> = small_extras.iter().map(|a| a.as_slice()).collect();
+    let seed_a = [0x11u8; 32];
+    let seed_b = [0x22u8; 32];
+    let seed_c = [0x33u8; 32];
 
-    let actual = private_multisig_core::pda::derive_pda(&program_id, seed, &refs);
+    let actual = private_multisig_core::pda::derive_pda(&program_id, &[&seed_a, &seed_b, &seed_c]);
 
-    // Independent recompute.
-    let mut preimage = Vec::with_capacity(32 + 13 + 100);
-    preimage.extend_from_slice(&program_id);
-    preimage.extend_from_slice(seed);
-    for e in &small_extras {
-        preimage.extend_from_slice(e);
-    }
-    let expected = crypto::Sha256Hasher::hash(&preimage);
-    assert_eq!(actual, expected, "v3: derive_pda with 100 single-byte extras");
+    // Manual: combined = SHA-256(seed_a || seed_b || seed_c);
+    //         pda = SHA-256(NSSA_PREFIX || program_id || combined).
+    let mut combined_preimage = Vec::with_capacity(96);
+    combined_preimage.extend_from_slice(&seed_a);
+    combined_preimage.extend_from_slice(&seed_b);
+    combined_preimage.extend_from_slice(&seed_c);
+    let combined: [u8; 32] = crypto::Sha256Hasher::hash(&combined_preimage);
 
-    // Total preimage size should be exactly 32 + 13 + 100 = 145.
-    assert_eq!(preimage.len(), 145);
+    let mut outer = [0u8; 96];
+    outer[..32].copy_from_slice(b"/NSSA/v0.2/AccountId/PDA/\x00\x00\x00\x00\x00\x00\x00");
+    outer[32..64].copy_from_slice(&program_id);
+    outer[64..96].copy_from_slice(&combined);
+    let expected: [u8; 32] = crypto::Sha256Hasher::hash(&outer);
 
-    // Different ordering of extras MUST yield a different PDA.
-    let mut reversed = small_extras.clone();
-    reversed.reverse();
-    let refs_rev: Vec<&[u8]> = reversed.iter().map(|a| a.as_slice()).collect();
-    let actual_rev = private_multisig_core::pda::derive_pda(&program_id, seed, &refs_rev);
-    assert_ne!(actual, actual_rev, "v3: extras ordering must affect result");
+    assert_eq!(actual, expected, "v3: multi-seed combine must be SHA-256 concat");
 }
 
-/// Zero extras must work (some callers may pass `&[]`).
+/// (8b) Single-seed input passes through WITHOUT a SHA-256 over the seed
+/// list (so `derive_pda(pid, &[&S]) != derive_pda(pid, &[&SHA(S)])`).
+/// This catches a regression that would always run the combine step.
 #[test]
-fn v3_attack_8b_derive_pda_zero_extras() {
+fn v3_attack_8b_derive_pda_single_seed_no_double_hash() {
     use crypto::Hasher;
 
     let program_id = [0x42u8; 32];
-    let seed = SEED_VAULT;
-    let actual = private_multisig_core::pda::derive_pda(&program_id, seed, &[]);
+    let single = [0xCDu8; 32];
 
-    let mut preimage = Vec::with_capacity(32 + 13);
-    preimage.extend_from_slice(&program_id);
-    preimage.extend_from_slice(seed);
-    let expected = crypto::Sha256Hasher::hash(&preimage);
-    assert_eq!(actual, expected, "v3: derive_pda zero extras");
+    let actual = private_multisig_core::pda::derive_pda(&program_id, &[&single]);
+
+    // Manual: with one seed, combined == single (no inner SHA-256).
+    let mut outer = [0u8; 96];
+    outer[..32].copy_from_slice(b"/NSSA/v0.2/AccountId/PDA/\x00\x00\x00\x00\x00\x00\x00");
+    outer[32..64].copy_from_slice(&program_id);
+    outer[64..96].copy_from_slice(&single);
+    let expected_single: [u8; 32] = crypto::Sha256Hasher::hash(&outer);
+
+    assert_eq!(actual, expected_single);
+
+    // And as a contrast: if the implementation accidentally always
+    // SHA-256'd the seed list, the result would be the "with SHA" path.
+    let double_seed_preimage: [u8; 32] = crypto::Sha256Hasher::hash(&single);
+    outer[64..96].copy_from_slice(&double_seed_preimage);
+    let expected_double: [u8; 32] = crypto::Sha256Hasher::hash(&outer);
+    assert_ne!(
+        actual, expected_double,
+        "v3: single-seed call must not double-hash the seed list"
+    );
 }
 
-/// Empty-byte extras (a `&[]` slice) are legal and contribute zero bytes
-/// to the preimage — confirm they do NOT change the result vs. omitting
-/// them. This is a subtle invariant: if a future PR adds a length prefix
-/// to each extra, this property changes.
+/// (8c) Seed ordering matters (SHA-256 of concat is non-commutative).
 #[test]
-fn v3_attack_8c_derive_pda_empty_byte_extra_equals_omission() {
+fn v3_attack_8c_derive_pda_seed_order_matters() {
     let program_id = [0x33u8; 32];
-    let seed = SEED_NULLIFIER;
+    let a = [0x11u8; 32];
+    let b = [0x22u8; 32];
 
-    let with_extras: &[&[u8]] = &[&[0x11; 32], &[0x22; 32]];
-    let with_empty: &[&[u8]] = &[&[0x11; 32], &[], &[0x22; 32]];
-
-    let a = private_multisig_core::pda::derive_pda(&program_id, seed, with_extras);
-    let b = private_multisig_core::pda::derive_pda(&program_id, seed, with_empty);
-    assert_eq!(
-        a, b,
-        "v3: empty byte-slice extra must contribute zero bytes — concat \
-         semantics demand no length prefix between extras",
+    let ab = private_multisig_core::pda::derive_pda(&program_id, &[&a, &b]);
+    let ba = private_multisig_core::pda::derive_pda(&program_id, &[&b, &a]);
+    assert_ne!(
+        ab, ba,
+        "v3: seed ordering must affect the result (non-commutative combine)",
     );
 }
 
@@ -1276,12 +1284,24 @@ fn v3_attack_16g_derive_proposal_pda_index_is_little_endian() {
 
     let actual = derive_proposal_pda(&program_id, &create_key, index);
 
-    let mut preimage = Vec::with_capacity(32 + 13 + 32 + 8);
-    preimage.extend_from_slice(&program_id);
-    preimage.extend_from_slice(SEED_PROPOSAL);
-    preimage.extend_from_slice(&create_key);
-    preimage.extend_from_slice(&[0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01]); // LE
-    let expected = crypto::Sha256Hasher::hash(&preimage);
+    // Round-5 SPEL-compatible recompute. The index seed is the 8 LE bytes
+    // right-padded to 32 (the `<u64 as ToSeed>::to_seed` shape).
+    let mut lit_padded = [0u8; 32];
+    lit_padded[..13].copy_from_slice(SEED_PROPOSAL);
+    let mut index_seed = [0u8; 32];
+    index_seed[..8].copy_from_slice(&[0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01]);
+
+    let mut combine_buf = Vec::with_capacity(96);
+    combine_buf.extend_from_slice(&lit_padded);
+    combine_buf.extend_from_slice(&create_key);
+    combine_buf.extend_from_slice(&index_seed);
+    let combined: [u8; 32] = crypto::Sha256Hasher::hash(&combine_buf);
+
+    let mut outer = [0u8; 96];
+    outer[..32].copy_from_slice(b"/NSSA/v0.2/AccountId/PDA/\x00\x00\x00\x00\x00\x00\x00");
+    outer[32..64].copy_from_slice(&program_id);
+    outer[64..96].copy_from_slice(&combined);
+    let expected: [u8; 32] = crypto::Sha256Hasher::hash(&outer);
     assert_eq!(actual, expected, "v3: derive_proposal_pda index slot must be LE");
 }
 

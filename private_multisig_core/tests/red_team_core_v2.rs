@@ -508,12 +508,11 @@ fn v2_attack_6a_reexport_surface_drift() {
 
     // `private_multisig_core::pda::derive_pda` is pub in its module but
     // intentionally not re-exported at the crate root — callers go through
-    // the typed helpers. Reach it via the full path.
-    let pid = private_multisig_core::pda::derive_pda(
-        &[0u8; 32],
-        SEED_MULTISIG_STATE,
-        &[&[0u8; 32]],
-    );
+    // the typed helpers. Reach it via the full path. Round-5 signature is
+    // `(program_id, seeds: &[&[u8; 32]])` so we pre-pad the literal.
+    let mut state_lit = [0u8; 32];
+    state_lit[..13].copy_from_slice(SEED_MULTISIG_STATE);
+    let pid = private_multisig_core::pda::derive_pda(&[0u8; 32], &[&state_lit, &[0u8; 32]]);
     assert_eq!(pid.len(), 32);
 }
 

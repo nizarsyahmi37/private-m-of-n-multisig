@@ -5,29 +5,43 @@
 //! Clients and the verifier program both call the same derivation function
 //! so an address never has to round-trip through state.
 //!
-//! ## Seed convention
+//! # Algorithm
 //!
-//! Each seed constant is exactly 13 bytes, matching lez-multisig's
-//! `pmsig_<role>__` shape so the two programs can be told apart at a glance
-//! in chain explorers. (PLAN.md describes them as "14 bytes each" but the
-//! literals it quotes — `pmsig_state__` etc. — are 13 bytes; we follow the
-//! literal byte values, not the byte-count annotation.)
+//! Byte-identical to `spel_framework::pda::compute_pda` +
+//! `nssa_core::AccountId::for_public_pda` so an SDK-derived `AccountId`
+//! exactly matches what the SPEL macro's `#[account(pda = [...])]` check
+//! recomputes on chain. Two steps:
 //!
-//! ```text
-//! pda = SHA-256( program_id ‖ seed_constant ‖ extra₀ ‖ extra₁ ‖ ... )
-//! ```
+//! 1. **Combine**: each input seed is normalized to a 32-byte value (literals
+//!    zero-padded to 32 from the right; `[u8; 32]` values are identity;
+//!    `u64` is little-endian + zero-padded to 32 from the right). If there
+//!    is exactly one seed, `combined = seed_0`. Otherwise
+//!    `combined = SHA-256(seed_0_32B ‖ seed_1_32B ‖ …)`.
+//! 2. **Apply NSSA public-PDA prefix**: `account_id = SHA-256(NSSA_PUBLIC_PDA_PREFIX(32) ‖ program_id(32) ‖ combined(32))`.
 //!
-//! `VERIFY:` lez-multisig's PoC notes mention an "XOR with create_key"
-//! pattern alongside a SHA-256-of-concat note. The two are mutually
-//! exclusive and PLAN.md flagged the contradiction. This crate implements
-//! the SHA-256-of-concat form (more common, easier to audit, no ambiguity
-//! around fixed-length XOR). If a future cross-check against the real
-//! lez-multisig source shows otherwise, only `derive_pda` needs to change —
-//! every public helper is layered on top.
+//! The 32-byte prefix `b"/NSSA/v0.2/AccountId/PDA/\0\0\0\0\0\0\0"` domain-
+//! separates public PDAs from private PDAs (which use a different prefix)
+//! and from arbitrary preimages.
+//!
+//! # Round-5 fix
+//!
+//! Earlier versions of this module used `SHA-256(program_id ‖ seed_13B ‖ extras…)`
+//! which did NOT match SPEL's derivation. Every SDK-derived address would
+//! have failed the verifier's PDA enforcement with `PdaMismatch`. The
+//! cross-check unit tests in `private_multisig_program/tests/`
+//! (`vault_pda_seed_parity.rs` and the catalog tests) pin the new
+//! algorithm against SPEL's own primitives.
 
-use crypto::Sha256Hasher;
+use crypto::{Hasher, Sha256Hasher};
 
 use crate::{AccountId, CreateKey, ProgramId};
+
+extern crate alloc;
+
+/// Domain-separation prefix used by `nssa_core::AccountId::for_public_pda`.
+/// 32 bytes (the literal text plus 7 trailing NULs to round it to 32).
+const NSSA_PUBLIC_PDA_PREFIX: &[u8; 32] =
+    b"/NSSA/v0.2/AccountId/PDA/\x00\x00\x00\x00\x00\x00\x00";
 
 /// Seed for the per-multisig `MultisigState` account.
 pub const SEED_MULTISIG_STATE: &[u8; 13] = b"pmsig_state__";
@@ -40,45 +54,74 @@ pub const SEED_VAULT: &[u8; 13] = b"pmsig_vault__";
 /// exists at this address is the on-chain double-vote check.
 pub const SEED_NULLIFIER: &[u8; 13] = b"pmsig_nulli__";
 
-/// `SHA-256(program_id ‖ seed ‖ extras…)`. Single source of truth for the
-/// derivation, layered helpers below specialize it for each account class.
-pub fn derive_pda(program_id: &ProgramId, seed: &[u8; 13], extras: &[&[u8]]) -> AccountId {
-    // Sum of all input lengths so the buffer is allocated exactly once.
-    let mut total = program_id.len() + seed.len();
-    for e in extras {
-        total += e.len();
-    }
-    let mut buf = alloc::vec::Vec::with_capacity(total);
-    buf.extend_from_slice(program_id);
-    buf.extend_from_slice(seed);
-    for e in extras {
-        buf.extend_from_slice(e);
-    }
-    <Sha256Hasher as crypto::Hasher>::hash(&buf)
+/// Right-zero-pad an input shorter than 32 bytes into a 32-byte seed.
+/// Mirrors `spel_framework::pda::seed_from_str` (which pads string seeds)
+/// and `<u64 as ToSeed>::to_seed` (which pads numeric seeds the same way).
+#[inline]
+fn pad_seed_32(input: &[u8]) -> [u8; 32] {
+    assert!(input.len() <= 32, "seed exceeds 32 bytes");
+    let mut out = [0u8; 32];
+    out[..input.len()].copy_from_slice(input);
+    out
 }
 
-/// `MultisigState` lives at `H(program_id ‖ pmsig_state__ ‖ create_key)`.
+/// SPEL-compatible PDA derivation primitive. Takes already-32-byte seeds
+/// (use [`pad_seed_32`] to normalize a shorter literal first) and combines
+/// them per the algorithm in the module docs.
+///
+/// # Panics
+///
+/// Panics if `seeds` is empty (matches `spel_framework::pda::compute_pda`'s
+/// behavior — there is no defensible "PDA with no seeds").
+pub fn derive_pda(program_id: &ProgramId, seeds: &[&[u8; 32]]) -> AccountId {
+    assert!(!seeds.is_empty(), "PDA requires at least one seed");
+
+    // Step 1: combine the seeds. Single seed pass-through; multiple seeds
+    // SHA-256 over the concatenation (NOT XOR — see PoC ambiguity note in
+    // the previous revision).
+    let combined: [u8; 32] = if seeds.len() == 1 {
+        *seeds[0]
+    } else {
+        let mut buf = alloc::vec::Vec::with_capacity(32 * seeds.len());
+        for seed in seeds {
+            buf.extend_from_slice(*seed);
+        }
+        Sha256Hasher::hash(&buf)
+    };
+
+    // Step 2: apply the NSSA public-PDA prefix domain separator.
+    let mut preimage = [0u8; 96];
+    preimage[0..32].copy_from_slice(NSSA_PUBLIC_PDA_PREFIX);
+    preimage[32..64].copy_from_slice(program_id);
+    preimage[64..96].copy_from_slice(&combined);
+    Sha256Hasher::hash(&preimage)
+}
+
+/// `MultisigState` PDA. Seeds: `[pad(SEED_MULTISIG_STATE), create_key]`.
 pub fn derive_multisig_state_pda(program_id: &ProgramId, create_key: &CreateKey) -> AccountId {
-    derive_pda(program_id, SEED_MULTISIG_STATE, &[create_key])
+    let lit = pad_seed_32(SEED_MULTISIG_STATE);
+    derive_pda(program_id, &[&lit, create_key])
 }
 
-/// `Proposal` for `index` of a given multisig lives at
-/// `H(program_id ‖ pmsig_prop___ ‖ create_key ‖ index.to_le_bytes())`.
+/// `Proposal` PDA for a given multisig instance and index. Seeds:
+/// `[pad(SEED_PROPOSAL), create_key, pad(index.to_le_bytes())]`.
 pub fn derive_proposal_pda(
     program_id: &ProgramId,
     create_key: &CreateKey,
     index: u64,
 ) -> AccountId {
-    let index_bytes = index.to_le_bytes();
-    derive_pda(program_id, SEED_PROPOSAL, &[create_key, &index_bytes])
+    let lit = pad_seed_32(SEED_PROPOSAL);
+    let index_seed = pad_seed_32(&index.to_le_bytes());
+    derive_pda(program_id, &[&lit, create_key, &index_seed])
 }
 
-/// `Vault` lives at `H(program_id ‖ pmsig_vault__ ‖ create_key)`.
+/// `Vault` PDA. Seeds: `[pad(SEED_VAULT), create_key]`.
 pub fn derive_vault_pda(program_id: &ProgramId, create_key: &CreateKey) -> AccountId {
-    derive_pda(program_id, SEED_VAULT, &[create_key])
+    let lit = pad_seed_32(SEED_VAULT);
+    derive_pda(program_id, &[&lit, create_key])
 }
 
-/// `NullifierEntry` lives at `H(program_id ‖ pmsig_nulli__ ‖ proposal_pda ‖ nullifier)`.
+/// `NullifierEntry` PDA. Seeds: `[pad(SEED_NULLIFIER), proposal_pda, nullifier]`.
 /// Init-fails-if-exists at this address is what enforces single-vote-per-
 /// (member, proposal): a second approval from the same member targets the
 /// same address and the `init` step fails.
@@ -87,13 +130,9 @@ pub fn derive_nullifier_entry_pda(
     proposal_pda: &AccountId,
     nullifier: &[u8; 32],
 ) -> AccountId {
-    derive_pda(program_id, SEED_NULLIFIER, &[proposal_pda, nullifier])
+    let lit = pad_seed_32(SEED_NULLIFIER);
+    derive_pda(program_id, &[&lit, proposal_pda, nullifier])
 }
-
-// `derive_pda` uses `alloc::vec::Vec`. The crate is currently linked as
-// `std` so the `alloc` crate is automatically reachable, but pulling it in
-// explicitly keeps the import path correct when step 3 switches to no_std.
-extern crate alloc;
 
 #[cfg(test)]
 mod tests {
@@ -134,6 +173,15 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn nssa_public_pda_prefix_is_pinned() {
+        // The prefix bytes are part of the on-chain ABI — if SPEL ever
+        // changes its prefix, this test catches it before the next deploy.
+        assert_eq!(NSSA_PUBLIC_PDA_PREFIX.len(), 32);
+        assert_eq!(&NSSA_PUBLIC_PDA_PREFIX[..25], b"/NSSA/v0.2/AccountId/PDA/");
+        assert_eq!(&NSSA_PUBLIC_PDA_PREFIX[25..], &[0u8; 7]);
     }
 
     #[test]
@@ -203,5 +251,22 @@ mod tests {
             let p = derive_proposal_pda(&TEST_PROGRAM_ID, &TEST_CREATE_KEY, ix);
             assert_ne!(p, [0u8; 32]);
         }
+    }
+
+    #[test]
+    fn single_seed_passes_through_without_combine_hash() {
+        // Single-seed PDAs use the seed directly (no inner SHA-256 of the
+        // seed list). Verify by constructing a PDA that's morally
+        // equivalent to "one seed of all 0xAB" — its inner combined seed
+        // must literally be all 0xAB, not SHA-256 of all 0xAB.
+        let seed = [0xAB_u8; 32];
+        let mut preimage = [0u8; 96];
+        preimage[0..32].copy_from_slice(NSSA_PUBLIC_PDA_PREFIX);
+        preimage[32..64].copy_from_slice(&TEST_PROGRAM_ID);
+        preimage[64..96].copy_from_slice(&seed); // identity, not SHA-256
+        let expected = Sha256Hasher::hash(&preimage);
+
+        let got = derive_pda(&TEST_PROGRAM_ID, &[&seed]);
+        assert_eq!(got, expected);
     }
 }

@@ -77,18 +77,25 @@ fn bridge_pda_uses_crypto_sha256_hasher() {
 
     let via_core = derive_multisig_state_pda(&program_id, &create_key);
 
-    // Independent reconstruction: program_id ‖ SEED_MULTISIG_STATE ‖ create_key,
-    // hashed with the exact same hasher the core crate uses internally.
-    let mut buf =
-        Vec::with_capacity(program_id.len() + SEED_MULTISIG_STATE.len() + create_key.len());
-    buf.extend_from_slice(&program_id);
-    buf.extend_from_slice(SEED_MULTISIG_STATE);
-    buf.extend_from_slice(&create_key);
-    let via_crypto = Sha256Hasher::hash(&buf);
+    // Independent reconstruction using the round-5 SPEL-compatible formula:
+    // combined = SHA-256(pad32(SEED_MULTISIG_STATE) || create_key)
+    // pda      = SHA-256(NSSA_PUBLIC_PDA_PREFIX || program_id || combined)
+    let mut lit_padded = [0u8; 32];
+    lit_padded[..13].copy_from_slice(SEED_MULTISIG_STATE);
+    let mut combined_preimage = Vec::with_capacity(64);
+    combined_preimage.extend_from_slice(&lit_padded);
+    combined_preimage.extend_from_slice(&create_key);
+    let combined: [u8; 32] = Sha256Hasher::hash(&combined_preimage);
+
+    let mut outer = [0u8; 96];
+    outer[..32].copy_from_slice(b"/NSSA/v0.2/AccountId/PDA/\x00\x00\x00\x00\x00\x00\x00");
+    outer[32..64].copy_from_slice(&program_id);
+    outer[64..96].copy_from_slice(&combined);
+    let via_crypto: [u8; 32] = Sha256Hasher::hash(&outer);
 
     assert_eq!(
         via_core, via_crypto,
-        "derive_multisig_state_pda must equal Sha256Hasher::hash(program_id ‖ SEED ‖ create_key)"
+        "derive_multisig_state_pda must equal SHA-256(NSSA_PREFIX ‖ program_id ‖ SHA-256(pad32(SEED) ‖ create_key))"
     );
 }
 
@@ -297,27 +304,33 @@ fn bridge_domain_separation_constants_are_used_only_in_crypto() {
     assert_eq!(DOMAIN_LEAF, 0x00);
     assert_eq!(DOMAIN_NODE, 0x01);
 
-    // PDA derivation and proposal_id derivation do NOT prepend a leaf or
-    // node domain byte — they are simple `Sha256Hasher::hash(buf)` calls
-    // over a concat preimage. If anyone ever sneaks a domain prefix in,
-    // this manual-recompute parity will break.
+    // PDA derivation has its own domain-separation prefix (the NSSA public-
+    // PDA prefix) but does NOT prepend a Merkle leaf or node byte. Pin that
+    // explicitly: derive via core, derive manually with the NSSA prefix, and
+    // confirm they match — while a Merkle-leaf-domained re-hash must not.
     let program_id = [0x05u8; 32];
     let create_key = [0x06u8; 32];
 
     let via_core = derive_multisig_state_pda(&program_id, &create_key);
-    let mut undomained = Vec::new();
-    undomained.extend_from_slice(&program_id);
-    undomained.extend_from_slice(SEED_MULTISIG_STATE);
-    undomained.extend_from_slice(&create_key);
-    let via_undomained = Sha256Hasher::hash(&undomained);
-    assert_eq!(via_core, via_undomained);
+    let mut lit_padded = [0u8; 32];
+    lit_padded[..13].copy_from_slice(SEED_MULTISIG_STATE);
+    let mut combined_preimage = Vec::with_capacity(64);
+    combined_preimage.extend_from_slice(&lit_padded);
+    combined_preimage.extend_from_slice(&create_key);
+    let combined: [u8; 32] = Sha256Hasher::hash(&combined_preimage);
+    let mut outer = [0u8; 96];
+    outer[..32].copy_from_slice(b"/NSSA/v0.2/AccountId/PDA/\x00\x00\x00\x00\x00\x00\x00");
+    outer[32..64].copy_from_slice(&program_id);
+    outer[64..96].copy_from_slice(&combined);
+    let via_manual: [u8; 32] = Sha256Hasher::hash(&outer);
+    assert_eq!(via_core, via_manual);
 
     // Sanity: a leaf-domained re-hash would NOT match. This pins the
     // negative — i.e. PDA derivation must not be confusable with
     // Merkle-leaf hashing.
-    let leaf_domained = Sha256Hasher::hash_leaf(&via_undomained);
+    let leaf_domained = Sha256Hasher::hash_leaf(&via_manual);
     assert_ne!(via_core, leaf_domained);
-    let node_domained = Sha256Hasher::hash_node(&via_undomained, &via_undomained);
+    let node_domained = Sha256Hasher::hash_node(&via_manual, &via_manual);
     assert_ne!(via_core, node_domained);
 
     // Same check for proposal_id.
@@ -568,8 +581,9 @@ fn bridge_kat_pinned() {
         let target_program = [0x33u8; 32];
 
         let state_pda = derive_multisig_state_pda(&program_id, &create_key);
+        // Round-5: pinned hex recomputed under SPEL-compatible derivation.
         let expected_state_pda = hex::decode(
-            "20aca105b7c2be9ec8b01915d326835c1e1eaef0b2b8677eaa5ce2557f2cb8f0",
+            "93b8f698cd4ced03f1fa0c7bd3025552f37c6f89ae9d5b482467c264eebfabe7",
         )
         .unwrap();
         assert_eq!(state_pda.as_slice(), expected_state_pda.as_slice());
@@ -577,7 +591,7 @@ fn bridge_kat_pinned() {
         let proposal_id =
             derive_proposal_id(&chain_id, &state_pda, index, action_bytes, &target_program);
         let expected_proposal_id = hex::decode(
-            "1b73cc050a06480e36ba5ca1e218a7ddbc4b9f95282377eb9836837a34a119b0",
+            "011f06dfcbbc20115b121180f32972ad28edc775c7969d4ec228a979442a179c",
         )
         .unwrap();
         assert_eq!(proposal_id.as_slice(), expected_proposal_id.as_slice());
@@ -606,7 +620,7 @@ fn bridge_kat_pinned() {
 
         let state_pda = derive_multisig_state_pda(&program_id, &create_key);
         let expected_state_pda = hex::decode(
-            "f7f600aa8ec091fdd33220d2e5356e85eb1e14f7d03f8e72afd80e120fbbaac3",
+            "18d93f1fb3524fbe933f86cf2a52d09c80885d18771eefd0efc4b88f2300fd49",
         )
         .unwrap();
         assert_eq!(state_pda.as_slice(), expected_state_pda.as_slice());
@@ -614,7 +628,7 @@ fn bridge_kat_pinned() {
         let proposal_id =
             derive_proposal_id(&chain_id, &state_pda, index, action_bytes, &target_program);
         let expected_proposal_id = hex::decode(
-            "aa1b927831968e9ba7d39fff8961d90b346649c71e974e15a7ccbd507f247c5b",
+            "b01d89ef9e4e0d05198d11a7b31cb1cbc38868ee01d4d76456b435ef78276113",
         )
         .unwrap();
         assert_eq!(proposal_id.as_slice(), expected_proposal_id.as_slice());
@@ -640,7 +654,7 @@ fn bridge_kat_pinned() {
 
         let state_pda = derive_multisig_state_pda(&program_id, &create_key);
         let expected_state_pda = hex::decode(
-            "35743218835b13a14f96b16e988387a08c41bef036c550388b3cf9dc88e4e95d",
+            "6de3a5cc83e530827b5b8f150028bf92bd4260aa94b101798ad794d72c3f0bb6",
         )
         .unwrap();
         assert_eq!(state_pda.as_slice(), expected_state_pda.as_slice());
@@ -648,7 +662,7 @@ fn bridge_kat_pinned() {
         let proposal_id =
             derive_proposal_id(&chain_id, &state_pda, index, action_bytes, &target_program);
         let expected_proposal_id = hex::decode(
-            "7bc55b80fb640cf39ee588113f6c337893c1cdbd9869f5affc2710439c8d7a59",
+            "db41d7e974dc92f89a9506a0f0cf605f88ecd0cde734a329a7b055709ec2ad8f",
         )
         .unwrap();
         assert_eq!(proposal_id.as_slice(), expected_proposal_id.as_slice());

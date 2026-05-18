@@ -94,24 +94,26 @@ fn v4_debug_release_parity_pda_derivation() {
     let nullifier_pda =
         derive_nullifier_entry_pda(&program_id, &proposal_pda, &nullifier_bytes);
 
+    // Pins below recomputed under the round-5 SPEL-compatible PDA
+    // derivation (see private_multisig_core/src/pda.rs round-5 fix note).
     assert_eq!(
         state_pda,
-        h32("20aca105b7c2be9ec8b01915d326835c1e1eaef0b2b8677eaa5ce2557f2cb8f0"),
+        h32("93b8f698cd4ced03f1fa0c7bd3025552f37c6f89ae9d5b482467c264eebfabe7"),
         "derive_multisig_state_pda drifted; check SHA-256 wiring",
     );
     assert_eq!(
         proposal_pda,
-        h32("8a2be7bd87d1e4d0d47cb556b6d0bdb6ffd24a2181c54a414129f3d6162e0789"),
+        h32("3ba8afe167f3085e215327d9d1214c4c32bd44a58d3c237e4753b623b9522cb6"),
         "derive_proposal_pda(index=0) drifted",
     );
     assert_eq!(
         vault_pda,
-        h32("f80d0b4ccc822192eeb761223cc81655d403e0c41b2e1e44776d95a1142c96d3"),
+        h32("9d00add1aa402eb1d89ace0c705bc5e71a131310e7e85973f8e0dad545d16356"),
         "derive_vault_pda drifted",
     );
     assert_eq!(
         nullifier_pda,
-        h32("a364a0965d3d2eeaecd01eeedcd55a11d400f0ab6af99f6cd3253f03ead145b2"),
+        h32("d5794bbccf85f2efb99290b7100a0fae5212a1a5ad546f430628e4fbb392c2ec"),
         "derive_nullifier_entry_pda drifted",
     );
 }
@@ -139,7 +141,7 @@ fn v4_debug_release_parity_proposal_id() {
         );
         assert_eq!(
             pid,
-            h32("1b73cc050a06480e36ba5ca1e218a7ddbc4b9f95282377eb9836837a34a119b0"),
+            h32("011f06dfcbbc20115b121180f32972ad28edc775c7969d4ec228a979442a179c"),
             "KAT1 proposal_id drifted",
         );
     }
@@ -160,7 +162,7 @@ fn v4_debug_release_parity_proposal_id() {
         );
         assert_eq!(
             pid,
-            h32("aa1b927831968e9ba7d39fff8961d90b346649c71e974e15a7ccbd507f247c5b"),
+            h32("b01d89ef9e4e0d05198d11a7b31cb1cbc38868ee01d4d76456b435ef78276113"),
             "KAT2 proposal_id drifted",
         );
     }
@@ -177,7 +179,7 @@ fn v4_debug_release_parity_proposal_id() {
         );
         assert_eq!(
             pid,
-            h32("7bc55b80fb640cf39ee588113f6c337893c1cdbd9869f5affc2710439c8d7a59"),
+            h32("db41d7e974dc92f89a9506a0f0cf605f88ecd0cde734a329a7b055709ec2ad8f"),
             "KAT3 proposal_id drifted",
         );
     }
@@ -719,12 +721,14 @@ fn v4_error_code_stable_across_threads() {
 // the bigger the explosion, the harder a silent regression is.
 #[test]
 fn v4_all_kat_vectors_reproduced() {
+    // Pins recomputed under round-5 SPEL-compatible PDA derivation.
+
     // KAT 1
     {
         let state_pda = derive_multisig_state_pda(&[0x11u8; 32], &[0x22u8; 32]);
         assert_eq!(
             state_pda,
-            h32("20aca105b7c2be9ec8b01915d326835c1e1eaef0b2b8677eaa5ce2557f2cb8f0"),
+            h32("93b8f698cd4ced03f1fa0c7bd3025552f37c6f89ae9d5b482467c264eebfabe7"),
         );
         let pid = derive_proposal_id(
             &ChainId::from_u64(1),
@@ -735,7 +739,7 @@ fn v4_all_kat_vectors_reproduced() {
         );
         assert_eq!(
             pid,
-            h32("1b73cc050a06480e36ba5ca1e218a7ddbc4b9f95282377eb9836837a34a119b0"),
+            h32("011f06dfcbbc20115b121180f32972ad28edc775c7969d4ec228a979442a179c"),
         );
     }
 
@@ -748,7 +752,7 @@ fn v4_all_kat_vectors_reproduced() {
         let state_pda = derive_multisig_state_pda(&[0xA0u8; 32], &create_key);
         assert_eq!(
             state_pda,
-            h32("f7f600aa8ec091fdd33220d2e5356e85eb1e14f7d03f8e72afd80e120fbbaac3"),
+            h32("18d93f1fb3524fbe933f86cf2a52d09c80885d18771eefd0efc4b88f2300fd49"),
         );
         let pid = derive_proposal_id(
             &ChainId::from_u64(0xABCD_EF01),
@@ -759,7 +763,7 @@ fn v4_all_kat_vectors_reproduced() {
         );
         assert_eq!(
             pid,
-            h32("aa1b927831968e9ba7d39fff8961d90b346649c71e974e15a7ccbd507f247c5b"),
+            h32("b01d89ef9e4e0d05198d11a7b31cb1cbc38868ee01d4d76456b435ef78276113"),
         );
     }
 
@@ -768,7 +772,7 @@ fn v4_all_kat_vectors_reproduced() {
         let state_pda = derive_multisig_state_pda(&[0x99u8; 32], &[0xABu8; 32]);
         assert_eq!(
             state_pda,
-            h32("35743218835b13a14f96b16e988387a08c41bef036c550388b3cf9dc88e4e95d"),
+            h32("6de3a5cc83e530827b5b8f150028bf92bd4260aa94b101798ad794d72c3f0bb6"),
         );
         let pid = derive_proposal_id(
             &ChainId::from_u64(0xDEAD_BEEF),
@@ -779,7 +783,7 @@ fn v4_all_kat_vectors_reproduced() {
         );
         assert_eq!(
             pid,
-            h32("7bc55b80fb640cf39ee588113f6c337893c1cdbd9869f5affc2710439c8d7a59"),
+            h32("db41d7e974dc92f89a9506a0f0cf605f88ecd0cde734a329a7b055709ec2ad8f"),
         );
     }
 }
@@ -883,7 +887,7 @@ fn v4_kat_roundtrip_at_load() {
             &[0x33u8; 32],
         );
         let expected =
-            h32("1b73cc050a06480e36ba5ca1e218a7ddbc4b9f95282377eb9836837a34a119b0");
+            h32("011f06dfcbbc20115b121180f32972ad28edc775c7969d4ec228a979442a179c");
         assert_eq!(pid_first, expected);
         for _ in 0..10_000 {
             let s = derive_multisig_state_pda(&[0x11u8; 32], &[0x22u8; 32]);
@@ -907,7 +911,7 @@ fn v4_kat_roundtrip_at_load() {
         }
         let state_pda = derive_multisig_state_pda(&[0xA0u8; 32], &create_key);
         let expected =
-            h32("aa1b927831968e9ba7d39fff8961d90b346649c71e974e15a7ccbd507f247c5b");
+            h32("b01d89ef9e4e0d05198d11a7b31cb1cbc38868ee01d4d76456b435ef78276113");
         for _ in 0..10_000 {
             let s = derive_multisig_state_pda(&[0xA0u8; 32], &create_key);
             assert_eq!(s, state_pda);
@@ -926,7 +930,7 @@ fn v4_kat_roundtrip_at_load() {
     {
         let state_pda = derive_multisig_state_pda(&[0x99u8; 32], &[0xABu8; 32]);
         let expected =
-            h32("7bc55b80fb640cf39ee588113f6c337893c1cdbd9869f5affc2710439c8d7a59");
+            h32("db41d7e974dc92f89a9506a0f0cf605f88ecd0cde734a329a7b055709ec2ad8f");
         for _ in 0..10_000 {
             let s = derive_multisig_state_pda(&[0x99u8; 32], &[0xABu8; 32]);
             assert_eq!(s, state_pda);
