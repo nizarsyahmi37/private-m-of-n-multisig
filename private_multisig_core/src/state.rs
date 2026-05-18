@@ -86,6 +86,26 @@ impl MultisigState {
 pub struct Proposal {
     /// Bytes of the action the multisig will execute via `ChainedCall` once
     /// threshold approvals are collected. Capped at [`MAX_ACTION_BYTES_LEN`].
+    ///
+    /// # Wire-format contract with the callee
+    ///
+    /// `execute` emits these bytes as `ChainedCall.instruction_data`
+    /// encoded via `risc0_zkvm::serde::to_vec(&action_bytes)` — i.e. a
+    /// `Vec<u8>` wrapped in risc0-serde's word-packed format with a
+    /// length prefix. The runtime delivers the resulting `Vec<u32>` to
+    /// the callee's `env::read::<T>()`. For this to round-trip, the
+    /// callee MUST declare its instruction type as `Vec<u8>` and run
+    /// its own inner decode (typically Borsh) on the resulting byte
+    /// payload. Callees with typed instruction enums (e.g. an `enum
+    /// Token { Transfer { ... } }`) will deserialize garbage because
+    /// risc0-serde reads the length prefix as a field discriminant.
+    ///
+    /// Practically: the proposer chooses a callee that follows this
+    /// contract, and the SDK pre-encodes the typed-callee-instruction
+    /// to bytes (Borsh) before calling `propose`. The verifier itself
+    /// does not validate the encoding — it just forwards the bytes.
+    /// See the red-team finding R5-T2 (round 5 validation) for the
+    /// full attack analysis.
     pub action_bytes: alloc::vec::Vec<u8>,
     /// Program the `ChainedCall` is dispatched to.
     pub target_program: AccountId,
