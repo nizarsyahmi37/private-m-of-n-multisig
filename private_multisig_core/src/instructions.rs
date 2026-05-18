@@ -8,6 +8,8 @@
 //!
 //! Variants:
 //! - [`Instruction::CreateMultisig`] — initialize a fresh instance.
+//! - [`Instruction::CreateVault`] — initialize the vault PDA for an
+//!   existing instance and claim its ownership for the multisig program.
 //! - [`Instruction::Propose`] — open a new proposal at the next free index.
 //! - [`Instruction::Approve`] — submit a Risc0 receipt asserting member
 //!   approval. Per PLAN.md step 4, the verifier extracts `public_inputs`
@@ -22,8 +24,9 @@ use crate::proof::ApprovePublicInputs;
 
 /// Top-level instruction dispatched by the SPEL verifier program. Borsh-
 /// serialized with a single-byte discriminant: `CreateMultisig=0`,
-/// `Propose=1`, `Approve=2`, `Execute=3`. Discriminants are part of the
-/// on-chain ABI and must never be reordered; new variants append.
+/// `Propose=1`, `Approve=2`, `Execute=3`, `CreateVault=4`. Discriminants
+/// are part of the on-chain ABI and must never be reordered; new variants
+/// append.
 #[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub enum Instruction {
     /// Initialize a new multisig instance under `create_key`, frozen at
@@ -65,6 +68,17 @@ pub enum Instruction {
     Execute {
         create_key: CreateKey,
         index: u64,
+    },
+    /// Initialize the vault PDA for an instance and claim its ownership
+    /// for the verifier program. Round-5 fix for R5-T1: without this
+    /// instruction the vault would have `program_owner = DEFAULT_PROGRAM_ID`
+    /// and the chained call in `Execute` would silently no-op at the
+    /// runtime's balance-authorization check.
+    ///
+    /// Appended at discriminant 4 to preserve the stable wire format of
+    /// the four MVP variants above.
+    CreateVault {
+        create_key: CreateKey,
     },
 }
 
@@ -135,6 +149,16 @@ mod tests {
     }
 
     #[test]
+    fn create_vault_borsh_round_trip() {
+        let ix = Instruction::CreateVault {
+            create_key: [0xAA; 32],
+        };
+        let bytes = to_vec(&ix).unwrap();
+        let decoded = Instruction::try_from_slice(&bytes).unwrap();
+        assert_eq!(ix, decoded);
+    }
+
+    #[test]
     fn discriminants_are_stable() {
         // Borsh enum encoding: first byte is the variant index.
         // CreateMultisig = 0, Propose = 1, Approve = 2, Execute = 3.
@@ -175,6 +199,12 @@ mod tests {
                 index: 0,
             }),
             3
+        );
+        assert_eq!(
+            first_byte(&Instruction::CreateVault {
+                create_key: [0; 32],
+            }),
+            4
         );
     }
 

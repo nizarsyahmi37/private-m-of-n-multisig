@@ -79,6 +79,34 @@ mod private_multisig {
         Ok(SpelOutput::execute(vec![state, admin], vec![]))
     }
 
+    /// Initialize the vault PDA for an existing multisig instance.
+    ///
+    /// Without this handler the vault would have `program_owner =
+    /// DEFAULT_PROGRAM_ID` until something else wrote it, and the chained
+    /// call in `execute` would silently fail at the runtime's balance-
+    /// authorization check (R5-T1). The `init` constraint plus `pda = [...]`
+    /// makes SPEL auto-claim the vault under this program with
+    /// `Claim::Pda(combined_seed)`, so subsequent `execute` calls can
+    /// authorize the vault in chained calls under the same PdaSeed.
+    ///
+    /// Idempotency: `init` fails-if-exists, so a second `create_vault` for
+    /// the same `(create_key)` reverts cleanly. The handler also verifies
+    /// the `state` PDA exists by claim-binding it, so a vault cannot be
+    /// created without first running `create_multisig`.
+    #[instruction]
+    pub fn create_vault(
+        #[account(pda = [literal("pmsig_state__"), arg("create_key")])]
+        state: AccountWithMetadata,
+        #[account(init, pda = [literal("pmsig_vault__"), arg("create_key")])]
+        vault: AccountWithMetadata,
+        #[account(signer)]
+        admin: AccountWithMetadata,
+        create_key: [u8; 32],
+    ) -> SpelResult {
+        let _ = create_key;
+        Ok(SpelOutput::execute(vec![state, vault, admin], vec![]))
+    }
+
     /// Open a proposal under an active instance.
     ///
     /// Validates `action_bytes` length, bumps `state.proposal_count`, writes
@@ -455,12 +483,23 @@ mod private_multisig {
     }
 
     /// Reject a proposal. Post-MVP placeholder per PLAN.md step 4.
+    ///
+    /// Gated behind a `state` PDA seed so this handler can only emit a
+    /// receipt against an actual multisig instance — without the binding,
+    /// any signer could spam the chain with valid `reject` receipts for
+    /// nonexistent multisigs and poison downstream indexers (R5-T5).
     #[instruction]
     pub fn reject(
+        #[account(pda = [literal("pmsig_state__"), arg("create_key")])]
+        state: AccountWithMetadata,
         #[account(signer)]
         rejector: AccountWithMetadata,
+        create_key: [u8; 32],
     ) -> SpelResult {
-        // TODO(post-MVP): nullifier-domain-separated rejection vote.
-        Ok(SpelOutput::execute(vec![rejector], vec![]))
+        // TODO(post-MVP): nullifier-domain-separated rejection vote against
+        // a specific (state, proposal). The MVP shape just pins the state
+        // PDA so consumers can trust the receipt refers to a real instance.
+        let _ = create_key;
+        Ok(SpelOutput::execute(vec![state, rejector], vec![]))
     }
 }
