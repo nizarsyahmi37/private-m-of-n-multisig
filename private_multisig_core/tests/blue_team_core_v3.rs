@@ -188,12 +188,24 @@ fn v3_from_code_1003_to_invalid_threshold() {
         Some(CoreError::InvalidThreshold),
         "from_code(1003) must round-trip to InvalidThreshold"
     );
-    // 1004 is the next unused slot; from_code must reject it so a future
+    // 1004 is SerializationError, 1005 is ArithmeticOverflow (round-5
+    // split of the previously-overloaded InstanceNotActive path); 1006 is
+    // the next unused slot — from_code must reject it so a future
     // accidental renumbering of an upper-class variant is caught here.
     assert_eq!(
         CoreError::from_code(1004),
+        Some(CoreError::SerializationError),
+        "from_code(1004) must round-trip to SerializationError"
+    );
+    assert_eq!(
+        CoreError::from_code(1005),
+        Some(CoreError::ArithmeticOverflow),
+        "from_code(1005) must round-trip to ArithmeticOverflow"
+    );
+    assert_eq!(
+        CoreError::from_code(1006),
         None,
-        "from_code(1004) must remain unmapped"
+        "from_code(1006) must remain unmapped"
     );
 }
 

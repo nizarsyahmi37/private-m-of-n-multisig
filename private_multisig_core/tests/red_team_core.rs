@@ -638,7 +638,7 @@ fn attack_6a_every_variant_has_distinct_code() {
 #[test]
 fn attack_6b_from_code_rejects_undocumented_0_to_5000() {
     let valid: std::collections::HashSet<u32> = [
-        1000, 1001, 1002, 1003, 2000, 2001, 2002, 2003, 3000, 4000, 4001,
+        1000, 1001, 1002, 1003, 1004, 1005, 2000, 2001, 2002, 2003, 3000, 4000, 4001,
     ]
     .into_iter()
     .collect();

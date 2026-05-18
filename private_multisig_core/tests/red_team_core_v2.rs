@@ -85,8 +85,20 @@ fn v2_attack_1a_finding2_from_code_boundary() {
         Some(CoreError::InvalidThreshold),
         "FINDING-V2-A closure: code 1003 maps to InvalidThreshold",
     );
-    // The flanking codes also stay clean.
-    assert_eq!(CoreError::from_code(1004), None);
+    // 1004 and 1005 are now SerializationError and ArithmeticOverflow
+    // respectively (round-5 split of the previously-overloaded
+    // InstanceNotActive path). 1006 onward stays clean.
+    assert_eq!(
+        CoreError::from_code(1004),
+        Some(CoreError::SerializationError),
+        "round-5 split: code 1004 maps to SerializationError",
+    );
+    assert_eq!(
+        CoreError::from_code(1005),
+        Some(CoreError::ArithmeticOverflow),
+        "round-5 split: code 1005 maps to ArithmeticOverflow",
+    );
+    assert_eq!(CoreError::from_code(1006), None);
     assert_eq!(CoreError::from_code(1500), None);
     assert_eq!(CoreError::from_code(1999), None);
 }

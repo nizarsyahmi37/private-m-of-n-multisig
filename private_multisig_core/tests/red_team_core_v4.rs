@@ -574,7 +574,9 @@ fn v4_attack_11a_no_cross_round_from_code_contradiction() {
         (1001, Some(CoreError::ProposalExpiredOrExecuted)),
         (1002, Some(CoreError::ActionBytesTooLong)),
         (1003, Some(CoreError::InvalidThreshold)),
-        (1004, None),
+        (1004, Some(CoreError::SerializationError)),
+        (1005, Some(CoreError::ArithmeticOverflow)),
+        (1006, None),
         (1999, None),
         (2000, Some(CoreError::InvalidReceipt)),
         (2001, Some(CoreError::ImageIdMismatch)),
@@ -1199,9 +1201,11 @@ fn v4_attack_13n_proposal_id_known_answer_under_zero_inputs() {
 /// added in a high-numbered slot (e.g. 12345) surfaces.
 #[test]
 fn v4_attack_13o_from_code_sparse_over_65k() {
-    let documented: HashSet<u32> = [1000, 1001, 1002, 1003, 2000, 2001, 2002, 2003, 3000, 4000, 4001]
-        .into_iter()
-        .collect();
+    let documented: HashSet<u32> = [
+        1000, 1001, 1002, 1003, 1004, 1005, 2000, 2001, 2002, 2003, 3000, 4000, 4001,
+    ]
+    .into_iter()
+    .collect();
     for code in 0u32..=65_535 {
         let got = CoreError::from_code(code);
         if documented.contains(&code) {

@@ -121,13 +121,23 @@ fn e1002_from_code_round_trip() {
         Some(CoreError::ActionBytesTooLong)
     );
 
-    // 1003 is now InvalidThreshold (FINDING-V2-A); 1004 is the next free
-    // slot in E1xxx — must NOT lift to any variant.
+    // 1003 is InvalidThreshold (FINDING-V2-A), 1004 is SerializationError
+    // (round-5 fix: split serde paths from InstanceNotActive), 1005 is
+    // ArithmeticOverflow (same round-5 split for checked_add paths). 1006
+    // is the next free slot in E1xxx — must NOT lift to any variant.
     assert_eq!(
         CoreError::from_code(1003),
         Some(CoreError::InvalidThreshold)
     );
-    assert_eq!(CoreError::from_code(1004), None);
+    assert_eq!(
+        CoreError::from_code(1004),
+        Some(CoreError::SerializationError)
+    );
+    assert_eq!(
+        CoreError::from_code(1005),
+        Some(CoreError::ArithmeticOverflow)
+    );
+    assert_eq!(CoreError::from_code(1006), None);
 }
 
 // ===========================================================================
