@@ -215,25 +215,20 @@ fn bench_borsh_round_trip(c: &mut Criterion) {
         );
     }
 
-    for &receipt_len in &[100usize, 1000] {
-        let ix_approve = Instruction::Approve {
-            create_key: CREATE_KEY,
-            index: 7,
-            receipt: vec![0xDEu8; receipt_len],
-            public_inputs: inputs,
-        };
-        group.bench_with_input(
-            BenchmarkId::new("Instruction::Approve", receipt_len),
-            &ix_approve,
-            |b, ix| {
-                b.iter(|| {
-                    let bytes = to_vec(black_box(ix)).unwrap();
-                    let decoded = Instruction::try_from_slice(&bytes).unwrap();
-                    black_box(decoded)
-                });
-            },
-        );
-    }
+    // Round 5 dropped Instruction::Approve.receipt — the wire is now a
+    // fixed 137 bytes regardless of any payload. One bench is enough.
+    let ix_approve = Instruction::Approve {
+        create_key: CREATE_KEY,
+        index: 7,
+        public_inputs: inputs,
+    };
+    group.bench_function("Instruction::Approve", |b| {
+        b.iter(|| {
+            let bytes = to_vec(black_box(&ix_approve)).unwrap();
+            let decoded = Instruction::try_from_slice(&bytes).unwrap();
+            black_box(decoded)
+        });
+    });
 
     let ix_execute = Instruction::Execute {
         create_key: CREATE_KEY,
