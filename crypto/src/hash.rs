@@ -62,6 +62,7 @@ pub trait Hasher {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct Sha256Hasher;
 
 impl Hasher for Sha256Hasher {

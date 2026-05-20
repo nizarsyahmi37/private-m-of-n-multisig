@@ -1,0 +1,57 @@
+[package]
+name = "private_multisig_sdk"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[features]
+default = ["std"]
+# `std` enables everything (including Risc0 proving if the prover feature is
+# also enabled). Without `std`, only Member, IdentityCommitment, and builder
+# types compile.
+std = ["dep:risc0-zkvm"]
+# `prover` gates the Risc0 proving module. Requires the Risc0 toolchain
+# to be installed and network access for artifact download. Enable explicitly:
+# `cargo build -p private_multisig_sdk --features prover`
+prover = ["dep:risc0-zkvm"]
+
+[dependencies]
+# Cryptographic core (Merkle, nullifier, identity commitment)
+crypto = { path = "../crypto", default-features = false }
+
+# Shared types: Instruction, state, PDA derivation, ApprovePublicInputs
+private_multisig_core = { path = "../private_multisig_core" }
+
+# Zero-knowledge proof generation (gated behind the `prover` feature)
+# When enabled, this pulls in the full Risc0 toolchain (requires network access
+# for artifact download). Without `prover`, this crate compiles without
+# Risc0 — useful for type-checking and testing the member/builder/session modules.
+risc0-zkvm = { version = "3.0", default-features = false, optional = true }
+
+# Secret management: wraps sk in Secret<T>, auto-Zeroize on drop
+secrecy = "0.8"
+
+# Local key-value store for resumable ApprovalSession persistence
+sled = "0.34"
+
+# Password-based key derivation + AEAD for keystore encryption
+argon2 = "0.5"
+chacha20poly1305 = "0.10"
+zeroize = { version = "1", features = ["derive"] }
+
+# Error types
+thiserror = { workspace = true }
+
+# Serialization for wire and storage formats
+borsh = { workspace = true }
+
+# Randomness for key and salt generation
+rand = { workspace = true }
+
+# Platform-specific home directory lookup
+dirs = "5"
+
+[dev-dependencies]
+tempfile = "3"
