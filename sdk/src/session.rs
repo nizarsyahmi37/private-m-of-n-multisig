@@ -192,6 +192,37 @@ impl ApprovalSession {
     }
 
     fn transition_to(&mut self, next: SessionStatus) {
+        // Enforce the documented state machine (BT-11 fix):
+        // Drafted -> Proving -> Proved -> Submitted -> Confirmed
+        // Any state can transition to Failed
+        // Submitted -> Proved only via demote_on_reorg (special-cased below)
+        // Proved -> Proving (retry)
+        match (&self.status, &next) {
+            // Valid forward transitions
+            (SessionStatus::Drafted, SessionStatus::Proving) => {}
+            (SessionStatus::Proving, SessionStatus::Proved) => {}
+            (SessionStatus::Proved, SessionStatus::Submitted) => {}
+            (SessionStatus::Submitted, SessionStatus::Confirmed) => {}
+            // Failed is terminal — no transitions from it
+            (SessionStatus::Failed, _) => {
+                panic!("invalid session transition: Failed is terminal")
+            }
+            // Retry: reproving from Proved is acceptable
+            (SessionStatus::Proved, SessionStatus::Proving) => {}
+            // Submitted -> Proved is only valid via demote_on_reorg, not via this method
+            (SessionStatus::Submitted, SessionStatus::Proved) => {
+                panic!("invalid session transition: use demote_on_reorg() instead")
+            }
+            // Backward transitions
+            (SessionStatus::Confirmed, _) => {
+                panic!("invalid session transition: Confirmed is terminal")
+            }
+            // All other transitions are invalid
+            _ => panic!(
+                "invalid session transition: {:?} -> {:?}",
+                self.status, next
+            ),
+        }
         self.status = next;
         self.last_updated = current_unix_seconds();
     }
@@ -229,6 +260,9 @@ pub struct SessionStore {
 }
 
 struct Inner {
+    // `db` must outlive `tree` (sled invariant). Keeping it here ensures
+    // drop order: `Inner` drops `db` after `tree` (field order = drop order).
+    #[allow(dead_code)]
     db: Db,
     tree: Tree,
 }
@@ -440,6 +474,7 @@ mod tests {
 
     #[test]
     fn session_transitions_to_proved() {
+        // Session starts in Drafted, must go through Proving to reach Proved.
         let session = ApprovalSession::new(
             [0xAA; 32],
             [0xBB; 32],
@@ -448,6 +483,8 @@ mod tests {
             [0x22; 32],
         );
         let mut s = session;
+        s.mark_proving();
+        assert_eq!(s.status, SessionStatus::Proving);
         s.mark_proved(vec![0x99; 64]);
         assert_eq!(s.status, SessionStatus::Proved);
         assert!(s.receipt.is_some());
@@ -455,6 +492,7 @@ mod tests {
 
     #[test]
     fn session_reorg_demotion() {
+        // Full state machine walk: Drafted -> Proving -> Proved -> Submitted.
         let mut session = ApprovalSession::new(
             [0xAA; 32],
             [0xBB; 32],
@@ -462,6 +500,8 @@ mod tests {
             [0x11; 96],
             [0x22; 32],
         );
+        session.mark_proving();
+        session.mark_proved(vec![0x99; 64]);
         session.mark_submitted(100);
         assert_eq!(session.status, SessionStatus::Submitted);
 

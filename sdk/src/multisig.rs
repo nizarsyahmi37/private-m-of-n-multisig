@@ -87,6 +87,12 @@ impl MultisigBuilder {
         let n = u32::try_from(self.added.len())
             .map_err(|_| SdkError::ThresholdExceedsMembers)?;
 
+        // Check m == 0 or n == 0 first (BT-2 fix: dedicated InvalidThreshold)
+        if self.m == 0 || n == 0 {
+            return Err(SdkError::InvalidThreshold);
+        }
+
+        // InsufficientMembers: check after m/n validity so the error code is accurate
         if self.added.len() < self.m as usize {
             return Err(SdkError::InsufficientMembers {
                 m: self.m,
@@ -94,7 +100,8 @@ impl MultisigBuilder {
             });
         }
 
-        if self.m == 0 || n == 0 || u32::from(self.m) > n {
+        // m > n: distinct error
+        if u32::from(self.m) > n {
             return Err(SdkError::ThresholdExceedsMembers);
         }
 
@@ -314,5 +321,45 @@ mod tests {
         let pid0 = snap.derive_proposal_id(0, action, &target);
         let pid1 = snap.derive_proposal_id(1, action, &target);
         assert_ne!(pid0, pid1);
+    }
+
+    // BT-5: extreme threshold boundary tests
+
+    #[test]
+    fn builder_accepts_max_threshold_min_members() {
+        // m = u8::MAX (255), n = 255 — maximal threshold with tight membership
+        let mut builder = crate::multisig::MultisigBuilder::new(255);
+        for _ in 0..255 {
+            builder.add_member(crate::member::Member::new().unwrap().commitment()).unwrap();
+        }
+        let result = builder.finalize().unwrap();
+        assert_eq!(result.m, 255);
+        assert_eq!(result.n, 255);
+    }
+
+    #[test]
+    fn builder_accepts_minimal_1_of_1() {
+        // Minimal valid multisig: m=1, n=1
+        let mut builder = crate::multisig::MultisigBuilder::new(1);
+        builder.add_member(crate::member::Member::new().unwrap().commitment()).unwrap();
+        let result = builder.finalize().unwrap();
+        assert_eq!(result.m, 1);
+        assert_eq!(result.n, 1);
+    }
+
+    #[test]
+    fn builder_rejects_m_zero() {
+        let mut builder = crate::multisig::MultisigBuilder::new(0);
+        builder.add_member(crate::member::Member::new().unwrap().commitment()).unwrap();
+        let result = builder.finalize();
+        assert!(matches!(result, Err(SdkError::InvalidThreshold)));
+    }
+
+    #[test]
+    fn builder_rejects_n_zero() {
+        let mut builder = crate::multisig::MultisigBuilder::new(1);
+        // 0 members for a 1-of-N multisig — n == 0
+        let result = builder.finalize();
+        assert!(matches!(result, Err(SdkError::InvalidThreshold)));
     }
 }

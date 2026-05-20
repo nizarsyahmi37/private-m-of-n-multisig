@@ -30,7 +30,7 @@ use chacha20poly1305::aead::AeadInPlace;
 use chacha20poly1305::KeyInit;
 use rand::rngs::OsRng;
 use rand::RngCore;
-use secrecy::{ExposeSecret, Secret};
+use secrecy::Secret;
 use zeroize::Zeroize;
 
 use crypto::hash::Sha256Hasher;
@@ -150,10 +150,14 @@ impl Member {
 
         let result = cipher.encrypt_in_place(nonce, aad, &mut in_out);
         if result.is_err() {
+            // Zeroize plaintext before returning (RT-1 fix)
+            in_out.zeroize();
             kek.zeroize();
             return Err(SdkError::KeystoreSerializationFailed);
         }
-        // in_out now holds ciphertext || tag (80 bytes)
+        // in_out now holds ciphertext || tag (80 bytes) — plaintext is gone.
+        // The Vec is moved into Keystore.ciphertext, taking the encrypted bytes
+        // with it. No further zeroization needed here.
 
         // Zeroize derived key material.
         kek.zeroize();
@@ -282,6 +286,7 @@ impl Drop for Member {
 
 #[cfg(test)]
 mod tests {
+    use secrecy::ExposeSecret;
     use super::*;
 
     #[test]

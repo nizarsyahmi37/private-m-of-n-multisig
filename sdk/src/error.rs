@@ -40,6 +40,9 @@ pub enum SdkError {
     ProposalIndexMismatch,
 
     // --- Multisig ---
+    #[error("E5019: invalid threshold (m == 0 or n == 0)")]
+    InvalidThreshold,
+
     #[error("E5020: member count below threshold (need m members)")]
     InsufficientMembers { m: u8, n: u32 },
 
@@ -115,6 +118,7 @@ impl SdkError {
             SdkError::ActionBytesHashMismatch => 5011,
             SdkError::TargetProgramHashMismatch => 5012,
             SdkError::ProposalIndexMismatch => 5013,
+            SdkError::InvalidThreshold => 5019,
             SdkError::InsufficientMembers { .. } => 5020,
             SdkError::ThresholdExceedsMembers => 5021,
             SdkError::DuplicateMember => 5022,

@@ -50,8 +50,8 @@ use crate::multisig::MultisigStateSnapshot;
 /// the auto-generated `Methods` enum first; only falls back here if the
 /// methods crate hasn't been built yet (e.g. fresh `cargo check`).
 const APPROVE_CIRCUIT_IMAGE_ID_PINNED: [u32; 8] = [
-    0xA4D1_2C8D, 0xE6B2_8C9F, 0x1F3D_5A7B, 0x9C4E_8B2D, 0x7A3F_1C5E, 0x8B9D_4E2F,
-    0x5C3A_7D1B, 0x2E8F_9C4A,
+    763539168, 1016753994, 1524795730, 877238783, 502029817, 1373722446,
+    3332462251, 4034702986,
 ];
 
 /// Risc0 guest proof generator for the approval circuit.
@@ -141,6 +141,14 @@ impl ApprovalProver {
             return Err(SdkError::ActionBytesTooLarge);
         }
 
+        // --- Proposal index freshness check (RT-7 fix): reject stale index ---
+        // A stale snapshot with an old proposal_count could allow approval of a
+        // superseded proposal. Verify index < snapshot.proposal_count so approvals
+        // can only target proposals that exist at the time of this session's creation.
+        if index >= snapshot.proposal_count {
+            return Err(SdkError::ProposalIndexMismatch);
+        }
+
         // --- Merkle proof validation: fail fast before expensive proving ---
         if !verify_proof::<crypto::hash::Sha256Hasher>(
             &snapshot.members_root,
@@ -151,11 +159,9 @@ impl ApprovalProver {
         }
 
         // --- proposal_id recompute: verify against what the circuit will commit ---
-        let local_proposal_id =
-            snapshot.derive_proposal_id(index, action_bytes, target_program);
-        if local_proposal_id == [0u8; 32] {
-            return Err(SdkError::ActionBytesHashMismatch);
-        }
+        // (removed the zero-check — SHA-256 of a non-trivial preimage is
+        // astronomically unlikely to produce [0;32], and the check misclassified
+        // the error as ActionBytesHashMismatch per BT-4) ---
 
         // --- Extract raw (sk, salt) from Member ---
         let (sk, salt) = member.witness();
