@@ -32,12 +32,10 @@
 //! total private witness: 788 bytes
 //! ```
 
-use borsh::{BorshDeserialize, BorshSerialize};
 use crypto::hash::HASH_LEN;
 use crypto::merkle::{verify_proof, MerkleProof, MERKLE_DEPTH};
 use private_multisig_core::proof::ApprovePublicInputs;
-use risc0_zkvm::serde::to_vec;
-use risc0_zkvm::{ExecutorEnv, Receipt};
+use risc0_zkvm::{default_prover, ExecutorEnv, Receipt};
 use std::env;
 use zeroize::Zeroize;
 
@@ -45,11 +43,11 @@ use crate::error::SdkError;
 use crate::member::Member;
 use crate::multisig::MultisigStateSnapshot;
 
-/// Fallback image ID that matches `methods/guest/src/bin/approve_circuit.rs`
-/// when the workspace last built cleanly. The `try_image_id()` method probes
-/// the auto-generated `Methods` enum first; only falls back here if the
-/// methods crate hasn't been built yet (e.g. fresh `cargo check`).
-const APPROVE_CIRCUIT_IMAGE_ID_PINNED: [u32; 8] = [
+/// Image ID of the approve circuit, pinned locally so the SDK does not need to
+/// depend on the heavy `methods` crate (whose build invokes the Risc0 RISC-V
+/// toolchain). `sdk/tests/image_id_pin_parity.rs` cross-checks this against
+/// `private_multisig_program::APPROVE_CIRCUIT_IMAGE_ID` so any drift fails CI.
+pub(crate) const APPROVE_CIRCUIT_IMAGE_ID_PINNED: [u32; 8] = [
     763539168, 1016753994, 1524795730, 877238783, 502029817, 1373722446,
     3332462251, 4034702986,
 ];
@@ -74,8 +72,8 @@ const APPROVE_CIRCUIT_IMAGE_ID_PINNED: [u32; 8] = [
 /// let nullifier = prover.nullifier();
 /// ```
 ///
-/// The `prove()` output is `risc0_zkvm::serde::to_vec(&Receipt)` — the same
-/// encoding the verifier host receives from the LEZ sequencer.
+/// The `prove()` output is `bincode::serialize(&Receipt)` — the format used
+/// for resumable session persistence (`ApprovalSession::receipt`).
 /// `public_inputs_bytes()` gives the 96-byte payload that goes into
 /// `Instruction::Approve.public_inputs`.
 ///
@@ -100,7 +98,11 @@ pub struct ApprovalProver {
     action_bytes: Vec<u8>,
     /// The target program (needed to recompute proposal_id locally).
     target_program: private_multisig_core::AccountId,
-    /// Encoded receipt from the last `prove()` call.
+    /// Compiled RISC-V ELF of the approve circuit. Caller-supplied so the SDK
+    /// can compile without pulling in the heavy `methods` crate. Typically
+    /// sourced from `private_multisig_program::APPROVE_CIRCUIT_ELF`.
+    elf: &'static [u8],
+    /// Encoded receipt from the last `prove()` call (bincode-serialized).
     receipt: Option<Vec<u8>>,
 }
 
@@ -128,6 +130,9 @@ impl ApprovalProver {
     /// - `action_bytes`: raw bytes stored in the on-chain proposal account.
     /// - `target_program`: target of the `ChainedCall` on execute.
     /// - `merkle_proof`: inclusion proof for this member's commitment.
+    /// - `elf`: compiled approve-circuit ELF bytes — pass
+    ///   `private_multisig_program::APPROVE_CIRCUIT_ELF` from a downstream
+    ///   binary that depends on the program crate.
     pub fn new(
         member: &Member,
         snapshot: &MultisigStateSnapshot,
@@ -135,6 +140,7 @@ impl ApprovalProver {
         action_bytes: &[u8],
         target_program: &private_multisig_core::AccountId,
         merkle_proof: &MerkleProof,
+        elf: &'static [u8],
     ) -> Result<Self, SdkError> {
         // --- action_bytes length check ---
         if action_bytes.len() > private_multisig_core::state::MAX_ACTION_BYTES_LEN {
@@ -178,6 +184,7 @@ impl ApprovalProver {
             index,
             action_bytes: action_bytes.to_vec(),
             target_program: *target_program,
+            elf,
             receipt: None,
         })
     }
@@ -200,10 +207,9 @@ impl ApprovalProver {
             .derive_proposal_id(self.index, &self.action_bytes, &self.target_program);
 
         let receipt = self.run_risc0_prover(proposal_id)?;
-        let encoded =
-            to_vec(&receipt).map_err(|e| SdkError::ProofGenerationFailed(format!(
-                "risc0 serde encode failed: {e}"
-            )))?;
+        let encoded = bincode::serialize(&receipt).map_err(|e| {
+            SdkError::ProofGenerationFailed(format!("bincode encode failed: {e}"))
+        })?;
         self.receipt = Some(encoded.clone());
         Ok(encoded)
     }
@@ -245,80 +251,60 @@ impl ApprovalProver {
         self.compute_nullifier(proposal_id)
     }
 
-    /// Internal: build input buffer and call Risc0 prover.
+    /// Internal: stream the canonical 788-byte witness into the guest and
+    /// run the Risc0 prover against the pinned image ID.
+    ///
+    /// The witness layout matches `private_multisig_program::pack_approve_witness`
+    /// — see that crate for the byte-exact layout pinned by the
+    /// `witness_wire_format` test suite.
     fn run_risc0_prover(&self, proposal_id: [u8; 32]) -> Result<Receipt, SdkError> {
-        const PUBLIC_PREFIX: usize = 64;
-        const WITNESS_SK: usize = 32;
-        const WITNESS_SALT: usize = 32;
-        const WITNESS_SIBLINGS: usize = MERKLE_DEPTH * HASH_LEN;
-        const WITNESS_DIRECTIONS: usize = MERKLE_DEPTH;
-        let total = PUBLIC_PREFIX + WITNESS_SK + WITNESS_SALT + WITNESS_SIBLINGS + WITNESS_DIRECTIONS;
-
-        let mut input = Vec::with_capacity(total);
-
-        // Public prefix: members_root || proposal_id
-        input.extend_from_slice(&self.snapshot.members_root);
-        input.extend_from_slice(&proposal_id);
-
-        // Private witness: sk + salt
-        input.extend_from_slice(&self.sk);
-        input.extend_from_slice(&self.salt);
-
-        // Private witness: flattened siblings (level order)
-        input.extend_from_slice(&self.siblings_flat.as_slice());
-
-        // Private witness: direction bytes
-        for &d in &self.directions_flat {
-            input.push(if d { 1u8 } else { 0u8 });
+        let mut siblings_flat = [0u8; MERKLE_DEPTH * HASH_LEN];
+        for (level, sibling) in self.siblings_flat.iter().enumerate() {
+            let start = level * HASH_LEN;
+            siblings_flat[start..start + HASH_LEN].copy_from_slice(sibling);
         }
-
-        debug_assert_eq!(input.len(), total, "input buffer size mismatch");
+        let mut direction_bytes = [0u8; MERKLE_DEPTH];
+        for (level, bit) in self.directions_flat.iter().enumerate() {
+            direction_bytes[level] = u8::from(*bit);
+        }
+        let mut public_prefix = [0u8; 64];
+        public_prefix[..32].copy_from_slice(&self.snapshot.members_root);
+        public_prefix[32..].copy_from_slice(&proposal_id);
 
         let env = ExecutorEnv::builder()
-            .add_input(&input)
+            .write_slice(&public_prefix)
+            .write_slice(&self.sk)
+            .write_slice(&self.salt)
+            .write_slice(&siblings_flat)
+            .write_slice(&direction_bytes)
             .build()
-            .map_err(|e| SdkError::ProofGenerationFailed(format!(
-                "ExecutorEnv build failed: {e}"
-            )))?;
+            .map_err(|e| {
+                SdkError::ProofGenerationFailed(format!("ExecutorEnv build failed: {e}"))
+            })?;
 
         let image_id = Self::image_id();
 
-        let receipt = risc0_zkvm::prove::prove(env, image_id)
-            .map_err(|e| SdkError::ProofGenerationFailed(format!(
-                "risc0 prove() failed: {e}"
-            )))?;
+        let prove_info = default_prover().prove(env, self.elf).map_err(|e| {
+            SdkError::ProofGenerationFailed(format!("risc0 prove() failed: {e}"))
+        })?;
+        let receipt = prove_info.receipt;
 
-        // Local self-verification guards against prover bugs.
-        // Skipped in DEV_MODE (the fake prover doesn't produce verifiable receipts).
         if !Self::is_dev_mode() {
-            receipt.verify(image_id)
-                .map_err(|e| SdkError::ReceiptVerificationFailed(format!(
+            receipt.verify(image_id).map_err(|e| {
+                SdkError::ReceiptVerificationFailed(format!(
                     "local receipt verify() failed: {e}"
-                )))?;
+                ))
+            })?;
         }
 
         Ok(receipt)
     }
 
-    /// Resolve the approve-circuit image ID.
-    ///
-    /// Tries the auto-generated `Methods::APPROVE_CIRCUIT` enum first (available
-    /// when `risc0_build::embed_methods()` was run). Falls back to the pinned
-    /// constant if that fails, which lets the SDK compile independently of the
-    /// guest build order.
-    fn image_id() -> [u32; 8] {
-        Self::try_methods_image_id().unwrap_or(APPROVE_CIRCUIT_IMAGE_ID_PINNED)
-    }
-
-    /// Probe for the `Methods::APPROVE_CIRCUIT` image ID.
-    ///
-    /// Returns `None` until the `methods` crate is properly integrated as
-    /// a workspace member. When available, callers should update this to
-    /// return `Some(methods::APPROVE_CIRCUIT_ID)`.
-    fn try_methods_image_id() -> Option<[u32; 8]> {
-        // Integration note: once `methods/` is a proper workspace member,
-        // replace this with `Some(methods::APPROVE_CIRCUIT_ID)`.
-        None
+    /// The pinned approve-circuit image ID. A dev-dep parity test
+    /// (`sdk/tests/image_id_pin_parity.rs`) verifies this stays in lockstep
+    /// with `private_multisig_program::APPROVE_CIRCUIT_IMAGE_ID`.
+    pub(crate) fn image_id() -> [u32; 8] {
+        APPROVE_CIRCUIT_IMAGE_ID_PINNED
     }
 
     /// True if `RISC0_DEV_MODE` is set to a truthy value.
@@ -346,6 +332,14 @@ impl ApprovalProver {
     }
 }
 
+/// Test-only accessor for `APPROVE_CIRCUIT_IMAGE_ID_PINNED`. Used by
+/// `tests/image_id_pin_parity.rs` to cross-check against the canonical id
+/// re-exported from `private_multisig_program`.
+#[doc(hidden)]
+pub fn __test_only_image_id() -> [u32; 8] {
+    APPROVE_CIRCUIT_IMAGE_ID_PINNED
+}
+
 impl Drop for ApprovalProver {
     fn drop(&mut self) {
         // Zeroize sk and salt so they don't linger after the prover is dropped.
@@ -356,11 +350,16 @@ impl Drop for ApprovalProver {
 }
 
 #[cfg(all(test, feature = "prover"))]
-#[cfg(test)]
 mod tests {
     use super::*;
     use crate::member::Member;
     use crypto::merkle::MerkleProof;
+
+    /// Placeholder ELF for unit tests that never reach `prove()`. The tests in
+    /// this module only exercise input validation, so the ELF bytes are unused.
+    /// A real proving test belongs in `private_multisig_program/tests/` where
+    /// `APPROVE_CIRCUIT_ELF` is available.
+    const STUB_ELF: &[u8] = b"stub-elf-for-construction-tests-only";
 
     #[test]
     fn prover_constructs_with_valid_inputs() {
@@ -376,7 +375,7 @@ mod tests {
             finalized.members_root,
             2,
             2,
-            0,
+            1,
         )
         .unwrap();
         let proof = finalized.merkle_proof(&member.commitment()).unwrap();
@@ -388,6 +387,7 @@ mod tests {
             b"test action",
             &[0xCC; 32],
             &proof,
+            STUB_ELF,
         );
         assert!(prover.is_ok(), "prover should construct: {prover:?}");
     }
@@ -409,8 +409,15 @@ mod tests {
             siblings: [[0u8; 32]; MERKLE_DEPTH],
             indices: [false; MERKLE_DEPTH],
         };
-        let result =
-            ApprovalProver::new(&member, &snap, 0, &oversized, &[0xCC; 32], &proof);
+        let result = ApprovalProver::new(
+            &member,
+            &snap,
+            0,
+            &oversized,
+            &[0xCC; 32],
+            &proof,
+            STUB_ELF,
+        );
         assert!(matches!(result, Err(SdkError::ActionBytesTooLarge)));
     }
 
@@ -424,7 +431,7 @@ mod tests {
             wrong_root,
             2,
             2,
-            0,
+            1,
         )
         .unwrap();
         let proof = MerkleProof {
@@ -438,6 +445,7 @@ mod tests {
             b"test",
             &[0xCC; 32],
             &proof,
+            STUB_ELF,
         );
         assert!(matches!(result, Err(SdkError::MerkleProofInvalid)));
     }
@@ -455,12 +463,20 @@ mod tests {
             finalized.members_root,
             2,
             2,
-            0,
+            1,
         )
         .unwrap();
         let proof = finalized.merkle_proof(&member.commitment()).unwrap();
-        let prover =
-            ApprovalProver::new(&member, &snap, 0, b"action", &[0xCC; 32], &proof).unwrap();
+        let prover = ApprovalProver::new(
+            &member,
+            &snap,
+            0,
+            b"action",
+            &[0xCC; 32],
+            &proof,
+            STUB_ELF,
+        )
+        .unwrap();
 
         let public_inputs = prover.public_inputs();
         let nullifier_direct = prover.nullifier();
