@@ -129,6 +129,15 @@ mod private_multisig {
     ///
     /// Validates `action_bytes` length, bumps `state.proposal_count`, writes
     /// a fresh `Proposal` to the proposal account.
+    ///
+    /// **Authorization model**: `#[account(signer)]` requires *some*
+    /// signature on the tx — it does NOT bind to a member or admin. Open
+    /// proposing is intentional: the threat model (`THREAT_MODEL.md` T1.5)
+    /// rules out per-member binding for privacy reasons, and per-admin
+    /// binding would defeat the relayer pool. DoS via spam-proposing is
+    /// mitigated economically (each `propose` tx costs gas; the spammer
+    /// pays). Downstream consumers that page proposals should expect gaps
+    /// and unindexed indices.
     #[instruction]
     pub fn propose(
         #[account(mut, owner = self_program_id, pda = [literal("pmsig_state__"), arg("create_key")])]
