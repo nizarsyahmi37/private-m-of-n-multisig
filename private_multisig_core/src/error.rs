@@ -15,65 +15,47 @@
 //! change the (code → meaning) mapping. New errors get fresh codes in the
 //! next-free slot of their class.
 //!
-//! ## Codes that surface from other layers
+//! ## Variants present in the catalog but not emitted by v1 handlers
 //!
-//! Two codes in the `E2xxx` and `E3xxx` classes are not emitted directly by
-//! the handler body — they surface through Risc0 / SPEL primitives:
+//! Four variants are part of the on-chain ABI but the v1 handler does not
+//! emit them. They are reserved (or surface from other layers) and consumers
+//! MUST NOT treat their absence at runtime as a contract violation:
 //!
-//! - **`E2001 ImageIdMismatch`** is what the SDK reports when a receipt was
-//!   produced against a different image-id than the one this program pins.
-//!   On chain, the symptom is that the outer SPEL receipt fails to verify
-//!   (the inner `env::verify` composition assumption cannot be discharged);
-//!   the handler never reaches the point of returning this code. The SDK
-//!   maps this off-chain failure mode to `E2001` so consumers have a single
-//!   ABI-aligned error to match on.
-//! - **`E3000 NullifierAlreadyUsed`** is enforced by SPEL's `#[account(init)]`
-//!   macro on the `NullifierEntry` PDA — init-fails-if-exists means a second
-//!   approval with the same nullifier reverts with SPEL's
-//!   `AccountAlreadyInitialized` framework error rather than this code. The
-//!   semantic is preserved: the *only* way to fail double-vote rejection is
-//!   the same nullifier landing at the same PDA twice.
+//! - **`E1000 InstanceNotActive`** — reserved for a future v2 lifecycle model
+//!   with an `active` flag on `MultisigState`. v1 never returns this code.
+//! - **`E1001 ProposalExpiredOrExecuted`** — reserved for v2 proposal
+//!   expiry. v1's already-executed case is `E4001 AlreadyExecuted`.
+//! - **`E2001 ImageIdMismatch`** — the on-chain handler does not check the
+//!   receipt's image-id explicitly; a wrong image-id causes the outer SPEL
+//!   receipt to fail to verify off-chain (the inner `env::verify`
+//!   composition assumption cannot be discharged). The variant is reserved
+//!   so the SDK / indexer code can map that off-chain failure to a single
+//!   ABI-aligned error code in a future release. As of v1 the SDK does
+//!   NOT construct this variant — it returns `SdkError::ReceiptVerificationFailed`
+//!   (E5031) instead. Consumers that need to distinguish image-id mismatch
+//!   from other receipt failures should match on the underlying error
+//!   message until a typed mapping ships.
+//! - **`E3000 NullifierAlreadyUsed`** — double-vote rejection is enforced by
+//!   SPEL's `#[account(init)]` macro on the `NullifierEntry` PDA;
+//!   init-fails-if-exists means the second approval reverts with SPEL's
+//!   `AccountAlreadyInitialized` framework error, NOT this code. The
+//!   variant is reserved here so a future SDK release can map that SPEL
+//!   error to E3000; v1 does not perform that mapping.
 //!
-//! The previously-reserved codes `E1000 InstanceNotActive` and `E1001
-//! ProposalExpiredOrExecuted` were removed before any consumer matched on
-//! them; the verifier has no `active` flag and no expiry, so a reserved-
-//! but-dead code in the IDL was actively misleading. Both numbers are
-//! retired and will not be reused — anyone receiving them from a future
-//! release should treat the program as compromised.
+//! These reservations are intentional and will not be reused. New variants
+//! get fresh codes in the next-free slot of their class.
 
 /// Error codes returned by the verifier program. The discriminants are kept
 /// stable by the `code()` method — adding a variant in the middle of the
 /// enum is fine, removing one is not.
 ///
-/// ## Variants surfaced from outside the handler body
-///
-/// Four codes in this enum are not emitted by the verifier's handler bodies
-/// directly. They are part of the ABI because consumers (SDK, indexers,
-/// integration tests) need a single set of constants to match against:
-///
-/// - **`InstanceNotActive` (E1000)** — reserved for a future v2 lifecycle
-///   model with an `active` flag on `MultisigState`. v1 has no such flag,
-///   so the handler never returns this code. Kept reserved so adding the
-///   field later doesn't require an ABI bump.
-/// - **`ProposalExpiredOrExecuted` (E1001)** — reserved for a future v2
-///   expiry model. v1 has no proposal expiry; the already-executed case
-///   is `E4001 AlreadyExecuted`. Kept reserved for the same reason as
-///   `E1000`.
-/// - **`ImageIdMismatch` (E2001)** — reported by the SDK when a receipt
-///   was produced against a different image-id than the one this program
-///   pins. On chain, the symptom is that the outer SPEL receipt fails to
-///   verify (the inner `env::verify` composition assumption cannot be
-///   discharged); the handler never reaches this code. The SDK maps that
-///   off-chain failure to `E2001` so consumers have a single ABI-aligned
-///   error to match on.
-/// - **`NullifierAlreadyUsed` (E3000)** — double-vote rejection is enforced
-///   by SPEL's `#[account(init)]` macro on the `NullifierEntry` PDA;
-///   init-fails-if-exists means the second approval reverts with SPEL's
-///   `AccountAlreadyInitialized` framework error. This variant is the
-///   ABI-aligned shape the SDK maps that failure to.
+/// See the module-level doc for which variants are reserved-but-unemitted
+/// (E1000, E1001) and which are reserved for a future SDK mapping layer
+/// (E2001, E3000). v1 handlers and the current SDK do not produce those
+/// four codes; consumers must not rely on receiving them.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
 pub enum CoreError {
-    /// Reserved for v2 lifecycle. Never emitted by v1 handlers.
+    /// Reserved for v2 lifecycle. Never emitted by v1 handlers or the SDK.
     #[error("E1000: instance not active")]
     InstanceNotActive,
     /// Reserved for v2 expiry. v1 uses `AlreadyExecuted` (E4001) for the
@@ -91,8 +73,10 @@ pub enum CoreError {
 
     #[error("E2000: invalid receipt")]
     InvalidReceipt,
-    /// SDK-surfaced. The on-chain handler never returns this directly —
-    /// wrong image-id makes the outer SPEL receipt fail to verify.
+    /// Reserved. The v1 SDK does NOT map `Receipt::verify` failures into
+    /// this variant — it returns `SdkError::ReceiptVerificationFailed`
+    /// (E5031) instead. Reserved here so a future typed mapping can land
+    /// without an ABI bump.
     #[error("E2001: image id mismatch")]
     ImageIdMismatch,
     #[error("E2002: root mismatch")]
@@ -100,9 +84,9 @@ pub enum CoreError {
     #[error("E2003: proposal id mismatch")]
     ProposalIdMismatch,
 
-    /// SDK-surfaced. SPEL's `#[account(init)]` on the `NullifierEntry`
-    /// PDA fails-if-exists with `AccountAlreadyInitialized`; the SDK maps
-    /// that to this variant for ABI consistency.
+    /// Reserved. v1's double-vote rejection surfaces as SPEL's framework
+    /// `AccountAlreadyInitialized` error, not this code. Reserved here so a
+    /// future SDK mapping can land without an ABI bump.
     #[error("E3000: nullifier already used")]
     NullifierAlreadyUsed,
 
