@@ -67,7 +67,7 @@ pub use member::{IdentityCommitment, Member};
 pub use multisig::{MultisigBuilder, MultisigStateSnapshot};
 #[cfg(feature = "prover")]
 pub use prover::ApprovalProver;
-pub use session::{ApprovalSession, SessionStatus};
+pub use session::{ApprovalSession, SessionStatus, DEFAULT_FINALITY_BLOCKS};
 
 /// Re-export the core types the SDK needs to reference.
 pub use private_multisig_core::proof::ApprovePublicInputs;

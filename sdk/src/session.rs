@@ -45,6 +45,11 @@ use std::sync::Mutex;
 use crate::error::SdkError;
 use crate::member::IdentityCommitment;
 
+/// Recommended N-block finality buffer for LEZ. Used by
+/// [`ApprovalSession::try_confirm`] callers that don't have a
+/// chain-specific reason to deviate. Sourced from THREAT_MODEL.md T6.5.
+pub const DEFAULT_FINALITY_BLOCKS: u64 = 32;
+
 /// Approval session status.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, BorshSerialize, BorshDeserialize)]
 pub enum SessionStatus {
