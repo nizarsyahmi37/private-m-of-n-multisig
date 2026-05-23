@@ -278,8 +278,8 @@ impl SessionKey {
         }
     }
 
-    fn to_vec(&self) -> Vec<u8> {
-        borsh::to_vec(self).expect("SessionKey Borsh serialization is infallible")
+    fn to_vec(self) -> Vec<u8> {
+        borsh::to_vec(&self).expect("SessionKey Borsh serialization is infallible")
     }
 }
 
