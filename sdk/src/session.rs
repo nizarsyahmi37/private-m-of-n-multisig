@@ -182,9 +182,35 @@ impl ApprovalSession {
         }
     }
 
-    /// Transition to `Confirmed`.
+    /// Force-transition to `Confirmed`. Skips finality checks — prefer
+    /// [`try_confirm`](Self::try_confirm) which enforces an N-block buffer.
+    /// This entry point exists for tests and recovery scripts that have
+    /// out-of-band confirmation that finality has been reached.
     pub fn mark_confirmed(&mut self) -> Result<(), SdkError> {
         self.transition_to(SessionStatus::Confirmed)
+    }
+
+    /// Promote from `Submitted` to `Confirmed` only if `current_block` is
+    /// at least `n_blocks` ahead of `submission_block`. Returns `Ok(false)`
+    /// if not enough blocks have passed (the documented `N` buffer in
+    /// THREAT_MODEL T6.5; `N = 32` is the recommended default for LEZ).
+    /// Returns `Err` if the session is not in `Submitted` status.
+    pub fn try_confirm(&mut self, current_block: u64, n_blocks: u64) -> Result<bool, SdkError> {
+        if self.status != SessionStatus::Submitted {
+            return Err(SdkError::SessionStatusMismatch);
+        }
+        let Some(submitted_at) = self.submission_block else {
+            return Err(SdkError::SessionStatusMismatch);
+        };
+        let confirmed_at = match submitted_at.checked_add(n_blocks) {
+            Some(b) => b,
+            None => return Err(SdkError::SessionStatusMismatch),
+        };
+        if current_block < confirmed_at {
+            return Ok(false);
+        }
+        self.transition_to(SessionStatus::Confirmed)?;
+        Ok(true)
     }
 
     /// Transition to `Failed` with an error message. Failed is terminal
@@ -504,6 +530,41 @@ mod tests {
         session.mark_submitted(100).unwrap();
         session.demote_on_reorg(101);
         assert_eq!(session.status, SessionStatus::Submitted);
+    }
+
+    #[test]
+    fn try_confirm_requires_n_block_buffer() {
+        let mut session = ApprovalSession::new(
+            [0xAA; 32],
+            [0xBB; 32],
+            IdentityCommitment([0xCC; 32]),
+            [0x11; 96],
+            [0x22; 32],
+        );
+        session.mark_proving().unwrap();
+        session.mark_proved(vec![0x99; 64]).unwrap();
+        session.mark_submitted(100).unwrap();
+
+        // 31 blocks past — not yet confirmed under N=32.
+        assert_eq!(session.try_confirm(131, 32).unwrap(), false);
+        assert_eq!(session.status, SessionStatus::Submitted);
+
+        // 32 blocks past — boundary, now confirmed.
+        assert_eq!(session.try_confirm(132, 32).unwrap(), true);
+        assert_eq!(session.status, SessionStatus::Confirmed);
+
+        // try_confirm on a non-Submitted session returns Err.
+        let mut fresh = ApprovalSession::new(
+            [0xAA; 32],
+            [0xBB; 32],
+            IdentityCommitment([0xCC; 32]),
+            [0x11; 96],
+            [0x22; 32],
+        );
+        assert!(matches!(
+            fresh.try_confirm(100, 32),
+            Err(SdkError::SessionStatusMismatch)
+        ));
     }
 
     #[test]
