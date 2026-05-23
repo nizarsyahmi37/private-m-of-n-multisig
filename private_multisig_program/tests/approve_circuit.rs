@@ -21,7 +21,7 @@
 
 use std::env;
 
-use crypto::{Identity, MerkleTree, Sha256Hasher, MERKLE_DEPTH, HASH_LEN};
+use crypto::{Identity, MerkleTree, Sha256Hasher, HASH_LEN, MERKLE_DEPTH};
 use private_multisig_core::{
     derive_proposal_id, ApprovePublicInputs, ChainId, APPROVE_PUBLIC_INPUTS_LEN,
 };
@@ -73,13 +73,7 @@ fn approve_circuit_proves_and_verifies_a_real_member_approval() {
     let target_program: [u8; 32] = [0xCD; 32];
     let action_bytes = b"treasury_withdraw(100,recipient=0xABCD)".to_vec();
     let chain_id = ChainId::from_u64(0xABCD_EF01);
-    let proposal_id = derive_proposal_id(
-        &chain_id,
-        &state_pda,
-        0,
-        &action_bytes,
-        &target_program,
-    );
+    let proposal_id = derive_proposal_id(&chain_id, &state_pda, 0, &action_bytes, &target_program);
 
     // ----- Compute expected nullifier and public-input bundle on the host. --
     let expected_nullifier = approver.nullifier::<Sha256Hasher>(&proposal_id);

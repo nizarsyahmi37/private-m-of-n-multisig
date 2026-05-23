@@ -110,11 +110,19 @@ fn finding1b_remains_closed_for_empty_tree() {
         siblings: real_marker_chain_siblings(),
         indices: [false; MERKLE_DEPTH],
     };
-    assert!(!crypto::verify_proof::<Sha256Hasher>(&empty_root, &ZERO_LEAF, &real_chain_proof));
+    assert!(!crypto::verify_proof::<Sha256Hasher>(
+        &empty_root,
+        &ZERO_LEAF,
+        &real_chain_proof
+    ));
 
     // All-zeros proof (the pre-fix FINDING-1 vector).
     let all_zero_proof = undomained_zero_proof();
-    assert!(!crypto::verify_proof::<Sha256Hasher>(&empty_root, &ZERO_LEAF, &all_zero_proof));
+    assert!(!crypto::verify_proof::<Sha256Hasher>(
+        &empty_root,
+        &ZERO_LEAF,
+        &all_zero_proof
+    ));
 
     // Garbage proofs across a range of seed bytes.
     for seed in 0u8..32 {
@@ -204,7 +212,10 @@ fn identity_nullifier_changes_with_pid() {
         let mut pid = [0u8; HASH_LEN];
         rng.fill_bytes(&mut pid);
         let n = id.nullifier::<Sha256Hasher>(&pid);
-        assert!(seen.insert(n), "duplicate nullifier across distinct pids: {n:?}");
+        assert!(
+            seen.insert(n),
+            "duplicate nullifier across distinct pids: {n:?}"
+        );
     }
     assert_eq!(seen.len(), 100);
 }
@@ -331,9 +342,15 @@ fn identity_debug_still_redacts_with_nullifier_call() {
     let pid = [0xEFu8; HASH_LEN];
     let _ = id.nullifier::<Sha256Hasher>(&pid);
     let rendered = format!("{:?}", id);
-    assert!(rendered.contains("[REDACTED]"), "Debug stopped redacting: {rendered}");
+    assert!(
+        rendered.contains("[REDACTED]"),
+        "Debug stopped redacting: {rendered}"
+    );
     assert!(!rendered.contains("ab"), "Debug leaked sk hex: {rendered}");
-    assert!(!rendered.contains("cd"), "Debug leaked salt hex: {rendered}");
+    assert!(
+        !rendered.contains("cd"),
+        "Debug leaked salt hex: {rendered}"
+    );
 }
 
 // ---------------------------------------------------------------------------

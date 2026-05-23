@@ -151,7 +151,12 @@ fn produce_receipt(
 
 /// Convenience: a "default" honest session for tests that only need one.
 fn default_session() -> WitnessSession {
-    produce_receipt(&[0, 1, 2, 3, 4], 2, 0, b"treasury_withdraw(100,recipient=0xABCD)")
+    produce_receipt(
+        &[0, 1, 2, 3, 4],
+        2,
+        0,
+        b"treasury_withdraw(100,recipient=0xABCD)",
+    )
 }
 
 // --------------------------------------------------------------------------

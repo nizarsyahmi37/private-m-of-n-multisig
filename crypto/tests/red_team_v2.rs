@@ -477,7 +477,12 @@ fn attack_capacity_boundary_zero_leaf_at_next_slot_mitigated() {
             chain[level]
         } else {
             // Reconstruct from leaves. Simple recursive helper inline.
-            fn node_at(t: &MerkleTree<Sha256Hasher>, level: usize, pos: usize, chain: &[Hash; MERKLE_DEPTH + 1]) -> Hash {
+            fn node_at(
+                t: &MerkleTree<Sha256Hasher>,
+                level: usize,
+                pos: usize,
+                chain: &[Hash; MERKLE_DEPTH + 1],
+            ) -> Hash {
                 if level == 0 {
                     return t
                         .leaf(pos)
@@ -893,7 +898,10 @@ fn attack_duplicate_enrollment_same_nullifier_documented() {
     let pid = [0x77u8; HASH_LEN];
     let n1 = nullifier::<Sha256Hasher>(&id.sk, &pid);
     let n2 = nullifier::<Sha256Hasher>(&id.sk, &pid);
-    assert_eq!(n1, n2, "same sk → same nullifier (on-chain rejects 2nd vote)");
+    assert_eq!(
+        n1, n2,
+        "same sk → same nullifier (on-chain rejects 2nd vote)"
+    );
 }
 
 /// Property-style sweep: for each tree size in 1..=64, for each leaf in the

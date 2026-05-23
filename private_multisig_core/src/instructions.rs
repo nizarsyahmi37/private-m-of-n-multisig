@@ -45,16 +45,7 @@ use crate::{AccountId, CreateKey};
 ///
 /// Discriminants for variants 0..=4 are part of the on-chain ABI and must
 /// never be reordered; new variants append.
-#[derive(
-    Clone,
-    Debug,
-    PartialEq,
-    Eq,
-    BorshSerialize,
-    BorshDeserialize,
-    Serialize,
-    Deserialize,
-)]
+#[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize, Serialize, Deserialize)]
 pub enum Instruction {
     /// Initialize a new multisig instance under `create_key`, frozen at
     /// member-set commitment `members_root`, with threshold `m` of `n`
@@ -92,24 +83,17 @@ pub enum Instruction {
         public_inputs: alloc::vec::Vec<u8>,
     },
     /// Execute proposal `index` if `approvals_count >= m` and `!executed`.
-    Execute {
-        create_key: CreateKey,
-        index: u64,
-    },
+    Execute { create_key: CreateKey, index: u64 },
     /// Initialize the vault PDA for an instance and claim its ownership
     /// for the verifier program. Round-5 fix for R5-T1: without this
     /// instruction the vault would have `program_owner = DEFAULT_PROGRAM_ID`
     /// and the chained call in `Execute` would silently no-op at the
     /// runtime's balance-authorization check.
-    CreateVault {
-        create_key: CreateKey,
-    },
+    CreateVault { create_key: CreateKey },
     /// Reject a proposal. Post-MVP placeholder; the on-chain handler is a
     /// no-op gated behind a state-PDA seed so emitted receipts always
     /// refer to a live multisig instance (round-5 R5-T5 fix).
-    Reject {
-        create_key: CreateKey,
-    },
+    Reject { create_key: CreateKey },
 }
 
 extern crate alloc;
@@ -281,6 +265,9 @@ mod tests {
                 break;
             }
         }
-        assert!(found, "canonical public-inputs layout missing from Approve encoding");
+        assert!(
+            found,
+            "canonical public-inputs layout missing from Approve encoding"
+        );
     }
 }

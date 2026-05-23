@@ -30,9 +30,7 @@ use std::process::Command;
 
 use crypto::{merkle::MERKLE_DEPTH, Identity, MerkleTree, Sha256Hasher, HASH_LEN};
 use private_multisig_core::{derive_proposal_id, ChainId, APPROVE_PUBLIC_INPUTS_LEN};
-use private_multisig_program::{
-    image_id_hex, APPROVE_CIRCUIT_ELF, APPROVE_CIRCUIT_IMAGE_ID,
-};
+use private_multisig_program::{image_id_hex, APPROVE_CIRCUIT_ELF, APPROVE_CIRCUIT_IMAGE_ID};
 use risc0_zkvm::{default_prover, ExecutorEnv};
 
 // ---------------------------------------------------------------------------
@@ -238,9 +236,7 @@ fn red3_image_id_hex_endianness_matches_pinned_stability() {
     assert_eq!(raw.len(), 32);
     let mut reconstructed = [0u32; 8];
     for i in 0..8 {
-        let chunk: [u8; 4] = raw[i * 4..(i + 1) * 4]
-            .try_into()
-            .expect("4-byte chunk");
+        let chunk: [u8; 4] = raw[i * 4..(i + 1) * 4].try_into().expect("4-byte chunk");
         reconstructed[i] = u32::from_le_bytes(chunk);
     }
     assert_eq!(

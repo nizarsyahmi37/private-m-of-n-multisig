@@ -58,9 +58,7 @@
 
 #![allow(clippy::needless_range_loop)]
 
-use private_multisig_program::{
-    image_id_hex, APPROVE_CIRCUIT_ELF, APPROVE_CIRCUIT_IMAGE_ID,
-};
+use private_multisig_program::{image_id_hex, APPROVE_CIRCUIT_ELF, APPROVE_CIRCUIT_IMAGE_ID};
 
 /// The pinned on-chain ABI: hex form of the approve-circuit image-id.
 ///
@@ -76,8 +74,7 @@ const PINNED_IMAGE_ID_HEX: &str =
 /// the word ordering cannot silently change the on-chain interpretation
 /// while the hex string coincidentally still matches.
 const PINNED_IMAGE_ID_WORDS: [u32; 8] = [
-    763539168, 1016753994, 1524795730, 877238783, 502029817, 1373722446, 3332462251,
-    4034702986,
+    763539168, 1016753994, 1524795730, 877238783, 502029817, 1373722446, 3332462251, 4034702986,
 ];
 
 /// Lower bound on a reasonable approve-circuit ELF size. The guest is small
@@ -178,11 +175,13 @@ fn image_id_is_not_a_recognized_dummy() {
         "image-id is all-zero — build harness produced a stub",
     );
     assert_ne!(
-        APPROVE_CIRCUIT_IMAGE_ID, [u32::MAX; 8],
+        APPROVE_CIRCUIT_IMAGE_ID,
+        [u32::MAX; 8],
         "image-id is all-ones — build harness produced a stub",
     );
     assert_ne!(
-        APPROVE_CIRCUIT_IMAGE_ID, [0u32, 1, 2, 3, 4, 5, 6, 7],
+        APPROVE_CIRCUIT_IMAGE_ID,
+        [0u32, 1, 2, 3, 4, 5, 6, 7],
         "image-id is the trivial 0..8 sequence — build harness produced a stub",
     );
 }
@@ -198,9 +197,7 @@ fn image_id_hex_round_trips_through_hex_crate() {
 
     let mut reconstructed = [0u32; 8];
     for i in 0..8 {
-        let chunk: [u8; 4] = bytes[i * 4..(i + 1) * 4]
-            .try_into()
-            .expect("4-byte chunk");
+        let chunk: [u8; 4] = bytes[i * 4..(i + 1) * 4].try_into().expect("4-byte chunk");
         reconstructed[i] = u32::from_le_bytes(chunk);
     }
     assert_eq!(reconstructed, APPROVE_CIRCUIT_IMAGE_ID);

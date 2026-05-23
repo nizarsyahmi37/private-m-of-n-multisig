@@ -61,9 +61,7 @@ use private_multisig_core::{
     derive_multisig_state_pda, derive_proposal_id, ApprovePublicInputs, ChainId,
     APPROVE_PUBLIC_INPUTS_LEN,
 };
-use private_multisig_program::{
-    image_id_hex, APPROVE_CIRCUIT_ELF, APPROVE_CIRCUIT_IMAGE_ID,
-};
+use private_multisig_program::{image_id_hex, APPROVE_CIRCUIT_ELF, APPROVE_CIRCUIT_IMAGE_ID};
 use risc0_zkvm::{default_prover, ExecutorEnv, Receipt};
 
 // ---------------------------------------------------------------------------
@@ -120,13 +118,7 @@ fn build_witness(
 
     let proof = tree.proof(approver_index).expect("proof must exist");
 
-    let proposal_id = derive_proposal_id(
-        chain_id,
-        state_pda,
-        index,
-        action_bytes,
-        target_program,
-    );
+    let proposal_id = derive_proposal_id(chain_id, state_pda, index, action_bytes, target_program);
 
     let mut siblings_flat = [0u8; MERKLE_DEPTH * HASH_LEN];
     for (level, sibling) in proof.siblings.iter().enumerate() {
@@ -291,8 +283,7 @@ fn v3_50_distinct_witnesses_serial_all_verify() {
     let mut nullifiers: Vec<[u8; 32]> = Vec::with_capacity(50);
     for member_idx in 0..10usize {
         for proposal_idx in 0..5u64 {
-            let action =
-                format!("v3_scale_m{member_idx}_p{proposal_idx}");
+            let action = format!("v3_scale_m{member_idx}_p{proposal_idx}");
             let w = build_witness(
                 &members,
                 member_idx,
@@ -309,8 +300,7 @@ fn v3_50_distinct_witnesses_serial_all_verify() {
             let decoded = decode_journal(&receipt);
             assert_eq!(decoded.members_root, w.members_root);
             assert_eq!(decoded.proposal_id, w.proposal_id);
-            let host_nul =
-                members[member_idx].nullifier::<Sha256Hasher>(&w.proposal_id);
+            let host_nul = members[member_idx].nullifier::<Sha256Hasher>(&w.proposal_id);
             assert_eq!(decoded.nullifier, host_nul);
             nullifiers.push(decoded.nullifier);
         }
@@ -448,16 +438,14 @@ fn v3_image_id_word_array_endianness_is_little_endian() {
         APPROVE_CIRCUIT_IMAGE_ID[0], 763_539_168u32,
         "endianness pin failed: APPROVE_CIRCUIT_IMAGE_ID[0] = {}, expected 763_539_168 \
          (which is 0x{:08x}, the LE interpretation of the hex prefix e0 ae 82 2d)",
-        APPROVE_CIRCUIT_IMAGE_ID[0],
-        0x2d82_aee0u32,
+        APPROVE_CIRCUIT_IMAGE_ID[0], 0x2d82_aee0u32,
     );
 
     // Cross-check the LE interpretation explicitly: pull the first 4 bytes
     // of the hex helper output and run them back through `from_le_bytes`.
     let s = image_id_hex();
     let prefix = &s[..8]; // 4 bytes worth of hex chars
-    let prefix_bytes =
-        hex::decode(prefix).expect("hex prefix decode must succeed");
+    let prefix_bytes = hex::decode(prefix).expect("hex prefix decode must succeed");
     assert_eq!(prefix_bytes.len(), 4);
     let prefix_arr: [u8; 4] = prefix_bytes
         .as_slice()
@@ -574,20 +562,14 @@ fn v3_no_witness_data_leaks_to_journal() {
     );
 
     // Full 32-byte sk substring scan — defense in depth.
-    let found_full = journal
-        .as_slice()
-        .windows(sk.len())
-        .any(|w| w == sk);
+    let found_full = journal.as_slice().windows(sk.len()).any(|w| w == sk);
     assert!(
         !found_full,
         "Full 32-byte sk appeared in journal — witness fully leaked"
     );
 
     // And salt should not leak either.
-    let found_salt = journal
-        .as_slice()
-        .windows(salt.len())
-        .any(|w| w == salt);
+    let found_salt = journal.as_slice().windows(salt.len()).any(|w| w == salt);
     assert!(
         !found_salt,
         "32-byte salt appeared in journal — witness salt leaked"

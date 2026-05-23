@@ -184,7 +184,12 @@ mod tests {
     fn multisig_state_borsh_serialized_size_is_fixed() {
         // 32 (create_key) + 32 (members_root) + 1 (m) + 4 (n) + 8 (proposal_count) = 77
         let bytes = to_vec(&sample_state()).unwrap();
-        assert_eq!(bytes.len(), 77, "MultisigState wire size drifted: got {}", bytes.len());
+        assert_eq!(
+            bytes.len(),
+            77,
+            "MultisigState wire size drifted: got {}",
+            bytes.len()
+        );
     }
 
     #[test]
@@ -234,14 +239,19 @@ mod tests {
     #[test]
     fn nullifier_entry_round_trip_is_zero_bytes() {
         let bytes = to_vec(&NullifierEntry).unwrap();
-        assert!(bytes.is_empty(), "NullifierEntry must serialize to zero bytes");
+        assert!(
+            bytes.is_empty(),
+            "NullifierEntry must serialize to zero bytes"
+        );
         let decoded: NullifierEntry = NullifierEntry::try_from_slice(&bytes).unwrap();
         assert_eq!(NullifierEntry, decoded);
     }
 
     #[test]
     fn vault_round_trip_is_32_bytes() {
-        let v = Vault { create_key: [0x77; 32] };
+        let v = Vault {
+            create_key: [0x77; 32],
+        };
         let bytes = to_vec(&v).unwrap();
         assert_eq!(bytes.len(), 32);
         let decoded: Vault = Vault::try_from_slice(&bytes).unwrap();

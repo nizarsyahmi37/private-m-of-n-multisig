@@ -105,10 +105,8 @@ fn state_pda_matches_spel_over_random_inputs() {
 fn proposal_pda_matches_spel_compute_pda() {
     let create_key = [0xCD_u8; 32];
     for &index in &[0u64, 1, 7, u64::MAX] {
-        let from_core =
-            derive_proposal_pda(&TEST_PROGRAM_BYTES, &create_key, index);
-        let from_spel =
-            spel_proposal_account_id(&TEST_PROGRAM_WORDS, &create_key, index);
+        let from_core = derive_proposal_pda(&TEST_PROGRAM_BYTES, &create_key, index);
+        let from_spel = spel_proposal_account_id(&TEST_PROGRAM_WORDS, &create_key, index);
         assert_eq!(
             from_core,
             *from_spel.value(),
@@ -147,10 +145,8 @@ fn proposal_pda_matches_spel_over_random_inputs() {
 fn nullifier_entry_pda_matches_spel_compute_pda() {
     let proposal_pda = [0xEF_u8; 32];
     let nullifier = [0x12_u8; 32];
-    let from_core =
-        derive_nullifier_entry_pda(&TEST_PROGRAM_BYTES, &proposal_pda, &nullifier);
-    let from_spel =
-        spel_nullifier_entry_account_id(&TEST_PROGRAM_WORDS, &proposal_pda, &nullifier);
+    let from_core = derive_nullifier_entry_pda(&TEST_PROGRAM_BYTES, &proposal_pda, &nullifier);
+    let from_spel = spel_nullifier_entry_account_id(&TEST_PROGRAM_WORDS, &proposal_pda, &nullifier);
     assert_eq!(
         from_core,
         *from_spel.value(),
@@ -173,10 +169,8 @@ fn nullifier_entry_pda_matches_spel_over_random_inputs() {
             program_bytes[i * 4..i * 4 + 4].copy_from_slice(&w.to_le_bytes());
         }
 
-        let from_core =
-            derive_nullifier_entry_pda(&program_bytes, &proposal_pda, &nullifier);
-        let from_spel =
-            spel_nullifier_entry_account_id(&program_words, &proposal_pda, &nullifier);
+        let from_core = derive_nullifier_entry_pda(&program_bytes, &proposal_pda, &nullifier);
+        let from_spel = spel_nullifier_entry_account_id(&program_words, &proposal_pda, &nullifier);
         assert_eq!(
             from_core,
             *from_spel.value(),

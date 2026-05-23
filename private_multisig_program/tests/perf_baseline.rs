@@ -93,13 +93,7 @@ fn build_valid_env() -> (ExecutorEnv<'static>, ApprovePublicInputs) {
     let target_program: [u8; 32] = [0xCD; 32];
     let action_bytes = b"treasury_withdraw(100,recipient=0xABCD)".to_vec();
     let chain_id = ChainId::from_u64(0xABCD_EF01);
-    let proposal_id = derive_proposal_id(
-        &chain_id,
-        &state_pda,
-        0,
-        &action_bytes,
-        &target_program,
-    );
+    let proposal_id = derive_proposal_id(&chain_id, &state_pda, 0, &action_bytes, &target_program);
 
     let expected_nullifier = approver.nullifier::<Sha256Hasher>(&proposal_id);
     let expected_bundle = ApprovePublicInputs {
@@ -244,7 +238,11 @@ fn perf_guest_cycle_count() {
     );
 
     // At least one segment must have been produced.
-    assert!(stats.segments >= 1, "expected ≥1 segment, got {}", stats.segments);
+    assert!(
+        stats.segments >= 1,
+        "expected ≥1 segment, got {}",
+        stats.segments
+    );
 }
 
 #[test]
@@ -258,7 +256,10 @@ fn perf_dev_mode_proving_time() {
     let (elapsed, prove_info) = prove_once();
 
     println!("perf_dev_mode_proving_time:");
-    println!("  RISC0_DEV_MODE     = {}", env::var("RISC0_DEV_MODE").unwrap_or_default());
+    println!(
+        "  RISC0_DEV_MODE     = {}",
+        env::var("RISC0_DEV_MODE").unwrap_or_default()
+    );
     println!("  wall-clock prove   = {:?}", elapsed);
     println!("  total_cycles       = {}", prove_info.stats.total_cycles);
     println!("  segments           = {}", prove_info.stats.segments);
@@ -333,7 +334,10 @@ fn perf_receipt_serialized_size() {
 
     println!("perf_receipt_serialized_size (dev_mode=1):");
     println!("  borsh::to_vec(&receipt).len() = {} bytes", len);
-    println!("  journal.bytes.len()           = {}", receipt.journal.bytes.len());
+    println!(
+        "  journal.bytes.len()           = {}",
+        receipt.journal.bytes.len()
+    );
 
     // Non-zero is the floor. The ceiling is generous — a dev-mode receipt
     // is dominated by the journal + small claim metadata and should be
@@ -394,11 +398,14 @@ fn perf_real_proving_with_dev_mode_off() {
     let (elapsed, prove_info) = prove_once();
     let stats = &prove_info.stats;
 
-    let encoded = borsh::to_vec(&prove_info.receipt)
-        .expect("real-mode receipt must borsh-serialize");
+    let encoded =
+        borsh::to_vec(&prove_info.receipt).expect("real-mode receipt must borsh-serialize");
 
     println!("perf_real_proving_with_dev_mode_off:");
-    println!("  RISC0_DEV_MODE         = {}", env::var("RISC0_DEV_MODE").unwrap_or_default());
+    println!(
+        "  RISC0_DEV_MODE         = {}",
+        env::var("RISC0_DEV_MODE").unwrap_or_default()
+    );
     println!("  wall-clock prove       = {:?}", elapsed);
     println!("  total_cycles           = {}", stats.total_cycles);
     println!("  user_cycles            = {}", stats.user_cycles);
@@ -406,7 +413,10 @@ fn perf_real_proving_with_dev_mode_off() {
     println!("  reserved_cycles        = {}", stats.reserved_cycles);
     println!("  segments               = {}", stats.segments);
     println!("  receipt borsh size     = {} bytes", encoded.len());
-    println!("  journal bytes          = {}", prove_info.receipt.journal.bytes.len());
+    println!(
+        "  journal bytes          = {}",
+        prove_info.receipt.journal.bytes.len()
+    );
 
     // 30 minutes is absurdly generous — the true number is expected to be
     // in the 1–10 min range on M1. The ceiling exists only so that a
@@ -423,7 +433,10 @@ fn perf_real_proving_with_dev_mode_off() {
     // same code path; only the SNARK back-end differs. This is a useful
     // cross-check that we are in fact in real mode (the receipt shape
     // changes) without depending on RISC0_DEV_MODE being readable.
-    assert!(stats.total_cycles >= 100_000, "real-mode total_cycles too low");
+    assert!(
+        stats.total_cycles >= 100_000,
+        "real-mode total_cycles too low"
+    );
 }
 
 /// Verification cost on a *real* receipt. On M1 this is typically

@@ -28,10 +28,10 @@ use rand::rngs::StdRng;
 use rand::{Rng, RngCore, SeedableRng};
 
 use private_multisig_core::{
-    derive_multisig_state_pda, derive_nullifier_entry_pda, derive_proposal_id,
-    derive_proposal_pda, derive_vault_pda, ApprovePublicInputs, ChainId, CoreError, Instruction,
-    MultisigState, NullifierEntry, Proposal, Vault, APPROVE_PUBLIC_INPUTS_LEN,
-    MAX_ACTION_BYTES_LEN, SEED_MULTISIG_STATE, SEED_NULLIFIER, SEED_PROPOSAL, SEED_VAULT,
+    derive_multisig_state_pda, derive_nullifier_entry_pda, derive_proposal_id, derive_proposal_pda,
+    derive_vault_pda, ApprovePublicInputs, ChainId, CoreError, Instruction, MultisigState,
+    NullifierEntry, Proposal, Vault, APPROVE_PUBLIC_INPUTS_LEN, MAX_ACTION_BYTES_LEN,
+    SEED_MULTISIG_STATE, SEED_NULLIFIER, SEED_PROPOSAL, SEED_VAULT,
 };
 
 const FIXED_PROGRAM: [u8; 32] = [0x42; 32];
@@ -191,24 +191,15 @@ fn attack_2b_proposal_id_avalanche_state_pda_bit_flip() {
     let mut r = rng();
     for _ in 0..200 {
         let mut pda = random_32(&mut r);
-        let baseline = derive_proposal_id(
-            &ChainId::from_u64(1),
-            &pda,
-            0,
-            b"action",
-            &FIXED_TARGET,
-        );
+        let baseline = derive_proposal_id(&ChainId::from_u64(1), &pda, 0, b"action", &FIXED_TARGET);
         let flip_bit = r.gen_range(0..256);
         pda[flip_bit / 8] ^= 1 << (flip_bit % 8);
-        let mutated = derive_proposal_id(
-            &ChainId::from_u64(1),
-            &pda,
-            0,
-            b"action",
-            &FIXED_TARGET,
-        );
+        let mutated = derive_proposal_id(&ChainId::from_u64(1), &pda, 0, b"action", &FIXED_TARGET);
         let hd = hamming_distance(&baseline, &mutated);
-        assert!((96..=160).contains(&hd), "weak avalanche on state PDA: {hd}/256");
+        assert!(
+            (96..=160).contains(&hd),
+            "weak avalanche on state PDA: {hd}/256"
+        );
     }
 }
 
@@ -235,11 +226,17 @@ fn attack_2c_proposal_id_avalanche_index_low_bit() {
             &FIXED_TARGET,
         );
         let hd = hamming_distance(&a, &b);
-        assert!((96..=160).contains(&hd), "weak avalanche on index: {hd}/256");
+        assert!(
+            (96..=160).contains(&hd),
+            "weak avalanche on index: {hd}/256"
+        );
         totals += hd;
     }
     let mean = totals as f64 / trials as f64;
-    assert!((118.0..=138.0).contains(&mean), "mean hamming dist {mean} off");
+    assert!(
+        (118.0..=138.0).contains(&mean),
+        "mean hamming dist {mean} off"
+    );
 }
 
 #[test]
@@ -249,24 +246,17 @@ fn attack_2d_proposal_id_avalanche_action_bytes_bit_flip() {
     for _ in 0..200 {
         let mut action = vec![0u8; 32];
         r.fill_bytes(&mut action);
-        let baseline = derive_proposal_id(
-            &ChainId::from_u64(1),
-            &state_pda,
-            0,
-            &action,
-            &FIXED_TARGET,
-        );
+        let baseline =
+            derive_proposal_id(&ChainId::from_u64(1), &state_pda, 0, &action, &FIXED_TARGET);
         let flip_bit = r.gen_range(0..(action.len() * 8));
         action[flip_bit / 8] ^= 1 << (flip_bit % 8);
-        let mutated = derive_proposal_id(
-            &ChainId::from_u64(1),
-            &state_pda,
-            0,
-            &action,
-            &FIXED_TARGET,
-        );
+        let mutated =
+            derive_proposal_id(&ChainId::from_u64(1), &state_pda, 0, &action, &FIXED_TARGET);
         let hd = hamming_distance(&baseline, &mutated);
-        assert!((96..=160).contains(&hd), "weak avalanche on action_bytes: {hd}/256");
+        assert!(
+            (96..=160).contains(&hd),
+            "weak avalanche on action_bytes: {hd}/256"
+        );
     }
 }
 
@@ -276,24 +266,15 @@ fn attack_2e_proposal_id_avalanche_target_program_bit_flip() {
     let state_pda = derive_multisig_state_pda(&FIXED_PROGRAM, &FIXED_CREATE_KEY);
     for _ in 0..200 {
         let mut tgt = random_32(&mut r);
-        let baseline = derive_proposal_id(
-            &ChainId::from_u64(1),
-            &state_pda,
-            0,
-            b"action",
-            &tgt,
-        );
+        let baseline = derive_proposal_id(&ChainId::from_u64(1), &state_pda, 0, b"action", &tgt);
         let flip_bit = r.gen_range(0..256);
         tgt[flip_bit / 8] ^= 1 << (flip_bit % 8);
-        let mutated = derive_proposal_id(
-            &ChainId::from_u64(1),
-            &state_pda,
-            0,
-            b"action",
-            &tgt,
-        );
+        let mutated = derive_proposal_id(&ChainId::from_u64(1), &state_pda, 0, b"action", &tgt);
         let hd = hamming_distance(&baseline, &mutated);
-        assert!((96..=160).contains(&hd), "weak avalanche on target: {hd}/256");
+        assert!(
+            (96..=160).contains(&hd),
+            "weak avalanche on target: {hd}/256"
+        );
     }
 }
 
@@ -354,7 +335,9 @@ fn attack_3a_multisig_state_rejects_trailing_bytes() {
 /// Attack 3b: Vault with trailing bytes.
 #[test]
 fn attack_3b_vault_rejects_trailing_bytes() {
-    let v = Vault { create_key: [0x11; 32] };
+    let v = Vault {
+        create_key: [0x11; 32],
+    };
     let mut bytes = to_vec(&v).unwrap();
     bytes.extend_from_slice(&[0xDE, 0xAD]);
     assert!(Vault::try_from_slice(&bytes).is_err());
@@ -471,7 +454,10 @@ fn attack_3h_random_byte_streams_dont_decode_to_instruction() {
             Err(_) => panic!("PANIC on random instruction stream"),
         }
     }
-    assert_eq!(accepted, 0, "{accepted}/{total} unknown-discriminant streams decoded");
+    assert_eq!(
+        accepted, 0,
+        "{accepted}/{total} unknown-discriminant streams decoded"
+    );
 }
 
 // ============================================================================
@@ -663,7 +649,10 @@ fn attack_6c_display_format_is_stable() {
         CoreError::ProposalExpiredOrExecuted.to_string(),
         "E1001: proposal expired or executed"
     );
-    assert_eq!(CoreError::InvalidReceipt.to_string(), "E2000: invalid receipt");
+    assert_eq!(
+        CoreError::InvalidReceipt.to_string(),
+        "E2000: invalid receipt"
+    );
     assert_eq!(
         CoreError::ImageIdMismatch.to_string(),
         "E2001: image id mismatch"
@@ -975,7 +964,11 @@ fn attack_12e_multisig_state_wire_size_is_77() {
         n: u32::MAX,
         proposal_count: u64::MAX,
     };
-    assert_eq!(to_vec(&s2).unwrap().len(), 77, "size depends on field values");
+    assert_eq!(
+        to_vec(&s2).unwrap().len(),
+        77,
+        "size depends on field values"
+    );
 }
 
 /// (12f) Endianness lock-in: confirm index and u64 fields go to the
@@ -1047,7 +1040,11 @@ fn attack_12g_create_key_vs_index_no_swap_collision() {
 #[test]
 fn attack_12h_nullifier_entry_is_zero_bytes() {
     let bytes = to_vec(&NullifierEntry).unwrap();
-    assert!(bytes.is_empty(), "NullifierEntry serialized to {} bytes", bytes.len());
+    assert!(
+        bytes.is_empty(),
+        "NullifierEntry serialized to {} bytes",
+        bytes.len()
+    );
 }
 
 /// (12i) Same proposal_id with action_bytes that differ only by appending
@@ -1077,7 +1074,10 @@ fn attack_12j_reexport_aliases_are_consistent() {
     assert_eq!(via_root, via_module);
 
     // Seed constants identity.
-    assert_eq!(SEED_MULTISIG_STATE, private_multisig_core::pda::SEED_MULTISIG_STATE);
+    assert_eq!(
+        SEED_MULTISIG_STATE,
+        private_multisig_core::pda::SEED_MULTISIG_STATE
+    );
     assert_eq!(SEED_PROPOSAL, private_multisig_core::pda::SEED_PROPOSAL);
     assert_eq!(SEED_VAULT, private_multisig_core::pda::SEED_VAULT);
     assert_eq!(SEED_NULLIFIER, private_multisig_core::pda::SEED_NULLIFIER);

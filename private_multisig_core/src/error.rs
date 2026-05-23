@@ -218,11 +218,9 @@ mod tests {
         // The `Display` text is what shows up in logs and tx error fields.
         // Confirm each one mentions its code so a grep over chain logs
         // returns hits without needing to decode.
-        assert!(
-            CoreError::NullifierAlreadyUsed
-                .to_string()
-                .contains("E3000")
-        );
+        assert!(CoreError::NullifierAlreadyUsed
+            .to_string()
+            .contains("E3000"));
         assert!(CoreError::ThresholdNotMet.to_string().contains("E4000"));
     }
 }

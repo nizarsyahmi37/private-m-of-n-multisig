@@ -9,12 +9,12 @@
 use borsh::{to_vec, BorshDeserialize};
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 
+use private_multisig_core::proof::ChainId;
 use private_multisig_core::{
     derive_multisig_state_pda, derive_nullifier_entry_pda, derive_proposal_id, derive_proposal_pda,
     derive_vault_pda, ApprovePublicInputs, Instruction, MultisigState, NullifierEntry, Proposal,
     Vault,
 };
-use private_multisig_core::proof::ChainId;
 
 // ---------- shared fixtures ----------
 
@@ -56,9 +56,7 @@ fn bench_pda_derivation(c: &mut Criterion) {
     let mut group = c.benchmark_group("pda_derivation");
 
     group.bench_function("derive_multisig_state_pda", |b| {
-        b.iter(|| {
-            derive_multisig_state_pda(black_box(&PROGRAM_ID), black_box(&CREATE_KEY))
-        });
+        b.iter(|| derive_multisig_state_pda(black_box(&PROGRAM_ID), black_box(&CREATE_KEY)));
     });
 
     group.bench_function("derive_proposal_pda_index_0", |b| {
@@ -152,7 +150,9 @@ fn bench_borsh_round_trip(c: &mut Criterion) {
         );
     }
 
-    let vault = Vault { create_key: CREATE_KEY };
+    let vault = Vault {
+        create_key: CREATE_KEY,
+    };
     group.bench_function("Vault", |b| {
         b.iter(|| {
             let bytes = to_vec(black_box(&vault)).unwrap();

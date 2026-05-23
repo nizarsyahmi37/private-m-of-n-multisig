@@ -16,9 +16,7 @@
 #![allow(clippy::let_underscore_untyped)]
 #![allow(clippy::manual_range_contains)]
 
-use private_multisig_program::{
-    image_id_hex, APPROVE_CIRCUIT_ELF, APPROVE_CIRCUIT_IMAGE_ID,
-};
+use private_multisig_program::{image_id_hex, APPROVE_CIRCUIT_ELF, APPROVE_CIRCUIT_IMAGE_ID};
 
 /// Embedded snapshot of `src/lib.rs` parsed by the source-scanning sentinels
 /// below. `include_str!` is resolved at compile time relative to this file.
@@ -59,7 +57,12 @@ fn api_image_id_hex_signature_pin() {
 #[test]
 fn api_image_id_hex_output_format() {
     let s = image_id_hex();
-    assert_eq!(s.len(), 64, "image_id_hex must return 64 chars, got {}", s.len());
+    assert_eq!(
+        s.len(),
+        64,
+        "image_id_hex must return 64 chars, got {}",
+        s.len()
+    );
     for c in s.chars() {
         let ok = c.is_ascii_digit() || ('a'..='f').contains(&c);
         assert!(ok, "non-lowercase-hex char in image_id_hex output: {c:?}");
@@ -341,8 +344,7 @@ fn api_module_level_docs_mention_step_4_consumption() {
         .join("\n");
 
     assert!(
-        module_docs.contains("PLAN.md step 4")
-            && module_docs.contains("APPROVE_CIRCUIT_IMAGE_ID"),
+        module_docs.contains("PLAN.md step 4") && module_docs.contains("APPROVE_CIRCUIT_IMAGE_ID"),
         "crate-level //! docs must mention `PLAN.md step 4` AND \
          `APPROVE_CIRCUIT_IMAGE_ID` so future contributors know the verifier \
          program depends on this surface. Got:\n{module_docs}"

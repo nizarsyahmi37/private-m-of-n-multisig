@@ -18,10 +18,10 @@
 
 use borsh::to_vec;
 use private_multisig_core::{
-    derive_multisig_state_pda, derive_nullifier_entry_pda, derive_proposal_id,
-    derive_proposal_pda, derive_vault_pda, ApprovePublicInputs, ChainId, CoreError, Instruction,
-    MultisigState, NullifierEntry, Proposal, Vault, SEED_MULTISIG_STATE, SEED_NULLIFIER,
-    SEED_PROPOSAL, SEED_VAULT,
+    derive_multisig_state_pda, derive_nullifier_entry_pda, derive_proposal_id, derive_proposal_pda,
+    derive_vault_pda, ApprovePublicInputs, ChainId, CoreError, Instruction, MultisigState,
+    NullifierEntry, Proposal, Vault, SEED_MULTISIG_STATE, SEED_NULLIFIER, SEED_PROPOSAL,
+    SEED_VAULT,
 };
 
 // ---------------------------------------------------------------------------
@@ -41,9 +41,11 @@ const ABI_HEX_PROPOSE_WITH_ACTION: &str = "0111111111111111111111111111111111111
 // || nullifier] 96-byte ApprovePublicInputs layout.
 const ABI_HEX_APPROVE: &str = "021111111111111111111111111111111111111111111111111111111111111111070000000000000066666666666666666666666666666666666666666666666666666666666666666000000044444444444444444444444444444444444444444444444444444444444444445555555555555555555555555555555555555555555555555555555555555555\
 6666666666666666666666666666666666666666666666666666666666666666";
-const ABI_HEX_EXECUTE: &str = "0311111111111111111111111111111111111111111111111111111111111111112a00000000000000";
+const ABI_HEX_EXECUTE: &str =
+    "0311111111111111111111111111111111111111111111111111111111111111112a00000000000000";
 // Round 6 adds CreateVault and Reject. Both are tiny: disc + create_key.
-const ABI_HEX_CREATE_VAULT: &str = "041111111111111111111111111111111111111111111111111111111111111111";
+const ABI_HEX_CREATE_VAULT: &str =
+    "041111111111111111111111111111111111111111111111111111111111111111";
 const ABI_HEX_REJECT: &str = "051111111111111111111111111111111111111111111111111111111111111111";
 
 #[test]
@@ -105,7 +107,10 @@ fn abi_pinned_approve_instruction() {
         public_inputs: inputs.to_bytes().to_vec(),
     };
     let got = hex::encode(to_vec(&ix).unwrap());
-    assert_eq!(got, ABI_HEX_APPROVE, "Instruction::Approve wire format drifted");
+    assert_eq!(
+        got, ABI_HEX_APPROVE,
+        "Instruction::Approve wire format drifted"
+    );
 }
 
 #[test]
@@ -115,7 +120,10 @@ fn abi_pinned_execute_instruction() {
         index: 42,
     };
     let got = hex::encode(to_vec(&ix).unwrap());
-    assert_eq!(got, ABI_HEX_EXECUTE, "Instruction::Execute wire format drifted");
+    assert_eq!(
+        got, ABI_HEX_EXECUTE,
+        "Instruction::Execute wire format drifted"
+    );
 }
 
 #[test]
@@ -124,7 +132,10 @@ fn abi_pinned_create_vault_instruction() {
         create_key: [0x11; 32],
     };
     let got = hex::encode(to_vec(&ix).unwrap());
-    assert_eq!(got, ABI_HEX_CREATE_VAULT, "Instruction::CreateVault wire format drifted");
+    assert_eq!(
+        got, ABI_HEX_CREATE_VAULT,
+        "Instruction::CreateVault wire format drifted"
+    );
 }
 
 #[test]
@@ -133,7 +144,10 @@ fn abi_pinned_reject_instruction() {
         create_key: [0x11; 32],
     };
     let got = hex::encode(to_vec(&ix).unwrap());
-    assert_eq!(got, ABI_HEX_REJECT, "Instruction::Reject wire format drifted");
+    assert_eq!(
+        got, ABI_HEX_REJECT,
+        "Instruction::Reject wire format drifted"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -141,8 +155,10 @@ fn abi_pinned_reject_instruction() {
 // ---------------------------------------------------------------------------
 
 const ABI_HEX_MULTISIG_STATE: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb03050000002a00000000000000";
-const ABI_HEX_PROPOSAL_EMPTY_ACTION: &str = "00000000cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc0200000000";
-const ABI_HEX_PROPOSAL_WITH_ACTION: &str = "0400000001020304cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc0200000000";
+const ABI_HEX_PROPOSAL_EMPTY_ACTION: &str =
+    "00000000cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc0200000000";
+const ABI_HEX_PROPOSAL_WITH_ACTION: &str =
+    "0400000001020304cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc0200000000";
 const ABI_HEX_NULLIFIER_ENTRY: &str = "";
 const ABI_HEX_VAULT: &str = "7777777777777777777777777777777777777777777777777777777777777777";
 
@@ -156,9 +172,16 @@ fn abi_pinned_multisig_state() {
         proposal_count: 42,
     };
     let bytes = to_vec(&state).unwrap();
-    assert_eq!(bytes.len(), 77, "MultisigState size drifted from documented 77 bytes");
+    assert_eq!(
+        bytes.len(),
+        77,
+        "MultisigState size drifted from documented 77 bytes"
+    );
     let got = hex::encode(&bytes);
-    assert_eq!(got, ABI_HEX_MULTISIG_STATE, "MultisigState wire format drifted");
+    assert_eq!(
+        got, ABI_HEX_MULTISIG_STATE,
+        "MultisigState wire format drifted"
+    );
 }
 
 #[test]
@@ -199,13 +222,18 @@ fn abi_pinned_nullifier_entry() {
     // accounting and init-fails-if-exists check both break.
     let bytes = to_vec(&NullifierEntry).unwrap();
     let got = hex::encode(&bytes);
-    assert_eq!(got, ABI_HEX_NULLIFIER_ENTRY, "NullifierEntry must serialize to 0 bytes");
+    assert_eq!(
+        got, ABI_HEX_NULLIFIER_ENTRY,
+        "NullifierEntry must serialize to 0 bytes"
+    );
     assert!(bytes.is_empty());
 }
 
 #[test]
 fn abi_pinned_vault() {
-    let v = Vault { create_key: [0x77; 32] };
+    let v = Vault {
+        create_key: [0x77; 32],
+    };
     let bytes = to_vec(&v).unwrap();
     assert_eq!(bytes.len(), 32, "Vault wire size must be 32 bytes");
     let got = hex::encode(&bytes);
@@ -226,7 +254,11 @@ fn abi_pinned_approve_public_inputs_to_bytes_layout() {
         nullifier: [0xCC; 32],
     };
     let canonical = inputs.to_bytes();
-    assert_eq!(canonical.len(), 96, "ApprovePublicInputs canonical layout must be 96 bytes");
+    assert_eq!(
+        canonical.len(),
+        96,
+        "ApprovePublicInputs canonical layout must be 96 bytes"
+    );
     let got = hex::encode(canonical);
     assert_eq!(
         got, ABI_HEX_APPROVE_PUBLIC_INPUTS_TO_BYTES,
@@ -269,8 +301,7 @@ const ABI_HEX_PDA_PROPOSAL_INDEX_0: &str =
     "26dac3f7182879b68a3f5d1c43638f2d78bcbcc53ec2380e85de8538aae5c8c7";
 const ABI_HEX_PDA_PROPOSAL_INDEX_1: &str =
     "b3a7cf3ee32d5513976781193dcd38a89be6e6f9f7a1ff37e8168b5667cc3e6a";
-const ABI_HEX_PDA_VAULT: &str =
-    "42cdbb8c5935f315a298ee9a4218bfa4aafbf395eb33109bf875926823501179";
+const ABI_HEX_PDA_VAULT: &str = "42cdbb8c5935f315a298ee9a4218bfa4aafbf395eb33109bf875926823501179";
 const ABI_HEX_PDA_NULLIFIER_ENTRY: &str =
     "bd2b503a2bb7959f488c4cab651339bd21aa0cd44c691fa78df12f1b559018d8";
 
@@ -278,21 +309,30 @@ const ABI_HEX_PDA_NULLIFIER_ENTRY: &str =
 fn abi_pinned_pda_multisig_state() {
     let pda = derive_multisig_state_pda(&[0x99; 32], &[0xAB; 32]);
     let got = hex::encode(pda);
-    assert_eq!(got, ABI_HEX_PDA_MULTISIG_STATE, "MultisigState PDA derivation drifted");
+    assert_eq!(
+        got, ABI_HEX_PDA_MULTISIG_STATE,
+        "MultisigState PDA derivation drifted"
+    );
 }
 
 #[test]
 fn abi_pinned_pda_proposal_index_0() {
     let pda = derive_proposal_pda(&[0x99; 32], &[0xAB; 32], 0);
     let got = hex::encode(pda);
-    assert_eq!(got, ABI_HEX_PDA_PROPOSAL_INDEX_0, "Proposal[0] PDA derivation drifted");
+    assert_eq!(
+        got, ABI_HEX_PDA_PROPOSAL_INDEX_0,
+        "Proposal[0] PDA derivation drifted"
+    );
 }
 
 #[test]
 fn abi_pinned_pda_proposal_index_1() {
     let pda = derive_proposal_pda(&[0x99; 32], &[0xAB; 32], 1);
     let got = hex::encode(pda);
-    assert_eq!(got, ABI_HEX_PDA_PROPOSAL_INDEX_1, "Proposal[1] PDA derivation drifted");
+    assert_eq!(
+        got, ABI_HEX_PDA_PROPOSAL_INDEX_1,
+        "Proposal[1] PDA derivation drifted"
+    );
     // Sanity: indices 0 and 1 must yield distinct addresses (already
     // covered by unit tests; redundant assertion here to make this file
     // self-contained as a wire-ABI reference).
@@ -311,7 +351,10 @@ fn abi_pinned_pda_vault() {
 fn abi_pinned_pda_nullifier_entry() {
     let pda = derive_nullifier_entry_pda(&[0x99; 32], &[0xCD; 32], &[0xEF; 32]);
     let got = hex::encode(pda);
-    assert_eq!(got, ABI_HEX_PDA_NULLIFIER_ENTRY, "NullifierEntry PDA derivation drifted");
+    assert_eq!(
+        got, ABI_HEX_PDA_NULLIFIER_ENTRY,
+        "NullifierEntry PDA derivation drifted"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -341,13 +384,7 @@ fn abi_pinned_proposal_id_canonical() {
 
 #[test]
 fn abi_pinned_proposal_id_empty_action() {
-    let pid = derive_proposal_id(
-        &ChainId::from_u64(1),
-        &[0x99; 32],
-        0,
-        b"",
-        &[0xCC; 32],
-    );
+    let pid = derive_proposal_id(&ChainId::from_u64(1), &[0x99; 32], 0, b"", &[0xCC; 32]);
     let got = hex::encode(pid);
     assert_eq!(
         got, ABI_HEX_PROPOSAL_ID_EMPTY_ACTION,
@@ -366,7 +403,11 @@ fn abi_pinned_error_code_table() {
     // these triples. Reordering a variant, renumbering a code, or rewording
     // a Display message is a major version bump.
     let table: &[(CoreError, u32, &str)] = &[
-        (CoreError::InstanceNotActive, 1000, "E1000: instance not active"),
+        (
+            CoreError::InstanceNotActive,
+            1000,
+            "E1000: instance not active",
+        ),
         (
             CoreError::ProposalExpiredOrExecuted,
             1001,

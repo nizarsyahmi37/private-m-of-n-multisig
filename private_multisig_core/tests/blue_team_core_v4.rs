@@ -50,8 +50,8 @@ use rand::rngs::StdRng;
 use rand::{Rng, RngCore, SeedableRng};
 
 use private_multisig_core::{
-    derive_multisig_state_pda, derive_nullifier_entry_pda, derive_proposal_id,
-    derive_proposal_pda, derive_vault_pda,
+    derive_multisig_state_pda, derive_nullifier_entry_pda, derive_proposal_id, derive_proposal_pda,
+    derive_vault_pda,
     error::CoreError,
     instructions::Instruction,
     proof::{ApprovePublicInputs, ChainId, APPROVE_PUBLIC_INPUTS_LEN},
@@ -91,8 +91,7 @@ fn v4_debug_release_parity_pda_derivation() {
     let state_pda = derive_multisig_state_pda(&program_id, &create_key);
     let proposal_pda = derive_proposal_pda(&program_id, &create_key, 0);
     let vault_pda = derive_vault_pda(&program_id, &create_key);
-    let nullifier_pda =
-        derive_nullifier_entry_pda(&program_id, &proposal_pda, &nullifier_bytes);
+    let nullifier_pda = derive_nullifier_entry_pda(&program_id, &proposal_pda, &nullifier_bytes);
 
     // Pins below recomputed under the round-5 SPEL-compatible PDA
     // derivation (see private_multisig_core/src/pda.rs round-5 fix note).
@@ -236,14 +235,19 @@ fn v4_debug_release_parity_borsh_round_trip() {
              00",
         )
         .unwrap();
-        assert_eq!(bytes, expected, "Proposal(4-byte action) Borsh encoding drifted");
+        assert_eq!(
+            bytes, expected,
+            "Proposal(4-byte action) Borsh encoding drifted"
+        );
         let round: Proposal = Proposal::try_from_slice(&bytes).unwrap();
         assert_eq!(round, prop);
     }
 
     // Vault — 32 bytes flat, no length prefix on the inner array.
     {
-        let v = Vault { create_key: [0x77u8; 32] };
+        let v = Vault {
+            create_key: [0x77u8; 32],
+        };
         let bytes = to_vec(&v).unwrap();
         let expected = vec![0x77u8; 32];
         assert_eq!(bytes, expected, "Vault Borsh encoding drifted");
@@ -274,7 +278,10 @@ fn v4_debug_release_parity_borsh_round_trip() {
              3333333333333333333333333333333333333333333333333333333333333333",
         )
         .unwrap();
-        assert_eq!(bytes, expected, "ApprovePublicInputs Borsh encoding drifted");
+        assert_eq!(
+            bytes, expected,
+            "ApprovePublicInputs Borsh encoding drifted"
+        );
         assert_eq!(bytes.len(), APPROVE_PUBLIC_INPUTS_LEN);
         let round = ApprovePublicInputs::try_from_slice(&bytes).unwrap();
         assert_eq!(round, api);
@@ -310,7 +317,10 @@ fn v4_debug_release_parity_borsh_round_trip() {
              3333333333333333333333333333333333333333333333333333333333333333",
         )
         .unwrap();
-        assert_eq!(bytes, expected, "Instruction::Approve Borsh encoding drifted");
+        assert_eq!(
+            bytes, expected,
+            "Instruction::Approve Borsh encoding drifted"
+        );
         let round = Instruction::try_from_slice(&bytes).unwrap();
         assert_eq!(round, ix);
     }
@@ -345,9 +355,7 @@ fn v4_100_run_determinism() {
         let state_pda = derive_multisig_state_pda(&program_id, &create_key);
         let proposal_pda = derive_proposal_pda(&program_id, &create_key, index);
         let vault_pda = derive_vault_pda(&program_id, &create_key);
-        let pid = derive_proposal_id(
-            &chain_id, &state_pda, index, &action_bytes, &target_program,
-        );
+        let pid = derive_proposal_id(&chain_id, &state_pda, index, &action_bytes, &target_program);
         let null_pda = derive_nullifier_entry_pda(&program_id, &proposal_pda, &pid);
         let api = ApprovePublicInputs {
             members_root: [0xAAu8; 32],
@@ -377,8 +385,7 @@ fn v4_100_run_determinism() {
                 &action_bytes,
                 &target_program,
             );
-            let null_pda_r =
-                derive_nullifier_entry_pda(&program_id, &proposal_pda_r, &pid_r);
+            let null_pda_r = derive_nullifier_entry_pda(&program_id, &proposal_pda_r, &pid_r);
             let api_r = ApprovePublicInputs {
                 members_root: [0xAAu8; 32],
                 proposal_id: pid_r,
@@ -394,13 +401,31 @@ fn v4_100_run_determinism() {
             };
             let ms_bytes_r = to_vec(&ms_r).unwrap();
 
-            assert_eq!(state_pda_r, state_pda, "case {case} iter {iter}: state_pda drift");
-            assert_eq!(proposal_pda_r, proposal_pda, "case {case} iter {iter}: proposal_pda drift");
-            assert_eq!(vault_pda_r, vault_pda, "case {case} iter {iter}: vault_pda drift");
+            assert_eq!(
+                state_pda_r, state_pda,
+                "case {case} iter {iter}: state_pda drift"
+            );
+            assert_eq!(
+                proposal_pda_r, proposal_pda,
+                "case {case} iter {iter}: proposal_pda drift"
+            );
+            assert_eq!(
+                vault_pda_r, vault_pda,
+                "case {case} iter {iter}: vault_pda drift"
+            );
             assert_eq!(pid_r, pid, "case {case} iter {iter}: proposal_id drift");
-            assert_eq!(null_pda_r, null_pda, "case {case} iter {iter}: nullifier_pda drift");
-            assert_eq!(api_bytes_r, api_bytes, "case {case} iter {iter}: APIs borsh drift");
-            assert_eq!(ms_bytes_r, ms_bytes, "case {case} iter {iter}: MS borsh drift");
+            assert_eq!(
+                null_pda_r, null_pda,
+                "case {case} iter {iter}: nullifier_pda drift"
+            );
+            assert_eq!(
+                api_bytes_r, api_bytes,
+                "case {case} iter {iter}: APIs borsh drift"
+            );
+            assert_eq!(
+                ms_bytes_r, ms_bytes,
+                "case {case} iter {iter}: MS borsh drift"
+            );
         }
     }
 }
@@ -454,13 +479,7 @@ fn v4_parallel_proposal_id_no_race() {
     let target_program = Arc::new([0x66u8; 32]);
     let index: u64 = 1234;
 
-    let expected = derive_proposal_id(
-        &chain_id,
-        &state_pda,
-        index,
-        &action_bytes,
-        &target_program,
-    );
+    let expected = derive_proposal_id(&chain_id, &state_pda, index, &action_bytes, &target_program);
 
     let mut handles = Vec::with_capacity(16);
     for _ in 0..16 {
@@ -604,7 +623,10 @@ fn v4_no_global_state() {
     assert_eq!(a.proposal_count, u64::MAX);
 
     // b must be untouched.
-    assert_eq!(b, b_snapshot, "mutating one MultisigState leaked into another");
+    assert_eq!(
+        b, b_snapshot,
+        "mutating one MultisigState leaked into another"
+    );
     assert_eq!(b.create_key, [0xAAu8; 32]);
     assert_eq!(b.members_root, [0xBBu8; 32]);
     assert_eq!(b.m, 1);
@@ -659,7 +681,10 @@ fn v4_proposal_id_stable_across_borsh_round_trip() {
     let bytes = to_vec(&api).unwrap();
     assert_eq!(bytes.len(), APPROVE_PUBLIC_INPUTS_LEN);
     let decoded = ApprovePublicInputs::try_from_slice(&bytes).unwrap();
-    assert_eq!(decoded.proposal_id, pid, "Borsh round trip mangled proposal_id");
+    assert_eq!(
+        decoded.proposal_id, pid,
+        "Borsh round trip mangled proposal_id"
+    );
 
     // Explicit pack path (cross-check the second wire surface).
     let packed = api.to_bytes();
@@ -690,16 +715,25 @@ fn v4_error_code_stable_across_threads() {
                 let r = CoreError::from_code(1003);
                 assert_eq!(r, Some(CoreError::InvalidThreshold));
                 // Spot-check every known code from every thread.
-                assert_eq!(CoreError::from_code(1000), Some(CoreError::InstanceNotActive));
+                assert_eq!(
+                    CoreError::from_code(1000),
+                    Some(CoreError::InstanceNotActive)
+                );
                 assert_eq!(
                     CoreError::from_code(1001),
                     Some(CoreError::ProposalExpiredOrExecuted)
                 );
-                assert_eq!(CoreError::from_code(1002), Some(CoreError::ActionBytesTooLong));
+                assert_eq!(
+                    CoreError::from_code(1002),
+                    Some(CoreError::ActionBytesTooLong)
+                );
                 assert_eq!(CoreError::from_code(2000), Some(CoreError::InvalidReceipt));
                 assert_eq!(CoreError::from_code(2001), Some(CoreError::ImageIdMismatch));
                 assert_eq!(CoreError::from_code(2002), Some(CoreError::RootMismatch));
-                assert_eq!(CoreError::from_code(2003), Some(CoreError::ProposalIdMismatch));
+                assert_eq!(
+                    CoreError::from_code(2003),
+                    Some(CoreError::ProposalIdMismatch)
+                );
                 assert_eq!(
                     CoreError::from_code(3000),
                     Some(CoreError::NullifierAlreadyUsed)
@@ -893,19 +927,13 @@ fn v4_kat_roundtrip_at_load() {
             b"kat_action_1",
             &[0x33u8; 32],
         );
-        let expected =
-            h32("011f06dfcbbc20115b121180f32972ad28edc775c7969d4ec228a979442a179c");
+        let expected = h32("011f06dfcbbc20115b121180f32972ad28edc775c7969d4ec228a979442a179c");
         assert_eq!(pid_first, expected);
         for _ in 0..10_000 {
             let s = derive_multisig_state_pda(&[0x11u8; 32], &[0x22u8; 32]);
             assert_eq!(s, state_pda);
-            let p = derive_proposal_id(
-                &ChainId::from_u64(1),
-                &s,
-                0,
-                b"kat_action_1",
-                &[0x33u8; 32],
-            );
+            let p =
+                derive_proposal_id(&ChainId::from_u64(1), &s, 0, b"kat_action_1", &[0x33u8; 32]);
             assert_eq!(p, expected);
         }
     }
@@ -917,18 +945,11 @@ fn v4_kat_roundtrip_at_load() {
             create_key[i] = i as u8;
         }
         let state_pda = derive_multisig_state_pda(&[0xA0u8; 32], &create_key);
-        let expected =
-            h32("b01d89ef9e4e0d05198d11a7b31cb1cbc38868ee01d4d76456b435ef78276113");
+        let expected = h32("b01d89ef9e4e0d05198d11a7b31cb1cbc38868ee01d4d76456b435ef78276113");
         for _ in 0..10_000 {
             let s = derive_multisig_state_pda(&[0xA0u8; 32], &create_key);
             assert_eq!(s, state_pda);
-            let p = derive_proposal_id(
-                &ChainId::from_u64(0xABCD_EF01),
-                &s,
-                42,
-                b"",
-                &[0xFFu8; 32],
-            );
+            let p = derive_proposal_id(&ChainId::from_u64(0xABCD_EF01), &s, 42, b"", &[0xFFu8; 32]);
             assert_eq!(p, expected);
         }
     }
@@ -936,8 +957,7 @@ fn v4_kat_roundtrip_at_load() {
     // KAT 3
     {
         let state_pda = derive_multisig_state_pda(&[0x99u8; 32], &[0xABu8; 32]);
-        let expected =
-            h32("db41d7e974dc92f89a9506a0f0cf605f88ecd0cde734a329a7b055709ec2ad8f");
+        let expected = h32("db41d7e974dc92f89a9506a0f0cf605f88ecd0cde734a329a7b055709ec2ad8f");
         for _ in 0..10_000 {
             let s = derive_multisig_state_pda(&[0x99u8; 32], &[0xABu8; 32]);
             assert_eq!(s, state_pda);

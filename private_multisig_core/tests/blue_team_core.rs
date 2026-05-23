@@ -23,9 +23,12 @@ use rand::rngs::StdRng;
 use rand::{Rng, RngCore, SeedableRng};
 
 use private_multisig_core::{
-    derive_multisig_state_pda, derive_nullifier_entry_pda, derive_proposal_id,
-    derive_proposal_pda, derive_vault_pda, error::CoreError, instructions::Instruction,
-    proof::{ApprovePublicInputs, ChainId}, state::{MultisigState, NullifierEntry, Proposal, Vault},
+    derive_multisig_state_pda, derive_nullifier_entry_pda, derive_proposal_id, derive_proposal_pda,
+    derive_vault_pda,
+    error::CoreError,
+    instructions::Instruction,
+    proof::{ApprovePublicInputs, ChainId},
+    state::{MultisigState, NullifierEntry, Proposal, Vault},
     APPROVE_PUBLIC_INPUTS_LEN, MAX_ACTION_BYTES_LEN, SEED_MULTISIG_STATE, SEED_NULLIFIER,
     SEED_PROPOSAL, SEED_VAULT,
 };
@@ -63,9 +66,16 @@ fn core_borsh_round_trip_proptest() {
         };
         let bytes = to_vec(&state).unwrap();
         let decoded = MultisigState::try_from_slice(&bytes).unwrap();
-        assert_eq!(state, decoded, "MultisigState round-trip diverged @ iter {iter}");
+        assert_eq!(
+            state, decoded,
+            "MultisigState round-trip diverged @ iter {iter}"
+        );
         // Byte-for-byte: re-serialize the decoded form, expect identical bytes.
-        assert_eq!(bytes, to_vec(&decoded).unwrap(), "MultisigState bytes diverged @ {iter}");
+        assert_eq!(
+            bytes,
+            to_vec(&decoded).unwrap(),
+            "MultisigState bytes diverged @ {iter}"
+        );
 
         // Proposal with random-length action_bytes <= MAX
         let action_len = rng.gen_range(0..=MAX_ACTION_BYTES_LEN);
@@ -80,14 +90,24 @@ fn core_borsh_round_trip_proptest() {
         let bytes = to_vec(&proposal).unwrap();
         let decoded = Proposal::try_from_slice(&bytes).unwrap();
         assert_eq!(proposal, decoded, "Proposal round-trip diverged @ {iter}");
-        assert_eq!(bytes, to_vec(&decoded).unwrap(), "Proposal bytes diverged @ {iter}");
+        assert_eq!(
+            bytes,
+            to_vec(&decoded).unwrap(),
+            "Proposal bytes diverged @ {iter}"
+        );
 
         // Vault
-        let vault = Vault { create_key: random_array_32(&mut rng) };
+        let vault = Vault {
+            create_key: random_array_32(&mut rng),
+        };
         let bytes = to_vec(&vault).unwrap();
         let decoded = Vault::try_from_slice(&bytes).unwrap();
         assert_eq!(vault, decoded, "Vault round-trip diverged @ {iter}");
-        assert_eq!(bytes, to_vec(&decoded).unwrap(), "Vault bytes diverged @ {iter}");
+        assert_eq!(
+            bytes,
+            to_vec(&decoded).unwrap(),
+            "Vault bytes diverged @ {iter}"
+        );
 
         // NullifierEntry (empty, but still round-trip it).
         let null_bytes = to_vec(&NullifierEntry).unwrap();
@@ -102,7 +122,10 @@ fn core_borsh_round_trip_proptest() {
         };
         let bytes = to_vec(&pi).unwrap();
         let decoded = ApprovePublicInputs::try_from_slice(&bytes).unwrap();
-        assert_eq!(pi, decoded, "ApprovePublicInputs round-trip diverged @ {iter}");
+        assert_eq!(
+            pi, decoded,
+            "ApprovePublicInputs round-trip diverged @ {iter}"
+        );
         assert_eq!(bytes, to_vec(&decoded).unwrap());
 
         // Instruction::* — pick a variant each iteration.
@@ -138,7 +161,7 @@ fn core_borsh_round_trip_proptest() {
                     nullifier: nf,
                     public_inputs: inputs.to_bytes().to_vec(),
                 }
-            },
+            }
             _ => Instruction::Execute {
                 create_key: random_array_32(&mut rng),
                 index: rng.gen(),
@@ -147,7 +170,11 @@ fn core_borsh_round_trip_proptest() {
         let bytes = to_vec(&ix).unwrap();
         let decoded = Instruction::try_from_slice(&bytes).unwrap();
         assert_eq!(ix, decoded, "Instruction round-trip diverged @ {iter}");
-        assert_eq!(bytes, to_vec(&decoded).unwrap(), "Instruction bytes diverged @ {iter}");
+        assert_eq!(
+            bytes,
+            to_vec(&decoded).unwrap(),
+            "Instruction bytes diverged @ {iter}"
+        );
     }
 }
 
@@ -269,7 +296,13 @@ fn core_proposal_id_avalanche_each_input() {
     let mut seen: HashSet<[u8; 32]> = HashSet::new();
     for i in 0..32u64 {
         let cid = ChainId::from_u64(0x1234_5678_9ABC_DEF0 ^ (1u64 << (i % 64)));
-        let pid = derive_proposal_id(&cid, &fixed_state, fixed_index, &fixed_action, &fixed_target);
+        let pid = derive_proposal_id(
+            &cid,
+            &fixed_state,
+            fixed_index,
+            &fixed_action,
+            &fixed_target,
+        );
         assert!(seen.insert(pid), "chain_id sweep collided at bit {i}");
     }
 
@@ -371,7 +404,10 @@ fn core_proposal_id_byte_diff_hamming() {
             }
         };
 
-        assert_ne!(id_a, id_b, "single-bit input change produced identical proposal_id");
+        assert_ne!(
+            id_a, id_b,
+            "single-bit input change produced identical proposal_id"
+        );
         let h = hamming(&id_a, &id_b);
         total += u64::from(h);
     }
@@ -391,8 +427,8 @@ fn core_proposal_id_byte_diff_hamming() {
 #[test]
 fn core_error_code_invertibility() {
     for code in [1000u32, 1001, 2000, 2001, 2002, 2003, 3000, 4000, 4001] {
-        let variant = CoreError::from_code(code)
-            .unwrap_or_else(|| panic!("from_code({code}) returned None"));
+        let variant =
+            CoreError::from_code(code).unwrap_or_else(|| panic!("from_code({code}) returned None"));
         assert_eq!(variant.code(), code, "round-trip mismatch for code {code}");
     }
 }
@@ -418,7 +454,12 @@ fn core_error_code_unique_per_variant() {
     ];
     let mut codes: HashSet<u32> = HashSet::new();
     for v in all {
-        assert!(codes.insert(v.code()), "duplicate code {} from {:?}", v.code(), v);
+        assert!(
+            codes.insert(v.code()),
+            "duplicate code {} from {:?}",
+            v.code(),
+            v
+        );
     }
     assert_eq!(codes.len(), all.len(), "code cardinality != variant count");
 }
@@ -546,7 +587,10 @@ fn core_chain_id_from_u64_uniqueness() {
         // Spread across the u64 range so we exercise more than just the low byte.
         let v = i.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(i);
         let cid = ChainId::from_u64(v);
-        assert!(set.insert(*cid.as_bytes()), "ChainId collision for v={v:#x}");
+        assert!(
+            set.insert(*cid.as_bytes()),
+            "ChainId collision for v={v:#x}"
+        );
     }
     assert_eq!(set.len(), 100);
 }
@@ -577,7 +621,12 @@ fn core_seed_constants_match_documented_bytes() {
     assert_eq!(SEED_VAULT, b"pmsig_vault__");
     assert_eq!(SEED_NULLIFIER, b"pmsig_nulli__");
     // Length sentinel.
-    for s in [SEED_MULTISIG_STATE, SEED_PROPOSAL, SEED_VAULT, SEED_NULLIFIER] {
+    for s in [
+        SEED_MULTISIG_STATE,
+        SEED_PROPOSAL,
+        SEED_VAULT,
+        SEED_NULLIFIER,
+    ] {
         assert_eq!(s.len(), 13, "seed length drift: {s:?}");
     }
 }

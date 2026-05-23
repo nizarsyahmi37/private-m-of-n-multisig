@@ -31,8 +31,15 @@ use crypto::{
     hash::{DOMAIN_LEAF, DOMAIN_NODE},
     identity::{SALT_LEN, SK_LEN},
     merkle::{verify_proof, MAX_LEAVES},
-    Hash, Hasher, Identity, IdentityCommitment, MerkleProof, MerkleTree, Sha256Hasher,
-    HASH_LEN, MERKLE_DEPTH,
+    Hash,
+    Hasher,
+    Identity,
+    IdentityCommitment,
+    MerkleProof,
+    MerkleTree,
+    Sha256Hasher,
+    HASH_LEN,
+    MERKLE_DEPTH,
 };
 
 use rand::rngs::StdRng;
@@ -238,21 +245,12 @@ fn sdk_flow_double_vote_detection() {
 
     let voter = random_identity(&mut rng);
     // Two distinct proposals.
-    let proposal_a = derive_proposal_id(
-        b"lez-1",
-        &[0x11; 32],
-        1,
-        b"action-A",
-        b"target-program-A",
+    let proposal_a = derive_proposal_id(b"lez-1", &[0x11; 32], 1, b"action-A", b"target-program-A");
+    let proposal_b = derive_proposal_id(b"lez-1", &[0x11; 32], 2, b"action-B", b"target-program-B");
+    assert_ne!(
+        proposal_a, proposal_b,
+        "test vectors must yield distinct proposal_ids"
     );
-    let proposal_b = derive_proposal_id(
-        b"lez-1",
-        &[0x11; 32],
-        2,
-        b"action-B",
-        b"target-program-B",
-    );
-    assert_ne!(proposal_a, proposal_b, "test vectors must yield distinct proposal_ids");
 
     // Same member, same proposal, twice → identical nullifier
     // (NullifierEntry PDA `init` will fail on the second attempt).
@@ -263,7 +261,10 @@ fn sdk_flow_double_vote_detection() {
     // Same member, different proposal → different nullifier
     // (the same member must be free to approve independent proposals).
     let n_b = crypto::nullifier::<Sha256Hasher>(&voter.sk, &proposal_b);
-    assert_ne!(n_a1, n_b, "independent proposals must yield independent nullifiers");
+    assert_ne!(
+        n_a1, n_b,
+        "independent proposals must yield independent nullifiers"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -279,7 +280,8 @@ fn sdk_flow_non_member_cannot_construct_valid_proof() {
     let members: Vec<Identity> = (0..N).map(|_| random_identity(&mut rng)).collect();
     let mut tree = MerkleTree::<Sha256Hasher>::new();
     for m in &members {
-        tree.insert(*m.commitment::<Sha256Hasher>().as_bytes()).unwrap();
+        tree.insert(*m.commitment::<Sha256Hasher>().as_bytes())
+            .unwrap();
     }
     let members_root = tree.root();
 
@@ -479,7 +481,6 @@ fn sdk_flow_no_panics_on_realistic_inputs() {
 /// material as early as possible. The point is to verify the API doesn't
 /// force the caller to keep `sk` around longer than needed.
 fn commit_and_drop(identity: Identity) -> IdentityCommitment {
-    
     // `identity` drops here at end of scope — its `sk` and `salt` arrays
     // are owned by this function and go out of scope on return.
     //
@@ -523,7 +524,6 @@ fn sdk_flow_zeroize_attempt() {
     // Confirm we don't need a long-lived `sk` for the nullifier path
     // either: we can build a one-shot helper that signs and discards.
     fn approve_once(sk: [u8; SK_LEN], proposal_id: &Hash) -> Hash {
-        
         // `sk` drops here.
         crypto::nullifier::<Sha256Hasher>(&sk, proposal_id)
     }

@@ -4,10 +4,9 @@
 use borsh::{to_vec, BorshDeserialize};
 use crypto::{Identity, MerkleTree, Sha256Hasher};
 use private_multisig_core::{
-    derive_multisig_state_pda, derive_nullifier_entry_pda, derive_proposal_id,
-    derive_proposal_pda, derive_vault_pda, ApprovePublicInputs, ChainId, CoreError, Instruction,
-    MultisigState, Proposal, APPROVE_PUBLIC_INPUTS_LEN, MAX_ACTION_BYTES_LEN, SEED_MULTISIG_STATE,
-    SEED_PROPOSAL,
+    derive_multisig_state_pda, derive_nullifier_entry_pda, derive_proposal_id, derive_proposal_pda,
+    derive_vault_pda, ApprovePublicInputs, ChainId, CoreError, Instruction, MultisigState,
+    Proposal, APPROVE_PUBLIC_INPUTS_LEN, MAX_ACTION_BYTES_LEN, SEED_MULTISIG_STATE, SEED_PROPOSAL,
 };
 
 const PROGRAM_ID: [u8; 32] = [0x99; 32];
@@ -53,13 +52,7 @@ fn full_create_propose_approve_execute_round_trip() {
     // ---- Propose: derive proposal_id, build instruction.
     let action_bytes = b"treasury_withdraw(100)".to_vec();
     let chain_id = ChainId::from_u64(CHAIN_ID_U64);
-    let proposal_id = derive_proposal_id(
-        &chain_id,
-        &state_pda,
-        0,
-        &action_bytes,
-        &TARGET_PROGRAM,
-    );
+    let proposal_id = derive_proposal_id(&chain_id, &state_pda, 0, &action_bytes, &TARGET_PROGRAM);
     assert_ne!(proposal_id, [0u8; 32]);
 
     let propose_ix = Instruction::Propose {
@@ -87,8 +80,7 @@ fn full_create_propose_approve_execute_round_trip() {
 
         // Per-member nullifier address is what the verifier will init-fail-
         // if-exists. Each member produces a distinct PDA address.
-        let nullifier_pda =
-            derive_nullifier_entry_pda(&PROGRAM_ID, &proposal_pda_0, &nullifier);
+        let nullifier_pda = derive_nullifier_entry_pda(&PROGRAM_ID, &proposal_pda_0, &nullifier);
         assert_ne!(nullifier_pda, [0u8; 32]);
 
         let approve_ix = Instruction::Approve {
@@ -114,13 +106,7 @@ fn full_create_propose_approve_execute_round_trip() {
 fn distinct_members_on_same_proposal_produce_distinct_nullifiers() {
     let state_pda = derive_multisig_state_pda(&PROGRAM_ID, &CREATE_KEY);
     let chain_id = ChainId::from_u64(1);
-    let proposal_id = derive_proposal_id(
-        &chain_id,
-        &state_pda,
-        0,
-        b"action",
-        &TARGET_PROGRAM,
-    );
+    let proposal_id = derive_proposal_id(&chain_id, &state_pda, 0, b"action", &TARGET_PROGRAM);
 
     let m1 = deterministic_identity(1);
     let m2 = deterministic_identity(2);
@@ -144,13 +130,7 @@ fn same_member_same_proposal_same_nullifier_double_vote_pda_collision() {
     let state_pda = derive_multisig_state_pda(&PROGRAM_ID, &CREATE_KEY);
     let proposal_pda = derive_proposal_pda(&PROGRAM_ID, &CREATE_KEY, 0);
     let chain_id = ChainId::from_u64(1);
-    let proposal_id = derive_proposal_id(
-        &chain_id,
-        &state_pda,
-        0,
-        b"action",
-        &TARGET_PROGRAM,
-    );
+    let proposal_id = derive_proposal_id(&chain_id, &state_pda, 0, b"action", &TARGET_PROGRAM);
 
     let member = deterministic_identity(5);
     let n1 = member.nullifier::<Sha256Hasher>(&proposal_id);
@@ -169,20 +149,8 @@ fn same_member_different_proposals_distinct_nullifiers() {
     // proposal B.
     let state_pda = derive_multisig_state_pda(&PROGRAM_ID, &CREATE_KEY);
     let chain_id = ChainId::from_u64(1);
-    let pid_a = derive_proposal_id(
-        &chain_id,
-        &state_pda,
-        0,
-        b"action_a",
-        &TARGET_PROGRAM,
-    );
-    let pid_b = derive_proposal_id(
-        &chain_id,
-        &state_pda,
-        1,
-        b"action_b",
-        &TARGET_PROGRAM,
-    );
+    let pid_a = derive_proposal_id(&chain_id, &state_pda, 0, b"action_a", &TARGET_PROGRAM);
+    let pid_b = derive_proposal_id(&chain_id, &state_pda, 1, b"action_b", &TARGET_PROGRAM);
     assert_ne!(pid_a, pid_b);
 
     let member = deterministic_identity(7);
@@ -223,20 +191,9 @@ fn action_mutation_invalidates_proposal_id() {
     // matches.
     let state_pda = derive_multisig_state_pda(&PROGRAM_ID, &CREATE_KEY);
     let chain_id = ChainId::from_u64(1);
-    let pid_original = derive_proposal_id(
-        &chain_id,
-        &state_pda,
-        0,
-        b"action",
-        &TARGET_PROGRAM,
-    );
-    let pid_mutated = derive_proposal_id(
-        &chain_id,
-        &state_pda,
-        0,
-        b"action_mutated",
-        &TARGET_PROGRAM,
-    );
+    let pid_original = derive_proposal_id(&chain_id, &state_pda, 0, b"action", &TARGET_PROGRAM);
+    let pid_mutated =
+        derive_proposal_id(&chain_id, &state_pda, 0, b"action_mutated", &TARGET_PROGRAM);
     assert_ne!(pid_original, pid_mutated);
 }
 

@@ -676,7 +676,10 @@ fn wire_round_trip_repack_via_independent_packer() {
         .bytes
         .clone();
 
-    assert_eq!(journal_a, journal_b, "the two packings must yield identical journals");
+    assert_eq!(
+        journal_a, journal_b,
+        "the two packings must yield identical journals"
+    );
 
     // And the journal must decode to the expected public-input bundle.
     assert_eq!(journal_a.len(), APPROVE_PUBLIC_INPUTS_LEN);
@@ -711,7 +714,8 @@ fn wire_member_index_encoding_is_implicit_in_direction_bytes() {
         for level in 0..MERKLE_DEPTH {
             let expected_bit = (n >> level) & 1;
             assert_eq!(
-                direction_bytes[level] as u32, expected_bit,
+                direction_bytes[level] as u32,
+                expected_bit,
                 "member index {n}: direction bit at level {level} should be {expected_bit}, \
                  got {actual} — direction bytes do not encode index as LSB-first",
                 actual = direction_bytes[level]

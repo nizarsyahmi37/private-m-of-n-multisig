@@ -23,8 +23,8 @@
 
 use crypto::hash::Sha256Hasher;
 use crypto::merkle::MerkleTree;
-use private_multisig_core::proof::{derive_proposal_id, ChainId, DEPLOYMENT_CHAIN_ID_U64};
 use private_multisig_core::pda::derive_multisig_state_pda;
+use private_multisig_core::proof::{derive_proposal_id, ChainId, DEPLOYMENT_CHAIN_ID_U64};
 
 use crate::error::SdkError;
 use crate::member::IdentityCommitment;
@@ -84,8 +84,7 @@ impl MultisigBuilder {
     /// have been added. Returns `Err(ThresholdExceedsMembers)` if more than
     /// `u32::MAX` members were added (overflow in `n`).
     pub fn finalize(&self) -> Result<MultisigFinalized, SdkError> {
-        let n = u32::try_from(self.added.len())
-            .map_err(|_| SdkError::ThresholdExceedsMembers)?;
+        let n = u32::try_from(self.added.len()).map_err(|_| SdkError::ThresholdExceedsMembers)?;
 
         // Check m == 0 or n == 0 first (BT-2 fix: dedicated InvalidThreshold)
         if self.m == 0 || n == 0 {
@@ -94,10 +93,7 @@ impl MultisigBuilder {
 
         // InsufficientMembers: check after m/n validity so the error code is accurate
         if self.added.len() < self.m as usize {
-            return Err(SdkError::InsufficientMembers {
-                m: self.m,
-                n,
-            });
+            return Err(SdkError::InsufficientMembers { m: self.m, n });
         }
 
         // m > n: distinct error
@@ -155,7 +151,10 @@ impl MultisigFinalized {
 
     /// Returns the Merkle path for a given member's commitment.
     /// Used by the SDK to construct the witness for `ApprovalProver`.
-    pub fn merkle_proof(&self, commitment: &IdentityCommitment) -> Result<crypto::merkle::MerkleProof, SdkError> {
+    pub fn merkle_proof(
+        &self,
+        commitment: &IdentityCommitment,
+    ) -> Result<crypto::merkle::MerkleProof, SdkError> {
         let idx = self
             .member_index(commitment)
             .ok_or(SdkError::SessionStatusMismatch)?;
@@ -272,7 +271,10 @@ mod tests {
         let alice = crate::member::Member::new().unwrap();
         builder.add_member(alice.commitment()).unwrap();
         let result = builder.finalize();
-        assert!(matches!(result, Err(SdkError::InsufficientMembers { m: 2, n: 1 })));
+        assert!(matches!(
+            result,
+            Err(SdkError::InsufficientMembers { m: 2, n: 1 })
+        ));
     }
 
     #[test]
@@ -290,7 +292,9 @@ mod tests {
         let member = crate::member::Member::new().unwrap();
         let mut builder = MultisigBuilder::new(2);
         builder.add_member(member.commitment()).unwrap();
-        builder.add_member(crate::member::Member::new().unwrap().commitment()).unwrap();
+        builder
+            .add_member(crate::member::Member::new().unwrap().commitment())
+            .unwrap();
         let finalized = builder.finalize().unwrap();
 
         let program_id = [0xA1; 32];
@@ -298,7 +302,9 @@ mod tests {
         let action = b"transfer 100 tokens";
         let target = [0xCC; 32];
 
-        let snap = MultisigStateSnapshot::new(program_id, create_key, finalized.members_root, 2, 2, 0).unwrap();
+        let snap =
+            MultisigStateSnapshot::new(program_id, create_key, finalized.members_root, 2, 2, 0)
+                .unwrap();
         let pid1 = snap.derive_proposal_id(0, action, &target);
         let pid2 = snap.derive_proposal_id(0, action, &target);
         assert_eq!(pid1, pid2);
@@ -309,7 +315,9 @@ mod tests {
         let member = crate::member::Member::new().unwrap();
         let mut builder = MultisigBuilder::new(2);
         builder.add_member(member.commitment()).unwrap();
-        builder.add_member(crate::member::Member::new().unwrap().commitment()).unwrap();
+        builder
+            .add_member(crate::member::Member::new().unwrap().commitment())
+            .unwrap();
         let finalized = builder.finalize().unwrap();
 
         let program_id = [0xA1; 32];
@@ -317,7 +325,9 @@ mod tests {
         let action = b"transfer 100 tokens";
         let target = [0xCC; 32];
 
-        let snap = MultisigStateSnapshot::new(program_id, create_key, finalized.members_root, 2, 2, 0).unwrap();
+        let snap =
+            MultisigStateSnapshot::new(program_id, create_key, finalized.members_root, 2, 2, 0)
+                .unwrap();
         let pid0 = snap.derive_proposal_id(0, action, &target);
         let pid1 = snap.derive_proposal_id(1, action, &target);
         assert_ne!(pid0, pid1);
@@ -330,7 +340,9 @@ mod tests {
         // m = u8::MAX (255), n = 255 — maximal threshold with tight membership
         let mut builder = crate::multisig::MultisigBuilder::new(255);
         for _ in 0..255 {
-            builder.add_member(crate::member::Member::new().unwrap().commitment()).unwrap();
+            builder
+                .add_member(crate::member::Member::new().unwrap().commitment())
+                .unwrap();
         }
         let result = builder.finalize().unwrap();
         assert_eq!(result.m, 255);
@@ -341,7 +353,9 @@ mod tests {
     fn builder_accepts_minimal_1_of_1() {
         // Minimal valid multisig: m=1, n=1
         let mut builder = crate::multisig::MultisigBuilder::new(1);
-        builder.add_member(crate::member::Member::new().unwrap().commitment()).unwrap();
+        builder
+            .add_member(crate::member::Member::new().unwrap().commitment())
+            .unwrap();
         let result = builder.finalize().unwrap();
         assert_eq!(result.m, 1);
         assert_eq!(result.n, 1);
@@ -350,7 +364,9 @@ mod tests {
     #[test]
     fn builder_rejects_m_zero() {
         let mut builder = crate::multisig::MultisigBuilder::new(0);
-        builder.add_member(crate::member::Member::new().unwrap().commitment()).unwrap();
+        builder
+            .add_member(crate::member::Member::new().unwrap().commitment())
+            .unwrap();
         let result = builder.finalize();
         assert!(matches!(result, Err(SdkError::InvalidThreshold)));
     }

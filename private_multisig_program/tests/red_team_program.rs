@@ -37,9 +37,7 @@
 
 use std::env;
 
-use crypto::{
-    merkle::MERKLE_DEPTH, Identity, MerkleTree, Sha256Hasher, HASH_LEN,
-};
+use crypto::{merkle::MERKLE_DEPTH, Identity, MerkleTree, Sha256Hasher, HASH_LEN};
 use private_multisig_core::{
     derive_proposal_id, ApprovePublicInputs, ChainId, APPROVE_PUBLIC_INPUTS_LEN,
 };
@@ -316,8 +314,7 @@ fn red_proposal_id_substitution_changes_nullifier_in_journal() {
     let pid_b: [u8; 32] = {
         let program_id: [u8; 32] = [0x99; 32];
         let create_key: [u8; 32] = [0xAB; 32];
-        let state_pda =
-            private_multisig_core::derive_multisig_state_pda(&program_id, &create_key);
+        let state_pda = private_multisig_core::derive_multisig_state_pda(&program_id, &create_key);
         let target_program: [u8; 32] = [0xCD; 32];
         derive_proposal_id(
             &ChainId::from_u64(0xABCD_EF01),
@@ -348,7 +345,10 @@ fn red_proposal_id_substitution_changes_nullifier_in_journal() {
 
     assert_eq!(ja.members_root, jb.members_root, "shared member set");
     assert_eq!(ja.members_root, tree.root());
-    assert_ne!(ja.proposal_id, jb.proposal_id, "distinct proposal_id committed");
+    assert_ne!(
+        ja.proposal_id, jb.proposal_id,
+        "distinct proposal_id committed"
+    );
     assert_eq!(ja.proposal_id, pid_a);
     assert_eq!(jb.proposal_id, pid_b);
     assert_ne!(
@@ -562,7 +562,7 @@ fn red_swapped_sk_salt_fails() {
     let env_builder = ExecutorEnv::builder()
         .write_slice(&public_prefix)
         .write_slice(&real.salt) // sk slot
-        .write_slice(&real.sk)   // salt slot
+        .write_slice(&real.sk) // salt slot
         .write_slice(&siblings_flat)
         .write_slice(&direction_bytes)
         .build();

@@ -86,8 +86,7 @@ fn random_nonzero_leaf<R: RngCore>(rng: &mut R) -> Hash {
 /// optimisation in `--release` ever broke correctness, the assertions
 /// below would fail there even though they pass in debug (or vice versa).
 const SIZE3_LEAF_BYTES: [u8; 3] = [1, 2, 3];
-const SIZE3_ROOT_HEX: &str =
-    "fd7fcba86a73ede96174eb4ccca829adfba7a8cb3e2d5ffe51d71ebabf65c717";
+const SIZE3_ROOT_HEX: &str = "fd7fcba86a73ede96174eb4ccca829adfba7a8cb3e2d5ffe51d71ebabf65c717";
 
 /// Sibling hashes for proofs at indices 0, 1, 2. The first sibling
 /// differs by index (it pairs with the leaf's neighbour), the remaining
@@ -244,8 +243,7 @@ fn debug_release_parity_nullifier() {
     // expected = SHA256(sk ‖ pid) = e2d80f78d79027556d6619a1400605abbdca6bb6eb24e0831e33ecd5466fa5f6
     let sk = [0xAAu8; 32];
     let pid = [0xBBu8; HASH_LEN];
-    let expected =
-        decode_hex("e2d80f78d79027556d6619a1400605abbdca6bb6eb24e0831e33ecd5466fa5f6");
+    let expected = decode_hex("e2d80f78d79027556d6619a1400605abbdca6bb6eb24e0831e33ecd5466fa5f6");
     assert_eq!(
         nullifier::<Sha256Hasher>(&sk, &pid),
         expected,
@@ -277,8 +275,7 @@ fn debug_release_parity_commitment() {
     // sk = [0x55;32], salt = [0x66;32]
     // expected = SHA256(sk ‖ salt) = c0e763c35fb9ae653e27d88907dc7a58e3012f7cedbbc03f9124f25a8dc2d2da
     let id = Identity::new([0x55u8; 32], [0x66u8; 32]);
-    let expected =
-        decode_hex("c0e763c35fb9ae653e27d88907dc7a58e3012f7cedbbc03f9124f25a8dc2d2da");
+    let expected = decode_hex("c0e763c35fb9ae653e27d88907dc7a58e3012f7cedbbc03f9124f25a8dc2d2da");
     let c = id.commitment::<Sha256Hasher>();
     assert_eq!(
         *c.as_bytes(),
@@ -290,7 +287,11 @@ fn debug_release_parity_commitment() {
     let mut buf = [0u8; 64];
     buf[..32].copy_from_slice(&[0x55u8; 32]);
     buf[32..].copy_from_slice(&[0x66u8; 32]);
-    assert_eq!(ref_sha256(&buf), expected, "reference SHA-256 commitment drift");
+    assert_eq!(
+        ref_sha256(&buf),
+        expected,
+        "reference SHA-256 commitment drift"
+    );
 }
 
 #[test]
@@ -336,7 +337,9 @@ fn repeat_run_same_inputs_same_outputs_100x() {
 
     for (tree_size, proof_idx, seed) in configs {
         let mut rng = StdRng::seed_from_u64(seed);
-        let leaves: Vec<Hash> = (0..tree_size).map(|_| random_nonzero_leaf(&mut rng)).collect();
+        let leaves: Vec<Hash> = (0..tree_size)
+            .map(|_| random_nonzero_leaf(&mut rng))
+            .collect();
 
         // Reference run.
         let ref_tree = build_tree(&leaves);
@@ -512,7 +515,10 @@ fn parallel_identity_commitment_no_state_leak() {
     let mut sorted: Vec<Hash> = collected.iter().map(|(_, c)| *c).collect();
     sorted.sort();
     for w in sorted.windows(2) {
-        assert_ne!(w[0], w[1], "distinct identities produced colliding commitment");
+        assert_ne!(
+            w[0], w[1],
+            "distinct identities produced colliding commitment"
+        );
     }
 }
 
@@ -535,7 +541,8 @@ fn tree_grow_one_leaf_at_a_time_root_changes_monotonically() {
     assert_eq!(roots.len(), 32);
     for (i, w) in roots.windows(2).enumerate() {
         assert_ne!(
-            w[0], w[1],
+            w[0],
+            w[1],
             "consecutive roots after insert {} and {} matched — stale cache?",
             i,
             i + 1
@@ -621,7 +628,10 @@ fn hash_pair_associativity_sentinel() {
     // byte path the inequality could vanish.
     let left_n = Sha256Hasher::hash_node(&Sha256Hasher::hash_node(&a, &b), &c);
     let right_n = Sha256Hasher::hash_node(&a, &Sha256Hasher::hash_node(&b, &c));
-    assert_ne!(left_n, right_n, "hash_node appears associative — major regression");
+    assert_ne!(
+        left_n, right_n,
+        "hash_node appears associative — major regression"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -638,7 +648,11 @@ fn error_paths_dont_corrupt_state() {
 
     let root_before = tree.root();
     let proof_l1_before = tree.proof(0).unwrap();
-    assert!(verify_proof::<Sha256Hasher>(&root_before, &l1, &proof_l1_before));
+    assert!(verify_proof::<Sha256Hasher>(
+        &root_before,
+        &l1,
+        &proof_l1_before
+    ));
 
     // Trigger an error: out-of-range proof.
     match tree.proof(usize::MAX) {
@@ -682,8 +696,16 @@ fn error_paths_dont_corrupt_state() {
 fn merkle_tree_default_equals_new() {
     let d = MerkleTree::<Sha256Hasher>::default();
     let n = MerkleTree::<Sha256Hasher>::new();
-    assert_eq!(d.root(), n.root(), "Default::default and ::new disagree on root");
-    assert_eq!(d.len(), n.len(), "Default::default and ::new disagree on len");
+    assert_eq!(
+        d.root(),
+        n.root(),
+        "Default::default and ::new disagree on root"
+    );
+    assert_eq!(
+        d.len(),
+        n.len(),
+        "Default::default and ::new disagree on len"
+    );
     assert!(d.is_empty());
     assert!(n.is_empty());
     assert_eq!(d.capacity(), n.capacity());

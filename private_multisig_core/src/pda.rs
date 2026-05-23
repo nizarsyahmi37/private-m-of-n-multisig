@@ -40,8 +40,7 @@ extern crate alloc;
 
 /// Domain-separation prefix used by `nssa_core::AccountId::for_public_pda`.
 /// 32 bytes (the literal text plus 7 trailing NULs to round it to 32).
-const NSSA_PUBLIC_PDA_PREFIX: &[u8; 32] =
-    b"/NSSA/v0.2/AccountId/PDA/\x00\x00\x00\x00\x00\x00\x00";
+const NSSA_PUBLIC_PDA_PREFIX: &[u8; 32] = b"/NSSA/v0.2/AccountId/PDA/\x00\x00\x00\x00\x00\x00\x00";
 
 /// Seed for the per-multisig `MultisigState` account.
 pub const SEED_MULTISIG_STATE: &[u8; 13] = b"pmsig_state__";
@@ -167,10 +166,7 @@ mod tests {
         ];
         for i in 0..seeds.len() {
             for j in (i + 1)..seeds.len() {
-                assert_ne!(
-                    seeds[i], seeds[j],
-                    "seeds[{i}] collides with seeds[{j}]"
-                );
+                assert_ne!(seeds[i], seeds[j], "seeds[{i}] collides with seeds[{j}]");
             }
         }
     }

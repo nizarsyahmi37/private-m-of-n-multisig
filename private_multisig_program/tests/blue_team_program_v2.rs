@@ -77,9 +77,7 @@ fn deterministic_identity_u32(seed: u32) -> Identity {
     let mut sk = [0u8; 32];
     let mut salt = [0u8; 32];
     for i in 0..32 {
-        sk[i] = seed_bytes[i % 4]
-            .wrapping_add(i as u8)
-            .wrapping_mul(0x9B);
+        sk[i] = seed_bytes[i % 4].wrapping_add(i as u8).wrapping_mul(0x9B);
         salt[i] = seed_bytes[i % 4]
             .wrapping_mul(3)
             .wrapping_add(i as u8)
@@ -132,13 +130,7 @@ fn build_witness(
 
     let proof = tree.proof(approver_index).expect("proof must exist");
 
-    let proposal_id = derive_proposal_id(
-        chain_id,
-        state_pda,
-        index,
-        action_bytes,
-        target_program,
-    );
+    let proposal_id = derive_proposal_id(chain_id, state_pda, index, action_bytes, target_program);
 
     let mut siblings_flat = [0u8; MERKLE_DEPTH * HASH_LEN];
     for (level, sibling) in proof.siblings.iter().enumerate() {
@@ -430,12 +422,14 @@ fn v2_receipt_serializable_via_borsh() {
     // (e.g. to disk while collecting approvals, or to pass across the wire
     // between an off-chain prover service and the on-chain submitter).
     let bytes = borsh::to_vec(&receipt).expect("Receipt must Borsh-serialize");
-    assert!(!bytes.is_empty(), "Receipt borsh encoding must not be empty");
+    assert!(
+        !bytes.is_empty(),
+        "Receipt borsh encoding must not be empty"
+    );
 
     // Decode back and check the round-tripped receipt still verifies
     // against the same pinned image-id.
-    let decoded: Receipt =
-        borsh::from_slice(&bytes).expect("Receipt must Borsh-deserialize");
+    let decoded: Receipt = borsh::from_slice(&bytes).expect("Receipt must Borsh-deserialize");
     decoded
         .verify(APPROVE_CIRCUIT_IMAGE_ID)
         .expect("round-tripped Receipt must verify against pinned image-id");
@@ -546,8 +540,14 @@ fn v2_proving_for_2_of_3_threshold_simulation() {
     let d2 = decode_journal(&r2);
 
     // Same multisig, same proposal: identical members_root and proposal_id.
-    assert_eq!(d0.members_root, d2.members_root, "members_root drift across approvers");
-    assert_eq!(d0.proposal_id, d2.proposal_id, "proposal_id drift across approvers");
+    assert_eq!(
+        d0.members_root, d2.members_root,
+        "members_root drift across approvers"
+    );
+    assert_eq!(
+        d0.proposal_id, d2.proposal_id,
+        "proposal_id drift across approvers"
+    );
 
     // Two distinct approvers ⇒ two distinct nullifiers (so the on-chain
     // verifier counts this as two independent approvals).
@@ -597,8 +597,7 @@ fn v2_large_tree_5000_members_member_at_index_4321_proves() {
     let receipt = prove_once(&w);
     let decoded = decode_journal(&receipt);
 
-    let expected_nullifier =
-        members[approver_index].nullifier::<Sha256Hasher>(&w.proposal_id);
+    let expected_nullifier = members[approver_index].nullifier::<Sha256Hasher>(&w.proposal_id);
     assert_eq!(decoded.members_root, w.members_root);
     assert_eq!(decoded.proposal_id, w.proposal_id);
     assert_eq!(decoded.nullifier, expected_nullifier);
@@ -680,8 +679,7 @@ fn v2_nullifier_computed_inside_guest_matches_identity_nullifier_on_host() {
                 &ctx.target_program,
             );
 
-            let host_nullifier =
-                members[member_idx].nullifier::<Sha256Hasher>(&w.proposal_id);
+            let host_nullifier = members[member_idx].nullifier::<Sha256Hasher>(&w.proposal_id);
 
             let receipt = prove_once(&w);
             let decoded = decode_journal(&receipt);
@@ -834,9 +832,18 @@ fn v2_journal_decodes_as_three_distinct_fields_byte_positions_match_spec() {
     let nul_slice = &journal[64..96];
 
     let expected_nullifier = members[4].nullifier::<Sha256Hasher>(&w.proposal_id);
-    assert_eq!(root_slice, &w.members_root, "bytes [0..32) must be members_root");
-    assert_eq!(pid_slice, &w.proposal_id, "bytes [32..64) must be proposal_id");
-    assert_eq!(nul_slice, &expected_nullifier, "bytes [64..96) must be nullifier");
+    assert_eq!(
+        root_slice, &w.members_root,
+        "bytes [0..32) must be members_root"
+    );
+    assert_eq!(
+        pid_slice, &w.proposal_id,
+        "bytes [32..64) must be proposal_id"
+    );
+    assert_eq!(
+        nul_slice, &expected_nullifier,
+        "bytes [64..96) must be nullifier"
+    );
 
     // Sanity: the three segments must be pairwise distinct under our
     // fixture — root, pid, and nullifier are computed from disjoint

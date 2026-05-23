@@ -35,7 +35,8 @@ use rand::{RngCore, SeedableRng};
 
 use crypto::{Identity, MerkleTree, Sha256Hasher, SALT_LEN, SK_LEN};
 use private_multisig_core::{
-    derive_multisig_state_pda, derive_proposal_id, error::CoreError,
+    derive_multisig_state_pda, derive_proposal_id,
+    error::CoreError,
     proof::{ApprovePublicInputs, ChainId},
     state::{Proposal, MAX_ACTION_BYTES_LEN},
     APPROVE_PUBLIC_INPUTS_LEN,
@@ -210,11 +211,7 @@ fn error_codes_within_class_increment() {
                 CoreError::ProposalIdMismatch,
             ],
         ),
-        (
-            "E3xxx",
-            3000,
-            &[CoreError::NullifierAlreadyUsed],
-        ),
+        ("E3xxx", 3000, &[CoreError::NullifierAlreadyUsed]),
         (
             "E4xxx",
             4000,
@@ -402,7 +399,8 @@ fn error_classes_no_cross_collision() {
         let actual_class = class_of(v.code())
             .unwrap_or_else(|| panic!("{:?} code {} outside known classes", v, v.code()));
         assert_eq!(
-            actual_class, expected_class,
+            actual_class,
+            expected_class,
             "{:?} (code {}) belongs to class E{}xxx, not E{}xxx",
             v,
             v.code(),
@@ -470,12 +468,10 @@ fn integration_round_trip_with_oversize_action_unchanged() {
             approvals_count: 0,
             executed: false,
         };
-        let bytes = to_vec(&proposal).unwrap_or_else(|e| {
-            panic!("borsh serialize failed for size {}: {}", size, e)
-        });
-        let decoded = Proposal::try_from_slice(&bytes).unwrap_or_else(|e| {
-            panic!("borsh deserialize failed for size {}: {}", size, e)
-        });
+        let bytes = to_vec(&proposal)
+            .unwrap_or_else(|e| panic!("borsh serialize failed for size {}: {}", size, e));
+        let decoded = Proposal::try_from_slice(&bytes)
+            .unwrap_or_else(|e| panic!("borsh deserialize failed for size {}: {}", size, e));
         assert_eq!(decoded, proposal);
         assert!(
             Proposal::validate_action_bytes(&decoded.action_bytes).is_ok(),
