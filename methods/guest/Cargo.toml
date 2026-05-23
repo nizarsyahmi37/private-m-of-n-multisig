@@ -20,7 +20,10 @@ name = "private_multisig"
 path = "src/bin/private_multisig.rs"
 
 [dependencies]
-risc0-zkvm = { version = "3.0", default-features = false, features = ["std"] }
+# Pinned tight to match `risc0-zkvm = "=3.0.5"` in the SDK and `risc0-build
+# = "=3.0.5"` in `methods/Cargo.toml`; bumping any one of these requires
+# bumping all three together and regenerating the pinned image-id.
+risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["std"] }
 # The approve_circuit guest uses only the no_std-safe subset of `crypto` and
 # `private_multisig_core`. The SPEL verifier needs the full `std` surface
 # (state types, validators, derive helpers). Cargo unifies features within a
