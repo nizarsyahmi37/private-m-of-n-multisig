@@ -147,15 +147,25 @@ impl ApprovalSession {
     }
 
     /// Transition to `Proved` with the cached receipt.
+    ///
+    /// Validates the state-machine transition BEFORE writing the cached
+    /// receipt — a rejected transition must leave the session bit-identical
+    /// to its pre-call state, otherwise a persisted record can carry a
+    /// receipt whose status field says no proof exists yet.
     pub fn mark_proved(&mut self, receipt: Vec<u8>) -> Result<(), SdkError> {
+        self.transition_to(SessionStatus::Proved)?;
         self.receipt = Some(receipt);
-        self.transition_to(SessionStatus::Proved)
+        Ok(())
     }
 
     /// Transition to `Submitted` with the submission block number.
+    ///
+    /// Validates the state-machine transition BEFORE writing the submission
+    /// block — same rationale as `mark_proved`.
     pub fn mark_submitted(&mut self, block: u64) -> Result<(), SdkError> {
+        self.transition_to(SessionStatus::Submitted)?;
         self.submission_block = Some(block);
-        self.transition_to(SessionStatus::Submitted)
+        Ok(())
     }
 
     /// Demote from `Submitted` to `Proved` on reorg detection.
