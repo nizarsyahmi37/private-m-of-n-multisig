@@ -406,7 +406,7 @@ impl SessionStore {
             let (key_bytes, value_bytes) =
                 item.map_err(|e| SdkError::SessionStoreOpenFailed(e.to_string()))?;
             // Stop when the key no longer has the prefix.
-            if key_bytes.len() < prefix.len() || &key_bytes[..prefix.len()] != &prefix {
+            if key_bytes.len() < prefix.len() || key_bytes[..prefix.len()] != prefix[..] {
                 break;
             }
             let session: ApprovalSession =
