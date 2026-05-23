@@ -190,22 +190,28 @@ impl ApprovalSession {
         self.transition_to(SessionStatus::Confirmed)
     }
 
-    /// Promote from `Submitted` to `Confirmed` only if `current_block` is
-    /// at least `n_blocks` ahead of `submission_block`. Returns `Ok(false)`
-    /// if not enough blocks have passed (the documented `N` buffer in
-    /// THREAT_MODEL T6.5; `N = 32` is the recommended default for LEZ).
-    /// Returns `Err` if the session is not in `Submitted` status.
+    /// Promote from `Submitted` to `Confirmed` only once
+    /// `current_block >= submission_block + n_blocks`. Returns `Ok(false)`
+    /// if not enough blocks have passed; the documented N-block finality
+    /// buffer is THREAT_MODEL T6.5 with `N = 32` as the recommended default
+    /// for LEZ.
+    ///
+    /// Returns `Err(SessionStatusMismatch)` if the session is not in
+    /// `Submitted`, `Err(MissingSubmissionBlock)` if `Submitted` was reached
+    /// without a recorded block (this is a programming error — the only
+    /// constructor of `Submitted` is `mark_submitted(block)`), and
+    /// `Err(ArithmeticOverflow)` if `submission_block + n_blocks` would wrap
+    /// past `u64::MAX`.
     pub fn try_confirm(&mut self, current_block: u64, n_blocks: u64) -> Result<bool, SdkError> {
         if self.status != SessionStatus::Submitted {
             return Err(SdkError::SessionStatusMismatch);
         }
         let Some(submitted_at) = self.submission_block else {
-            return Err(SdkError::SessionStatusMismatch);
+            return Err(SdkError::MissingSubmissionBlock);
         };
-        let confirmed_at = match submitted_at.checked_add(n_blocks) {
-            Some(b) => b,
-            None => return Err(SdkError::SessionStatusMismatch),
-        };
+        let confirmed_at = submitted_at
+            .checked_add(n_blocks)
+            .ok_or(SdkError::ArithmeticOverflow)?;
         if current_block < confirmed_at {
             return Ok(false);
         }

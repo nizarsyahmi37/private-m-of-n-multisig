@@ -81,6 +81,12 @@ pub enum SdkError {
     #[error("E5043: session in unexpected status for requested operation")]
     SessionStatusMismatch,
 
+    #[error("E5044: session reached Submitted without recording a submission block")]
+    MissingSubmissionBlock,
+
+    #[error("E5045: arithmetic overflow computing finality boundary")]
+    ArithmeticOverflow,
+
     // --- Keystore ---
     #[error("E5050: keystore file open failed: {0}")]
     KeystoreOpenFailed(String),
@@ -131,6 +137,8 @@ impl SdkError {
             SdkError::SessionNotFound => 5041,
             SdkError::SessionCorrupted => 5042,
             SdkError::SessionStatusMismatch => 5043,
+            SdkError::MissingSubmissionBlock => 5044,
+            SdkError::ArithmeticOverflow => 5045,
             SdkError::KeystoreOpenFailed(_) => 5050,
             SdkError::KeystoreDecryptionFailed => 5051,
             SdkError::KeystoreSerializationFailed => 5052,
