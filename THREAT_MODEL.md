@@ -275,35 +275,35 @@ Companion to [`PLAN.md`](./PLAN.md). Each threat entry follows: **Capability →
 
 | Threat ID | Mitigation lives in | Verification |
 |---|---|---|
-| T1.1 | `sdk/src/network/relayer.rs`, docs | Manual review |
-| T1.2 | `sdk/src/submit/delay.rs` | Unit test on delay distribution |
+| T1.1 | Docs only in v1; relayer/submission module deferred to a follow-on under `sdk/src/` | Manual review |
+| T1.2 | Deferred to a follow-on `submit`-pathway under `sdk/src/`; v1 has no submission delay | Unit test on delay distribution (post-implementation) |
 | T1.3 | `methods/guest/src/bin/approve_circuit.rs` (constant-time hash), docs | Manual review |
-| T1.4 | `sdk/src/member.rs` (per-instance identity default), `cli/src/identity.rs` | Unit test |
+| T1.4 | `sdk/src/member.rs` (per-instance identity default); CLI integration deferred | Unit test |
 | T1.5 | Documented residual; `THREAT_MODEL.md` §10 | None |
-| T1.6 | Documented residual; `sdk/src/submit/delay.rs` partial | None |
+| T1.6 | Documented residual; partial mitigation deferred with T1.2 | None |
 | T2.1 | `methods/guest/src/bin/approve_circuit.rs` (nullifier assertion) | Integration test: tampered nullifier |
-| T2.2 | `private_multisig_program/src/approve.rs` + `NullifierEntry` PDA | **Integration test: cross-proposal replay** |
-| T2.3 | `private_multisig_program/src/approve.rs` (`proposal_id` recompute) | **Integration test: cross-instance replay** |
-| T2.4 | `private_multisig_program/src/approve.rs` (`chain_id` in preimage) | **Integration test: cross-chain replay** |
-| T2.5 | `private_multisig_program/src/propose.rs` (write-once fields) | **Integration test: mutation rejected** |
+| T2.2 | `methods/guest/src/bin/private_multisig.rs` `approve` handler + `NullifierEntry` PDA | **Integration test: cross-proposal replay** |
+| T2.3 | `methods/guest/src/bin/private_multisig.rs` `approve` handler (`proposal_id` recompute) | **Integration test: cross-instance replay** |
+| T2.4 | `methods/guest/src/bin/private_multisig.rs` `approve` handler (`chain_id` in preimage) | **Integration test: cross-chain replay** |
+| T2.5 | `methods/guest/src/bin/private_multisig.rs` `propose` handler (write-once via init-fails-if-exists) | **Integration test: mutation rejected** |
 | T3.1 | Documented trust assumption | Manual review |
-| T3.2 | `private_multisig_program/src/state.rs` (root write-once) | **Integration test: root swap rejected** |
-| T3.3 | `Cargo.toml` pinned Risc0 version | Manual review + advisory monitoring |
-| T4.1 | `private_multisig_program/src/approve.rs` (fail-fast ordering) | Bench test on rejection cost |
-| T4.2 | `private_multisig_program/src/execute.rs` (atomic check-and-set) | Integration test: double-execute |
-| T4.3 | `sdk/src/network/relayer.rs` (multi-relayer + retry) | Unit test: fallback path |
+| T3.2 | `methods/guest/src/bin/private_multisig.rs` (no `update_root` instruction; init-only state) | **Integration test: root swap rejected** |
+| T3.3 | `methods/{,guest/}Cargo.toml`, `sdk/Cargo.toml` (`risc0-{build,zkvm} = "=3.0.5"` pinned strict) | Manual review + advisory monitoring |
+| T4.1 | `methods/guest/src/bin/private_multisig.rs` `approve` handler (fail-fast ordering) | Bench test on rejection cost |
+| T4.2 | `methods/guest/src/bin/private_multisig.rs` `execute` handler (atomic check-and-set) | Integration test: double-execute |
+| T4.3 | Deferred to follow-on relayer module under `sdk/src/` | Unit test: fallback path (post-implementation) |
 | T4.4 | v2 — documented | None in v1 |
 | T5.1 | `Cargo.toml` (Risc0 setup pinned), docs | Manual review |
 | T5.2 | `crypto/src/hash.rs` (algo choice + params) | Manual review |
-| T5.3 | `crypto/src/params.rs` (single source) | **CI parity test: guest vs verifier byte equality** |
-| T6.1 | `sdk/src/member.rs` (`Secret<T>` + redacting `Debug`), CI lint | **Unit test: `Debug` output redaction** |
+| T5.3 | `private_multisig_core/src/proof.rs` (single-source `derive_proposal_id`) + `private_multisig_core/tests/cross_crate_parity.rs` | **CI parity test: guest vs verifier byte equality** |
+| T6.1 | `sdk/src/member.rs` (`Secret<T>` + redacting `Debug`); no CI lint yet | **Unit test: `Debug` output redaction** |
 | T6.2 | `sdk/src/member.rs` (`Zeroize`), docs | Manual review |
-| T6.3 | `.github/workflows/audit.yml` (`cargo audit` + `cargo deny`) | CI on every PR |
-| T6.4 | `private_multisig_program/`, fuzz suite | **`cargo fuzz` corpus + manual review** |
-| T6.5 | `sdk/src/submit/session.rs` (N-block confirmation) | Integration test: simulated reorg |
+| T6.3 | `.github/workflows/ci.yml` `audit` job (`cargo audit` + `cargo deny`) | CI on every PR |
+| T6.4 | `private_multisig_program/tests/{receipt_negative_paths,red_team_program_v4}.rs`; `cargo fuzz` corpus deferred | **Negative-path tests + manual review** |
+| T6.5 | `sdk/src/session.rs` (`try_confirm` + `DEFAULT_FINALITY_BLOCKS`) | Integration test: simulated reorg |
 | T7.1 | Release tooling, docs | Manual review |
 | T7.2 | Docs + v2 hardware path | Manual review |
-| T7.3 | Docs + `cli/src/admin.rs` warning | Manual review |
+| T7.3 | Docs; CLI admin warning deferred to the CLI follow-on | Manual review |
 
 Threats in **bold** have explicit integration tests planned in the MVP foundation.
 
