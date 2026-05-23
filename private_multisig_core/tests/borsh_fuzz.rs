@@ -121,6 +121,7 @@ fn sample_inputs() -> ApprovePublicInputs {
 }
 
 fn one_of_each_instruction() -> Vec<Instruction> {
+    let inputs = sample_inputs();
     vec![
         Instruction::CreateMultisig {
             create_key: [0xAA; 32],
@@ -137,11 +138,18 @@ fn one_of_each_instruction() -> Vec<Instruction> {
         Instruction::Approve {
             create_key: [0xAA; 32],
             index: 7,
-            public_inputs: sample_inputs(),
+            nullifier: inputs.nullifier,
+            public_inputs: inputs.to_bytes().to_vec(),
         },
         Instruction::Execute {
             create_key: [0xAA; 32],
             index: 12_345,
+        },
+        Instruction::CreateVault {
+            create_key: [0xAA; 32],
+        },
+        Instruction::Reject {
+            create_key: [0xAA; 32],
         },
     ]
 }
@@ -533,13 +541,17 @@ fn fuzz_instruction_trailing_garbage_handling() {
 }
 
 // ============================================================================
-// (8) Invalid enum discriminants — bytes 4..=255 are not valid Instruction.
+// (8) Invalid enum discriminants — bytes 6..=255 are not valid Instruction.
 // ============================================================================
+// Valid discriminants are CreateMultisig=0, Propose=1, Approve=2,
+// Execute=3, CreateVault=4, Reject=5. Anything 6..=255 must reject.
 
 #[test]
 fn fuzz_instruction_discriminant_in_invalid_range() {
     // Build an otherwise-valid Execute body so we can swap just the
-    // discriminant byte.
+    // discriminant byte. Disc 5 (Reject) has the same shape as Execute
+    // (only `create_key`), so the swapped body would be a valid Reject.
+    // We start the sweep at 6 to stay strictly in the invalid range.
     let ix = Instruction::Execute {
         create_key: [0xAA; 32],
         index: 0,
@@ -547,20 +559,22 @@ fn fuzz_instruction_discriminant_in_invalid_range() {
     let valid = to_vec(&ix).unwrap();
     assert_eq!(valid[0], 3, "Execute discriminant drifted");
 
-    for disc in 4u8..=255u8 {
+    for disc in 6u8..=255u8 {
         let mut buf = valid.clone();
         buf[0] = disc;
         let res = deser_catch::<Instruction>("Instruction", &buf);
         match res {
             Err(panic_msg) => panic!("disc={disc} PANICKED: {panic_msg}"),
-            Ok(Ok(_)) => panic!("disc={disc} ACCEPTED — Instruction variants are 0..=3"),
+            Ok(Ok(_)) => panic!(
+                "disc={disc} ACCEPTED — Instruction variants are 0..=5"
+            ),
             Ok(Err(_)) => {}
         }
     }
 
     // Also try just the discriminant byte alone (with no body) for each
     // invalid value.
-    for disc in 4u8..=255u8 {
+    for disc in 6u8..=255u8 {
         let buf = vec![disc];
         let res = deser_catch::<Instruction>("Instruction", &buf);
         match res {

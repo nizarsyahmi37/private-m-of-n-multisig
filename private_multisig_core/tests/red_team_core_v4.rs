@@ -449,11 +449,14 @@ fn v4_attack_9a_instruction_discriminant_lt_4() {
         Instruction::Approve {
             create_key: [0; 32],
             index: 0,
+            nullifier: [0; 32],
             public_inputs: ApprovePublicInputs {
                 members_root: [0; 32],
                 proposal_id: [0; 32],
                 nullifier: [0; 32],
-            },
+            }
+            .to_bytes()
+            .to_vec(),
         },
         Instruction::Execute {
             create_key: [0; 32],
@@ -799,19 +802,25 @@ fn v4_attack_13c_instruction_approve_embeds_public_inputs_byvalue() {
             proposal_id: random_32(&mut r),
             nullifier: random_32(&mut r),
         };
+        let public_inputs_bytes = inputs.to_bytes().to_vec();
         let ix = Instruction::Approve {
             create_key: random_32(&mut r),
             index: r.gen(),
-            public_inputs: inputs,
+            nullifier: inputs.nullifier,
+            public_inputs: public_inputs_bytes.clone(),
         };
         let bytes = to_vec(&ix).unwrap();
         let back = Instruction::try_from_slice(&bytes).unwrap();
         match back {
             Instruction::Approve { public_inputs, .. } => {
                 assert_eq!(
-                    public_inputs, inputs,
+                    public_inputs, public_inputs_bytes,
                     "v4: embedded public_inputs drifted after round-trip"
                 );
+                let decoded = ApprovePublicInputs::from_bytes(
+                    &public_inputs[..].try_into().unwrap(),
+                );
+                assert_eq!(decoded, inputs, "v4: typed re-decode drifted");
             }
             _ => panic!("v4: variant changed on round-trip"),
         }

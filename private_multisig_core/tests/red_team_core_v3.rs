@@ -191,11 +191,14 @@ fn v3_attack_2a_instruction_discriminants_each_pinned() {
     let approve = Instruction::Approve {
         create_key: [0; 32],
         index: 0,
+        nullifier: [0; 32],
         public_inputs: ApprovePublicInputs {
             members_root: [0; 32],
             proposal_id: [0; 32],
             nullifier: [0; 32],
-        },
+        }
+        .to_bytes()
+        .to_vec(),
     };
     assert_eq!(to_vec(&approve).unwrap()[0], 2u8, "v3: Approve disc != 2");
 
@@ -811,12 +814,11 @@ fn v3_attack_12a_core_does_not_link_instruction_create_key_to_state() {
 // 13. Approve minimal wire size — receipt no longer part of the instruction
 // ============================================================================
 
-/// Round 5 dropped the `receipt: Vec<u8>` field from `Instruction::Approve`
-/// (the receipt is attached host-side via `add_assumption`, never on the
-/// instruction wire). Pin the new minimal Approve wire size as
-/// `discriminant(1) + create_key(32) + index(8) + public_inputs(96) = 137`.
+/// Round 6 unified Approve with the verifier handler signature.
+/// Pin the new Approve wire size as
+/// `disc(1) + create_key(32) + index(8) + nullifier(32) + len(4) + public_inputs(96) = 173`.
 #[test]
-fn v3_attack_13a_approve_minimal_wire_size_137_bytes() {
+fn v3_attack_13a_approve_wire_size_173_bytes() {
     let inputs = ApprovePublicInputs {
         members_root: [0x11; 32],
         proposal_id: [0x22; 32],
@@ -825,15 +827,16 @@ fn v3_attack_13a_approve_minimal_wire_size_137_bytes() {
     let ix = Instruction::Approve {
         create_key: [0xAA; 32],
         index: 0,
-        public_inputs: inputs,
+        nullifier: inputs.nullifier,
+        public_inputs: inputs.to_bytes().to_vec(),
     };
     let bytes = to_vec(&ix).unwrap();
     assert_eq!(
         bytes.len(),
-        1 + 32 + 8 + APPROVE_PUBLIC_INPUTS_LEN,
-        "v3: minimal Approve wire size",
+        1 + 32 + 8 + 32 + 4 + APPROVE_PUBLIC_INPUTS_LEN,
+        "v3: Approve wire size",
     );
-    assert_eq!(bytes.len(), 137);
+    assert_eq!(bytes.len(), 173);
 
     let decoded = Instruction::try_from_slice(&bytes).unwrap();
     assert_eq!(decoded, ix);

@@ -147,7 +147,8 @@ fn build_approve_ix_bytes(
     let ix = Instruction::Approve {
         create_key: inst.create_key,
         index,
-        public_inputs: inputs,
+        nullifier: inputs.nullifier,
+        public_inputs: inputs.to_bytes().to_vec(),
     };
     let bytes = to_vec(&ix).unwrap();
     let decoded = Instruction::try_from_slice(&bytes).unwrap();

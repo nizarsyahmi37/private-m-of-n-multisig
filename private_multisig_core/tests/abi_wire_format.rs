@@ -31,11 +31,20 @@ use private_multisig_core::{
 const ABI_HEX_CREATE_MULTISIG: &str = "00111111111111111111111111111111111111111111111111111111111111111122222222222222222222222222222222222222222222222222222222222222220305000000";
 const ABI_HEX_PROPOSE_EMPTY_ACTION: &str = "0111111111111111111111111111111111111111111111111111111111111111110000000000000000000000003333333333333333333333333333333333333333333333333333333333333333";
 const ABI_HEX_PROPOSE_WITH_ACTION: &str = "011111111111111111111111111111111111111111111111111111111111111111000000000000000003000000aabbcc3333333333333333333333333333333333333333333333333333333333333333";
-// Round 5 dropped `receipt: Vec<u8>` from Instruction::Approve. New wire
-// layout: discriminant(0x02) || create_key(32) || index(8 LE) ||
-// members_root(32) || proposal_id(32) || nullifier(32) = 137 bytes.
-const ABI_HEX_APPROVE: &str = "0211111111111111111111111111111111111111111111111111111111111111110700000000000000444444444444444444444444444444444444444444444444444444444444444455555555555555555555555555555555555555555555555555555555555555556666666666666666666666666666666666666666666666666666666666666666";
+// Round 6 wire-format unification: Instruction::Approve now matches the
+// SPEL verifier handler signature exactly. Wire layout (Borsh,
+// off-chain SDK):
+//   disc(0x02) || create_key(32) || index(8 LE) || nullifier(32) ||
+//   public_inputs_len(4 LE = 96) || public_inputs(96)
+//   = 1 + 32 + 8 + 32 + 4 + 96 = 173 bytes.
+// The public_inputs payload is the canonical [members_root || proposal_id
+// || nullifier] 96-byte ApprovePublicInputs layout.
+const ABI_HEX_APPROVE: &str = "021111111111111111111111111111111111111111111111111111111111111111070000000000000066666666666666666666666666666666666666666666666666666666666666666000000044444444444444444444444444444444444444444444444444444444444444445555555555555555555555555555555555555555555555555555555555555555\
+6666666666666666666666666666666666666666666666666666666666666666";
 const ABI_HEX_EXECUTE: &str = "0311111111111111111111111111111111111111111111111111111111111111112a00000000000000";
+// Round 6 adds CreateVault and Reject. Both are tiny: disc + create_key.
+const ABI_HEX_CREATE_VAULT: &str = "041111111111111111111111111111111111111111111111111111111111111111";
+const ABI_HEX_REJECT: &str = "051111111111111111111111111111111111111111111111111111111111111111";
 
 #[test]
 fn abi_pinned_create_multisig_instruction() {
@@ -84,14 +93,16 @@ fn abi_pinned_propose_instruction_with_action() {
 
 #[test]
 fn abi_pinned_approve_instruction() {
+    let inputs = ApprovePublicInputs {
+        members_root: [0x44; 32],
+        proposal_id: [0x55; 32],
+        nullifier: [0x66; 32],
+    };
     let ix = Instruction::Approve {
         create_key: [0x11; 32],
         index: 7,
-        public_inputs: ApprovePublicInputs {
-            members_root: [0x44; 32],
-            proposal_id: [0x55; 32],
-            nullifier: [0x66; 32],
-        },
+        nullifier: inputs.nullifier,
+        public_inputs: inputs.to_bytes().to_vec(),
     };
     let got = hex::encode(to_vec(&ix).unwrap());
     assert_eq!(got, ABI_HEX_APPROVE, "Instruction::Approve wire format drifted");
@@ -105,6 +116,24 @@ fn abi_pinned_execute_instruction() {
     };
     let got = hex::encode(to_vec(&ix).unwrap());
     assert_eq!(got, ABI_HEX_EXECUTE, "Instruction::Execute wire format drifted");
+}
+
+#[test]
+fn abi_pinned_create_vault_instruction() {
+    let ix = Instruction::CreateVault {
+        create_key: [0x11; 32],
+    };
+    let got = hex::encode(to_vec(&ix).unwrap());
+    assert_eq!(got, ABI_HEX_CREATE_VAULT, "Instruction::CreateVault wire format drifted");
+}
+
+#[test]
+fn abi_pinned_reject_instruction() {
+    let ix = Instruction::Reject {
+        create_key: [0x11; 32],
+    };
+    let got = hex::encode(to_vec(&ix).unwrap());
+    assert_eq!(got, ABI_HEX_REJECT, "Instruction::Reject wire format drifted");
 }
 
 // ---------------------------------------------------------------------------

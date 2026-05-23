@@ -280,9 +280,12 @@ fn v4_debug_release_parity_borsh_round_trip() {
         assert_eq!(round, api);
     }
 
-    // Instruction::Approve — discriminant 0x02, plus packed fields.
-    // Round 5 dropped the `receipt: Vec<u8>` field, so the wire is now
-    // discriminant(1) || create_key(32) || index(8 LE) || public_inputs(96).
+    // Instruction::Approve — discriminant 0x02. Round 6 unified the
+    // verifier handler signature and core::Instruction::Approve shape:
+    //   disc(1) || create_key(32) || index(8 LE) || nullifier(32) ||
+    //   public_inputs_len(4 LE = 96) || public_inputs(96)
+    // = 173 bytes. The public_inputs payload is the canonical
+    // ApprovePublicInputs to_bytes layout.
     {
         let api = ApprovePublicInputs {
             members_root: [0x11u8; 32],
@@ -292,13 +295,16 @@ fn v4_debug_release_parity_borsh_round_trip() {
         let ix = Instruction::Approve {
             create_key: [0xAAu8; 32],
             index: 7,
-            public_inputs: api,
+            nullifier: api.nullifier,
+            public_inputs: api.to_bytes().to_vec(),
         };
         let bytes = to_vec(&ix).unwrap();
         let expected = hex::decode(
             "02\
              aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
              0700000000000000\
+             3333333333333333333333333333333333333333333333333333333333333333\
+             60000000\
              1111111111111111111111111111111111111111111111111111111111111111\
              2222222222222222222222222222222222222222222222222222222222222222\
              3333333333333333333333333333333333333333333333333333333333333333",
@@ -826,10 +832,12 @@ fn v4_release_size_sentinels_pinned() {
     assert_eq!(size_of::<Proposal>(), 64);
 
     // Instruction: enum size = max(variant) + discriminant, padded. Round
-    // 5 dropped Approve.receipt so Propose is now the largest variant
-    // (carries action_bytes: Vec<u8>). Today's size is 144 bytes. Pin it;
-    // future variant additions or field-shape changes show up in a diff.
-    assert_eq!(size_of::<Instruction>(), 144);
+    // 6 unified Approve to carry `nullifier: [u8; 32]` and
+    // `public_inputs: Vec<u8>` (matching the verifier handler signature),
+    // and removed the typed `ApprovePublicInputs` embedding. With both
+    // Propose and Approve carrying Vec<u8> fields, the in-memory layout
+    // is now 104 bytes (Vec<u8> = 24, plus fixed fields padded). Pin it.
+    assert_eq!(size_of::<Instruction>(), 104);
 }
 
 // ===========================================================================

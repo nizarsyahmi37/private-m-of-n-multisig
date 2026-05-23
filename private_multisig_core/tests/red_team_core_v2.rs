@@ -302,12 +302,13 @@ fn v2_attack_3b_instruction_disc0_truncated_body() {
 }
 
 /// Attack v2-3c: Approve instruction with `receipt.len() == 0` is a valid
-/// Round 5 dropped `receipt` from `Instruction::Approve`. The receipt is
-/// attached host-side via `ExecutorEnv::add_assumption` rather than
-/// carried on the instruction wire. This test now confirms the new
-/// minimal-Approve shape round-trips cleanly and pins the byte length.
+/// Round 6 unified the Approve wire with the verifier handler signature:
+/// `{create_key, index, nullifier, public_inputs: Vec<u8>}`. The wire is
+/// no longer a fixed 137 bytes — `public_inputs` is length-prefixed. Pin
+/// the byte length at 1 + 32 + 8 + 32 + 4 + 96 = 173 for the canonical
+/// 96-byte ApprovePublicInputs payload.
 #[test]
-fn v2_attack_3c_approve_minimal_wire_round_trips() {
+fn v2_attack_3c_approve_wire_round_trips() {
     let inputs = ApprovePublicInputs {
         members_root: [0x11; 32],
         proposal_id: [0x22; 32],
@@ -316,12 +317,13 @@ fn v2_attack_3c_approve_minimal_wire_round_trips() {
     let ix = Instruction::Approve {
         create_key: [0xAA; 32],
         index: 0,
-        public_inputs: inputs,
+        nullifier: inputs.nullifier,
+        public_inputs: inputs.to_bytes().to_vec(),
     };
     let bytes = to_vec(&ix).unwrap();
-    assert_eq!(bytes.len(), 1 + 32 + 8 + 96);
+    assert_eq!(bytes.len(), 1 + 32 + 8 + 32 + 4 + 96);
     let decoded = Instruction::try_from_slice(&bytes).unwrap();
-    assert_eq!(decoded, ix, "minimal Approve must round-trip");
+    assert_eq!(decoded, ix, "Approve must round-trip");
 }
 
 /// Attack v2-3d: feed an oversize length-prefix on `Proposal.action_bytes`

@@ -282,12 +282,12 @@ fn sdk_consumer_serialize_and_deserialize_approve_for_submission() {
     // length prefix width, this assertion catches the wire break before it
     // ships to the verifier.
     // Round 5 dropped `receipt: Vec<u8>` from Instruction::Approve, so the
-    // on-chain wire is now a fixed 137 bytes (disc + create_key + index +
-    // public_inputs). The receipt itself never crosses the on-chain wire —
-    // the host attaches it as a composition assumption via
-    // ExecutorEnv::add_assumption. The SDK still owns the receipt bytes
-    // locally (see ApprovalSession::Proved.receipt below) for the resume
-    // path, but the SDK-built Instruction::Approve is the minimal shape.
+    // Round 6 unified Instruction::Approve with the verifier handler.
+    // The Borsh wire is now disc(1) + create_key(32) + index(8) +
+    // nullifier(32) + public_inputs_len(4) + public_inputs(96) = 173
+    // bytes for the canonical 96-byte ApprovePublicInputs payload. The
+    // verifier accepts the SAME enum via SPEL's external_instruction
+    // route and decodes via risc0_zkvm::serde::Deserializer.
     let inputs = ApprovePublicInputs {
         members_root: [0x11; 32],
         proposal_id: [0x22; 32],
@@ -296,18 +296,19 @@ fn sdk_consumer_serialize_and_deserialize_approve_for_submission() {
     let ix = Instruction::Approve {
         create_key: CREATE_KEY,
         index: 0,
-        public_inputs: inputs,
+        nullifier: inputs.nullifier,
+        public_inputs: inputs.to_bytes().to_vec(),
     };
 
     let bytes = to_vec(&ix).expect("serialize Approve");
     assert_eq!(
         bytes.len(),
-        1 + 32 + 8 + 96,
-        "wire size drifted from the 137-byte minimal-Approve sentinel"
+        1 + 32 + 8 + 32 + 4 + 96,
+        "wire size drifted from the 173-byte Approve sentinel"
     );
-    assert_eq!(bytes.len(), 137);
+    assert_eq!(bytes.len(), 173);
 
-    // Round-trip back through Borsh — what the verifier will do.
+    // Round-trip back through Borsh — what the SDK does locally.
     let decoded = Instruction::try_from_slice(&bytes).expect("deserialize Approve");
     assert_eq!(ix, decoded);
 

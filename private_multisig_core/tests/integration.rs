@@ -94,7 +94,8 @@ fn full_create_propose_approve_execute_round_trip() {
         let approve_ix = Instruction::Approve {
             create_key: CREATE_KEY,
             index: 0,
-            public_inputs: inputs,
+            nullifier: inputs.nullifier,
+            public_inputs: inputs.to_bytes().to_vec(),
         };
         let bytes = to_vec(&approve_ix).unwrap();
         assert_eq!(Instruction::try_from_slice(&bytes).unwrap(), approve_ix);

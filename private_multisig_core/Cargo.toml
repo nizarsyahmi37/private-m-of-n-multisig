@@ -19,6 +19,7 @@ std = ["crypto/std", "dep:thiserror"]
 [dependencies]
 crypto = { path = "../crypto", default-features = false }
 borsh = { workspace = true }
+serde = { version = "1", default-features = false, features = ["derive", "alloc"] }
 thiserror = { workspace = true, optional = true }
 
 [dev-dependencies]

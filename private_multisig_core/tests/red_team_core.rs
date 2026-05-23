@@ -897,11 +897,12 @@ fn attack_12b_proposal_bool_strict() {
 }
 
 /// (12c) Approve instruction wire is fixed-length now that `receipt`
-/// has been dropped (round 5). The Borsh encoding is exactly
-/// `discriminant(1) + create_key(32) + index(8) + public_inputs(96) = 137`
-/// — no length-prefixed Vec field, no smuggling channel.
+/// Round 6 unified `Instruction::Approve` with the verifier handler:
+/// `{create_key, index, nullifier: [u8;32], public_inputs: Vec<u8>}`. The
+/// Borsh wire is `disc(1) + create_key(32) + index(8) + nullifier(32) +
+/// len(4) + public_inputs(96) = 173` for the canonical 96-byte payload.
 #[test]
-fn attack_12c_approve_wire_is_fixed_length_137() {
+fn attack_12c_approve_wire_is_173() {
     let inputs = ApprovePublicInputs {
         members_root: [1; 32],
         proposal_id: [2; 32],
@@ -910,24 +911,24 @@ fn attack_12c_approve_wire_is_fixed_length_137() {
     let ix = Instruction::Approve {
         create_key: [0; 32],
         index: 0,
-        public_inputs: inputs,
+        nullifier: inputs.nullifier,
+        public_inputs: inputs.to_bytes().to_vec(),
     };
     let bytes = to_vec(&ix).unwrap();
-    let expected = 1 + 32 + 8 + APPROVE_PUBLIC_INPUTS_LEN;
+    let expected = 1 + 32 + 8 + 32 + 4 + APPROVE_PUBLIC_INPUTS_LEN;
     assert_eq!(bytes.len(), expected, "Approve wire size drift");
-    assert_eq!(bytes.len(), 137);
+    assert_eq!(bytes.len(), 173);
     let back = Instruction::try_from_slice(&bytes).unwrap();
     assert_eq!(back, ix);
 }
 
-/// (12d) Round 5 removed the `receipt: Vec<u8>` field from
-/// `Instruction::Approve`, eliminating the length-prefix attack surface
-/// this test originally covered. The test now asserts the negative —
-/// `Instruction::Approve` has no Vec field on the wire — by checking the
-/// byte position immediately after `index` is the first byte of
-/// `public_inputs.members_root`, not a u32 length prefix.
+/// (12d) Round 6 keeps a length-prefixed `Vec<u8>` for public_inputs (so
+/// the SPEL handler can length-check before decoding). Pin the byte
+/// position layout: after disc(1)+create_key(32)+index(8)+nullifier(32),
+/// the next 4 bytes must be `[96, 0, 0, 0]` (LE u32 length prefix), then
+/// the 96 public-input bytes follow.
 #[test]
-fn attack_12d_approve_has_no_length_prefixed_payload() {
+fn attack_12d_approve_public_inputs_is_length_prefixed_vec() {
     let inputs = ApprovePublicInputs {
         members_root: [0xAB; 32],
         proposal_id: [0xCD; 32],
@@ -936,14 +937,20 @@ fn attack_12d_approve_has_no_length_prefixed_payload() {
     let ix = Instruction::Approve {
         create_key: [0; 32],
         index: 0,
-        public_inputs: inputs,
+        nullifier: inputs.nullifier,
+        public_inputs: inputs.to_bytes().to_vec(),
     };
     let bytes = to_vec(&ix).unwrap();
-    let after_index = 1 + 32 + 8;
+    let len_prefix_off = 1 + 32 + 8 + 32;
     assert_eq!(
-        bytes[after_index], 0xAB,
-        "byte immediately after index must be the first byte of members_root, \
-         not a length prefix — `receipt` reintroduced?",
+        &bytes[len_prefix_off..len_prefix_off + 4],
+        &96u32.to_le_bytes(),
+        "expected u32 LE length prefix == 96",
+    );
+    let payload_off = len_prefix_off + 4;
+    assert_eq!(
+        bytes[payload_off], 0xAB,
+        "byte after length prefix must be the first members_root byte",
     );
 }
 

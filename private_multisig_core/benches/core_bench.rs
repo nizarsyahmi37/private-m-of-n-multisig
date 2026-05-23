@@ -215,12 +215,14 @@ fn bench_borsh_round_trip(c: &mut Criterion) {
         );
     }
 
-    // Round 5 dropped Instruction::Approve.receipt — the wire is now a
-    // fixed 137 bytes regardless of any payload. One bench is enough.
+    // Round 6 unified Approve with the verifier handler shape:
+    // {create_key, index, nullifier, public_inputs: Vec<u8>}. The wire is
+    // 173 bytes for the canonical 96-byte ApprovePublicInputs payload.
     let ix_approve = Instruction::Approve {
         create_key: CREATE_KEY,
         index: 7,
-        public_inputs: inputs,
+        nullifier: inputs.nullifier,
+        public_inputs: inputs.to_bytes().to_vec(),
     };
     group.bench_function("Instruction::Approve", |b| {
         b.iter(|| {
