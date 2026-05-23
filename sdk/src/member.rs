@@ -127,7 +127,7 @@ impl Member {
         // Argon2id parameters: 64 MiB memory, 3 iterations, 4 parallelism.
         // RFC 9106 "interactive" parameters — fast for CLI, costly to brute-force.
         let argon_params = argon2::Params::new(65536, 3, 4, None)
-            .map_err(|e| SdkError::KeystoreSerializationFailed)?;
+            .map_err(|_| SdkError::KeystoreSerializationFailed)?;
 
         let argon2id = argon2::Argon2::new(argon2::Algorithm::Argon2id, argon2::Version::V0x13, argon_params);
         let mut kek = [0u8; 32];

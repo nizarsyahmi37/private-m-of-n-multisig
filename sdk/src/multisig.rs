@@ -357,7 +357,7 @@ mod tests {
 
     #[test]
     fn builder_rejects_n_zero() {
-        let mut builder = crate::multisig::MultisigBuilder::new(1);
+        let builder = crate::multisig::MultisigBuilder::new(1);
         // 0 members for a 1-of-N multisig — n == 0
         let result = builder.finalize();
         assert!(matches!(result, Err(SdkError::InvalidThreshold)));
