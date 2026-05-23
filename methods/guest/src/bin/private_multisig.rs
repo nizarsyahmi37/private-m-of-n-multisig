@@ -42,8 +42,15 @@ mod private_multisig {
     pub fn create_multisig(
         #[account(init, pda = [literal("pmsig_state__"), arg("create_key")])]
         mut state: AccountWithMetadata,
+        // `creator` is whichever account paid the tx fee. SPEL's
+        // `#[account(signer)]` does NOT bind to any specific identity —
+        // anyone can call `create_multisig` with the members_root they
+        // computed locally. Member-set integrity comes from the root
+        // commitment, not signer identity (see THREAT_MODEL §1 Actors:
+        // "Admin trusted for member-set integrity (v1)" — the trust is in
+        // the act of computing and publishing the root, not in this signer).
         #[account(signer)]
-        admin: AccountWithMetadata,
+        creator: AccountWithMetadata,
         create_key: [u8; 32],
         members_root: [u8; 32],
         m: u8,
@@ -76,7 +83,7 @@ mod private_multisig {
             )
         })?;
 
-        Ok(SpelOutput::execute(vec![state, admin], vec![]))
+        Ok(SpelOutput::execute(vec![state, creator], vec![]))
     }
 
     /// Initialize the vault PDA for an existing multisig instance.
