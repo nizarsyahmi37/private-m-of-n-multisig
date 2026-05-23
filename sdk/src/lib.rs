@@ -71,3 +71,12 @@ pub use session::{ApprovalSession, SessionStatus, DEFAULT_FINALITY_BLOCKS};
 
 /// Re-export the core types the SDK needs to reference.
 pub use private_multisig_core::proof::ApprovePublicInputs;
+
+/// Image ID of the approve circuit, pinned in the SDK so the crate compiles
+/// without depending on the heavy `methods` crate. The integration test
+/// `tests/image_id_pin_parity.rs` cross-checks this against the canonical
+/// id re-exported by `private_multisig_program::APPROVE_CIRCUIT_IMAGE_ID`
+/// so any drift fails CI even when the prover feature is off.
+pub const APPROVE_CIRCUIT_IMAGE_ID_PINNED: [u32; 8] = [
+    763539168, 1016753994, 1524795730, 877238783, 502029817, 1373722446, 3332462251, 4034702986,
+];
