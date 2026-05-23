@@ -7,7 +7,10 @@ repository.workspace = true
 rust-version.workspace = true
 
 [build-dependencies]
-risc0-build = "3.0"
+# Pinned tight to match `risc0-zkvm = "=3.0.5"` in the SDK and the guest;
+# bumping any one of these requires bumping all three together and
+# regenerating the pinned image-id.
+risc0-build = "=3.0.5"
 
 [package.metadata.risc0]
 methods = ["guest"]
