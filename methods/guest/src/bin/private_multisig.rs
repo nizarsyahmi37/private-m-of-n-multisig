@@ -99,8 +99,14 @@ mod private_multisig {
         state: AccountWithMetadata,
         #[account(init, pda = [literal("pmsig_vault__"), arg("create_key")])]
         vault: AccountWithMetadata,
+        // `payer` is whichever account paid the transaction fee. SPEL's
+        // `#[account(signer)]` does NOT bind to the multisig's admin or any
+        // member — vault initialization is idempotent (init-fails-if-exists)
+        // and produces no privileged side effect, so leaving the signer
+        // open lets any relayer create the vault for an instance whose
+        // members haven't gotten around to it yet.
         #[account(signer)]
-        admin: AccountWithMetadata,
+        payer: AccountWithMetadata,
         create_key: [u8; 32],
     ) -> SpelResult {
         // Defense-in-depth: borsh-decode state to confirm it's a valid
@@ -116,7 +122,7 @@ mod private_multisig {
             })?;
 
         let _ = create_key;
-        Ok(SpelOutput::execute(vec![state, vault, admin], vec![]))
+        Ok(SpelOutput::execute(vec![state, vault, payer], vec![]))
     }
 
     /// Open a proposal under an active instance.
@@ -377,8 +383,13 @@ mod private_multisig {
         mut proposal: AccountWithMetadata,
         #[account(mut, owner = self_program_id, pda = [literal("pmsig_vault__"), arg("create_key")])]
         vault: AccountWithMetadata,
+        // `submitter` is whichever account paid the tx fee. SPEL's
+        // `#[account(signer)]` does NOT bind to a privileged role — the
+        // M-of-N threshold check below is what authorizes execution.
+        // Anyone (including a relayer) can submit the tx once enough
+        // approvals are recorded.
         #[account(signer)]
-        executor: AccountWithMetadata,
+        submitter: AccountWithMetadata,
         create_key: [u8; 32],
         index: u64,
     ) -> SpelResult {
@@ -489,7 +500,7 @@ mod private_multisig {
         };
 
         Ok(SpelOutput::execute(
-            vec![state, proposal, vault, executor],
+            vec![state, proposal, vault, submitter],
             vec![chained],
         ))
     }
