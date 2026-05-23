@@ -139,12 +139,16 @@ mod private_multisig {
     ///
     /// **Authorization model**: `#[account(signer)]` requires *some*
     /// signature on the tx — it does NOT bind to a member or admin. Open
-    /// proposing is intentional: the threat model (`THREAT_MODEL.md` T1.5)
-    /// rules out per-member binding for privacy reasons, and per-admin
-    /// binding would defeat the relayer pool. DoS via spam-proposing is
-    /// mitigated economically (each `propose` tx costs gas; the spammer
-    /// pays). Downstream consumers that page proposals should expect gaps
-    /// and unindexed indices.
+    /// proposing is intentional: binding to a specific member would either
+    /// require a ZK membership proof on every `propose` (adding seconds of
+    /// latency for a step that doesn't otherwise need one) or expose the
+    /// proposer's identity (defeating the relayer-pool indirection
+    /// THREAT_MODEL T1.1 relies on for submission privacy). Binding to a
+    /// specific admin would single-source the propose path and defeat
+    /// relayer fallback under T4.3. DoS via spam-proposing is mitigated
+    /// economically: each `propose` tx costs gas; the spammer pays.
+    /// Downstream consumers that page proposals should expect gaps and
+    /// unindexed indices.
     #[instruction]
     pub fn propose(
         #[account(mut, owner = self_program_id, pda = [literal("pmsig_state__"), arg("create_key")])]
