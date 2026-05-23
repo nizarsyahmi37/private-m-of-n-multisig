@@ -187,11 +187,13 @@ impl ApprovalSession {
         }
     }
 
-    /// Force-transition to `Confirmed`. Skips finality checks — prefer
-    /// [`try_confirm`](Self::try_confirm) which enforces an N-block buffer.
-    /// This entry point exists for tests and recovery scripts that have
-    /// out-of-band confirmation that finality has been reached.
-    pub fn mark_confirmed(&mut self) -> Result<(), SdkError> {
+    /// Force-transition to `Confirmed` without enforcing the finality
+    /// buffer. Almost all callers should use
+    /// [`try_confirm`](Self::try_confirm) instead — this entry point is
+    /// reserved for tests and one-off recovery scripts that have out-of-band
+    /// confirmation that finality has been reached, and the
+    /// `force_confirm_unchecked` name keeps that footgun visible.
+    pub fn force_confirm_unchecked(&mut self) -> Result<(), SdkError> {
         self.transition_to(SessionStatus::Confirmed)
     }
 
