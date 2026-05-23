@@ -149,20 +149,23 @@ impl ApprovalSession {
     }
 
     /// Transition to `Proving` status.
-    pub fn mark_proving(&mut self) {
-        self.transition_to(SessionStatus::Proving);
+    ///
+    /// Returns `SdkError::SessionStatusMismatch` if the current status is
+    /// not `Drafted` or `Proved` (the only valid predecessors).
+    pub fn mark_proving(&mut self) -> Result<(), SdkError> {
+        self.transition_to(SessionStatus::Proving)
     }
 
     /// Transition to `Proved` with the cached receipt.
-    pub fn mark_proved(&mut self, receipt: Vec<u8>) {
+    pub fn mark_proved(&mut self, receipt: Vec<u8>) -> Result<(), SdkError> {
         self.receipt = Some(receipt);
-        self.transition_to(SessionStatus::Proved);
+        self.transition_to(SessionStatus::Proved)
     }
 
     /// Transition to `Submitted` with the submission block number.
-    pub fn mark_submitted(&mut self, block: u64) {
+    pub fn mark_submitted(&mut self, block: u64) -> Result<(), SdkError> {
         self.submission_block = Some(block);
-        self.transition_to(SessionStatus::Submitted);
+        self.transition_to(SessionStatus::Submitted)
     }
 
     /// Demote from `Submitted` to `Proved` on reorg detection.
@@ -180,51 +183,38 @@ impl ApprovalSession {
     }
 
     /// Transition to `Confirmed`.
-    pub fn mark_confirmed(&mut self) {
-        self.transition_to(SessionStatus::Confirmed);
+    pub fn mark_confirmed(&mut self) -> Result<(), SdkError> {
+        self.transition_to(SessionStatus::Confirmed)
     }
 
-    /// Transition to `Failed` with an error message.
+    /// Transition to `Failed` with an error message. Failed is terminal
+    /// and reachable from any state, so this never returns Err.
     pub fn mark_failed(&mut self, message: String) {
         self.status = SessionStatus::Failed;
         self.error_message = Some(message);
         self.last_updated = current_unix_seconds();
     }
 
-    fn transition_to(&mut self, next: SessionStatus) {
+    fn transition_to(&mut self, next: SessionStatus) -> Result<(), SdkError> {
         // Enforce the documented state machine (BT-11 fix):
         // Drafted -> Proving -> Proved -> Submitted -> Confirmed
-        // Any state can transition to Failed
-        // Submitted -> Proved only via demote_on_reorg (special-cased below)
+        // Any state can transition to Failed (via mark_failed, not this path)
+        // Submitted -> Proved only via demote_on_reorg
         // Proved -> Proving (retry)
-        match (&self.status, &next) {
-            // Valid forward transitions
-            (SessionStatus::Drafted, SessionStatus::Proving) => {}
-            (SessionStatus::Proving, SessionStatus::Proved) => {}
-            (SessionStatus::Proved, SessionStatus::Submitted) => {}
-            (SessionStatus::Submitted, SessionStatus::Confirmed) => {}
-            // Failed is terminal — no transitions from it
-            (SessionStatus::Failed, _) => {
-                panic!("invalid session transition: Failed is terminal")
-            }
-            // Retry: reproving from Proved is acceptable
-            (SessionStatus::Proved, SessionStatus::Proving) => {}
-            // Submitted -> Proved is only valid via demote_on_reorg, not via this method
-            (SessionStatus::Submitted, SessionStatus::Proved) => {
-                panic!("invalid session transition: use demote_on_reorg() instead")
-            }
-            // Backward transitions
-            (SessionStatus::Confirmed, _) => {
-                panic!("invalid session transition: Confirmed is terminal")
-            }
-            // All other transitions are invalid
-            _ => panic!(
-                "invalid session transition: {:?} -> {:?}",
-                self.status, next
-            ),
+        let valid = matches!(
+            (&self.status, &next),
+            (SessionStatus::Drafted, SessionStatus::Proving)
+                | (SessionStatus::Proving, SessionStatus::Proved)
+                | (SessionStatus::Proved, SessionStatus::Submitted)
+                | (SessionStatus::Submitted, SessionStatus::Confirmed)
+                | (SessionStatus::Proved, SessionStatus::Proving)
+        );
+        if !valid {
+            return Err(SdkError::SessionStatusMismatch);
         }
         self.status = next;
         self.last_updated = current_unix_seconds();
+        Ok(())
     }
 }
 
@@ -483,9 +473,9 @@ mod tests {
             [0x22; 32],
         );
         let mut s = session;
-        s.mark_proving();
+        s.mark_proving().unwrap();
         assert_eq!(s.status, SessionStatus::Proving);
-        s.mark_proved(vec![0x99; 64]);
+        s.mark_proved(vec![0x99; 64]).unwrap();
         assert_eq!(s.status, SessionStatus::Proved);
         assert!(s.receipt.is_some());
     }
@@ -500,9 +490,9 @@ mod tests {
             [0x11; 96],
             [0x22; 32],
         );
-        session.mark_proving();
-        session.mark_proved(vec![0x99; 64]);
-        session.mark_submitted(100);
+        session.mark_proving().unwrap();
+        session.mark_proved(vec![0x99; 64]).unwrap();
+        session.mark_submitted(100).unwrap();
         assert_eq!(session.status, SessionStatus::Submitted);
 
         // Block 99 is before submission block 100 — this IS a reorg.
@@ -511,8 +501,31 @@ mod tests {
         assert!(session.submission_block.is_none());
 
         // Block 101 is after submission block 100 — not a reorg.
-        session.mark_submitted(100);
+        session.mark_submitted(100).unwrap();
         session.demote_on_reorg(101);
         assert_eq!(session.status, SessionStatus::Submitted);
+    }
+
+    #[test]
+    fn invalid_transition_returns_err_not_panic() {
+        let mut session = ApprovalSession::new(
+            [0xAA; 32],
+            [0xBB; 32],
+            IdentityCommitment([0xCC; 32]),
+            [0x11; 96],
+            [0x22; 32],
+        );
+        // Drafted -> Proved is not a valid forward step.
+        assert!(matches!(
+            session.mark_proved(vec![]),
+            Err(SdkError::SessionStatusMismatch)
+        ));
+        // Mark Failed via the dedicated method (always succeeds).
+        session.mark_failed("test".to_string());
+        // Failed -> anything is rejected.
+        assert!(matches!(
+            session.mark_proving(),
+            Err(SdkError::SessionStatusMismatch)
+        ));
     }
 }
