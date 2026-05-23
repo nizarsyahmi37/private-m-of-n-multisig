@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+  # RISC0_DEV_MODE produces fast but non-SNARK receipts. Required for CI
+  # because real proving takes minutes per receipt. PLAN.md §Verification
+  # step 7 calls out a nightly job for the RISC0_DEV_MODE=0 path.
+  RISC0_DEV_MODE: "1"
+
+jobs:
+  build-and-test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Format check
+        run: cargo fmt --all --check
+
+      - name: Build workspace
+        run: cargo build --workspace --all-targets
+
+      - name: Test workspace
+        run: cargo test --workspace
+
+      - name: Build SDK with prover feature
+        run: cargo build -p private_multisig_sdk --features prover
+
+      - name: Test SDK with prover feature
+        run: cargo test -p private_multisig_sdk --features prover
+
+  audit:
+    name: Supply-chain audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install cargo-audit
+        run: cargo install --locked cargo-audit
+
+      - name: Audit dependencies for known vulnerabilities
+        run: cargo audit
+
+      - name: Install cargo-deny
+        run: cargo install --locked cargo-deny
+
+      - name: Check licenses, sources, and advisories
+        run: cargo deny check
