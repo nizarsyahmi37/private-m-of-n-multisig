@@ -183,7 +183,7 @@ impl Member {
     /// wrong or the blob is corrupted. Both cases produce the same error
     /// to prevent oracle attacks.
     pub fn from_keystore(blob: &[u8], password: &str) -> Result<Self, SdkError> {
-        let mut cursor = &blob[..];
+        let mut cursor = blob;
         let ks =
             Keystore::deserialize(&mut cursor).map_err(|_| SdkError::KeystoreDecryptionFailed)?;
 
