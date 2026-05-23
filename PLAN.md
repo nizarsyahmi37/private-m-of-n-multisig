@@ -171,7 +171,7 @@ After implementation, the foundation is correct iff all of the following hold:
 
 1. `cargo test -p crypto` — Merkle round-trip and nullifier determinism pass.
 2. `cargo build --release` — workspace builds; Risc0 guests build and produce image IDs.
-3. `make idl` — emits a non-empty `private_multisig.idl.json` with five instructions and three account types.
+3. `make idl` — emits a non-empty `private_multisig.idl.json` with six instructions (`create_multisig`, `create_vault`, `propose`, `approve`, `execute`, `reject`) and four account types (state, vault, proposal, nullifier entry).
 4. `make test-e2e` against a local sequencer (with `RISC0_DEV_MODE=1` for CI speed):
    - 2-of-3 multisig created; on-chain state has correct `members_root`, `m=2`, `n=3`.
    - Two distinct members approve a proposal; third approval with a *reused* nullifier is rejected with a documented error code.
