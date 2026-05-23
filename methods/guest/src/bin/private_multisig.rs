@@ -28,7 +28,7 @@ use spel_framework::prelude::*;
 
 include!("../approve_circuit_image_id.rs");
 
-#[lez_program]
+#[lez_program(instruction = "private_multisig_core::Instruction")]
 mod private_multisig {
     #[allow(unused_imports)]
     use super::*;
@@ -81,21 +81,21 @@ mod private_multisig {
 
     /// Initialize the vault PDA for an existing multisig instance.
     ///
-    /// Without this handler the vault would have `program_owner =
-    /// DEFAULT_PROGRAM_ID` until something else wrote it, and the chained
-    /// call in `execute` would silently fail at the runtime's balance-
-    /// authorization check (R5-T1). The `init` constraint plus `pda = [...]`
-    /// makes SPEL auto-claim the vault under this program with
-    /// `Claim::Pda(combined_seed)`, so subsequent `execute` calls can
-    /// authorize the vault in chained calls under the same PdaSeed.
+    /// `state` carries `owner = self_program_id`, so the SPEL macro
+    /// rejects any supplied `state` account whose `program_owner` is not
+    /// this verifier — closing R6-T3 (vault squat via a default state
+    /// account). The handler additionally borsh-decodes `state.account.data`
+    /// as `MultisigState` to confirm it has actually been initialized via
+    /// `create_multisig` and is not just a zero-filled account.
     ///
-    /// Idempotency: `init` fails-if-exists, so a second `create_vault` for
-    /// the same `(create_key)` reverts cleanly. The handler also verifies
-    /// the `state` PDA exists by claim-binding it, so a vault cannot be
-    /// created without first running `create_multisig`.
+    /// `vault`'s `#[account(init, pda = [...])]` makes SPEL auto-claim it
+    /// under this program with `Claim::Pda(combined_seed)`, so subsequent
+    /// `execute` calls can authorize the vault in chained calls under the
+    /// same PdaSeed. `init` fails-if-exists, so a second `create_vault`
+    /// for the same `(create_key)` reverts cleanly.
     #[instruction]
     pub fn create_vault(
-        #[account(pda = [literal("pmsig_state__"), arg("create_key")])]
+        #[account(owner = self_program_id, pda = [literal("pmsig_state__"), arg("create_key")])]
         state: AccountWithMetadata,
         #[account(init, pda = [literal("pmsig_vault__"), arg("create_key")])]
         vault: AccountWithMetadata,
@@ -103,6 +103,18 @@ mod private_multisig {
         admin: AccountWithMetadata,
         create_key: [u8; 32],
     ) -> SpelResult {
+        // Defense-in-depth: borsh-decode state to confirm it's a valid
+        // initialized MultisigState body. An attacker who somehow supplied
+        // a state account passing the PDA + owner checks but with crafted
+        // data still has to produce bytes that decode as MultisigState.
+        let _state_body: MultisigState =
+            borsh::from_slice(&state.account.data).map_err(|e| {
+                SpelError::custom(
+                    private_multisig_core::CoreError::SerializationError.code(),
+                    format!("MultisigState decode failed: {e}"),
+                )
+            })?;
+
         let _ = create_key;
         Ok(SpelOutput::execute(vec![state, vault, admin], vec![]))
     }
@@ -113,7 +125,7 @@ mod private_multisig {
     /// a fresh `Proposal` to the proposal account.
     #[instruction]
     pub fn propose(
-        #[account(mut)]
+        #[account(mut, owner = self_program_id, pda = [literal("pmsig_state__"), arg("create_key")])]
         mut state: AccountWithMetadata,
         #[account(init, pda = [literal("pmsig_prop___"), arg("create_key"), arg("index")])]
         mut proposal: AccountWithMetadata,
@@ -215,9 +227,9 @@ mod private_multisig {
     /// `proposal.approvals_count` is bumped only after every check passes.
     #[instruction]
     pub fn approve(
-        #[account(mut, pda = [literal("pmsig_state__"), arg("create_key")])]
+        #[account(mut, owner = self_program_id, pda = [literal("pmsig_state__"), arg("create_key")])]
         state: AccountWithMetadata,
-        #[account(mut, pda = [literal("pmsig_prop___"), arg("create_key"), arg("index")])]
+        #[account(mut, owner = self_program_id, pda = [literal("pmsig_prop___"), arg("create_key"), arg("index")])]
         mut proposal: AccountWithMetadata,
         #[account(init, pda = [literal("pmsig_nulli__"), account("proposal"), arg("nullifier")])]
         nullifier_entry: AccountWithMetadata,
@@ -359,11 +371,11 @@ mod private_multisig {
     /// with `proposal.action_bytes`.
     #[instruction]
     pub fn execute(
-        #[account(mut, pda = [literal("pmsig_state__"), arg("create_key")])]
+        #[account(mut, owner = self_program_id, pda = [literal("pmsig_state__"), arg("create_key")])]
         state: AccountWithMetadata,
-        #[account(mut, pda = [literal("pmsig_prop___"), arg("create_key"), arg("index")])]
+        #[account(mut, owner = self_program_id, pda = [literal("pmsig_prop___"), arg("create_key"), arg("index")])]
         mut proposal: AccountWithMetadata,
-        #[account(mut, pda = [literal("pmsig_vault__"), arg("create_key")])]
+        #[account(mut, owner = self_program_id, pda = [literal("pmsig_vault__"), arg("create_key")])]
         vault: AccountWithMetadata,
         #[account(signer)]
         executor: AccountWithMetadata,
@@ -490,7 +502,7 @@ mod private_multisig {
     /// nonexistent multisigs and poison downstream indexers (R5-T5).
     #[instruction]
     pub fn reject(
-        #[account(pda = [literal("pmsig_state__"), arg("create_key")])]
+        #[account(owner = self_program_id, pda = [literal("pmsig_state__"), arg("create_key")])]
         state: AccountWithMetadata,
         #[account(signer)]
         rejector: AccountWithMetadata,
