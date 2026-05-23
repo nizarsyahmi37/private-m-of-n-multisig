@@ -43,13 +43,10 @@ use crate::error::SdkError;
 use crate::member::Member;
 use crate::multisig::MultisigStateSnapshot;
 
-/// Image ID of the approve circuit, pinned locally so the SDK does not need to
-/// depend on the heavy `methods` crate (whose build invokes the Risc0 RISC-V
-/// toolchain). `sdk/tests/image_id_pin_parity.rs` cross-checks this against
-/// `private_multisig_program::APPROVE_CIRCUIT_IMAGE_ID` so any drift fails CI.
-pub(crate) const APPROVE_CIRCUIT_IMAGE_ID_PINNED: [u32; 8] = [
-    763539168, 1016753994, 1524795730, 877238783, 502029817, 1373722446, 3332462251, 4034702986,
-];
+// `APPROVE_CIRCUIT_IMAGE_ID_PINNED` is exported from the crate root
+// (`sdk/src/lib.rs`) so the parity test in `sdk/tests/` can read it without
+// pulling in the `prover` feature.
+use crate::APPROVE_CIRCUIT_IMAGE_ID_PINNED;
 
 /// Risc0 guest proof generator for the approval circuit.
 ///
@@ -325,14 +322,6 @@ impl ApprovalProver {
     fn compute_nullifier(&self, proposal_id: [u8; 32]) -> [u8; 32] {
         crypto::nullifier::<crypto::hash::Sha256Hasher>(&self.sk, &proposal_id)
     }
-}
-
-/// Test-only accessor for `APPROVE_CIRCUIT_IMAGE_ID_PINNED`. Used by
-/// `tests/image_id_pin_parity.rs` to cross-check against the canonical id
-/// re-exported from `private_multisig_program`.
-#[doc(hidden)]
-pub fn __test_only_image_id() -> [u32; 8] {
-    APPROVE_CIRCUIT_IMAGE_ID_PINNED
 }
 
 impl Drop for ApprovalProver {
