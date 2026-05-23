@@ -5,8 +5,7 @@
 //! retry logic) can match on the code without parsing free-form text. The
 //! codes are grouped by class:
 //!
-//! - `E1xxx` — state-machine violations (instance not active, proposal
-//!   expired or executed).
+//! - `E1xxx` — state-machine violations (input shape, threshold, encoding).
 //! - `E2xxx` — proof-verification failures (bad receipt, image-ID mismatch,
 //!   root mismatch, proposal-id mismatch).
 //! - `E3xxx` — double-vote detection.
@@ -15,14 +14,70 @@
 //! Codes are stable: never renumber, never reuse a retired number, never
 //! change the (code → meaning) mapping. New errors get fresh codes in the
 //! next-free slot of their class.
+//!
+//! ## Codes that surface from other layers
+//!
+//! Two codes in the `E2xxx` and `E3xxx` classes are not emitted directly by
+//! the handler body — they surface through Risc0 / SPEL primitives:
+//!
+//! - **`E2001 ImageIdMismatch`** is what the SDK reports when a receipt was
+//!   produced against a different image-id than the one this program pins.
+//!   On chain, the symptom is that the outer SPEL receipt fails to verify
+//!   (the inner `env::verify` composition assumption cannot be discharged);
+//!   the handler never reaches the point of returning this code. The SDK
+//!   maps this off-chain failure mode to `E2001` so consumers have a single
+//!   ABI-aligned error to match on.
+//! - **`E3000 NullifierAlreadyUsed`** is enforced by SPEL's `#[account(init)]`
+//!   macro on the `NullifierEntry` PDA — init-fails-if-exists means a second
+//!   approval with the same nullifier reverts with SPEL's
+//!   `AccountAlreadyInitialized` framework error rather than this code. The
+//!   semantic is preserved: the *only* way to fail double-vote rejection is
+//!   the same nullifier landing at the same PDA twice.
+//!
+//! The previously-reserved codes `E1000 InstanceNotActive` and `E1001
+//! ProposalExpiredOrExecuted` were removed before any consumer matched on
+//! them; the verifier has no `active` flag and no expiry, so a reserved-
+//! but-dead code in the IDL was actively misleading. Both numbers are
+//! retired and will not be reused — anyone receiving them from a future
+//! release should treat the program as compromised.
 
 /// Error codes returned by the verifier program. The discriminants are kept
 /// stable by the `code()` method — adding a variant in the middle of the
 /// enum is fine, removing one is not.
+///
+/// ## Variants surfaced from outside the handler body
+///
+/// Four codes in this enum are not emitted by the verifier's handler bodies
+/// directly. They are part of the ABI because consumers (SDK, indexers,
+/// integration tests) need a single set of constants to match against:
+///
+/// - **`InstanceNotActive` (E1000)** — reserved for a future v2 lifecycle
+///   model with an `active` flag on `MultisigState`. v1 has no such flag,
+///   so the handler never returns this code. Kept reserved so adding the
+///   field later doesn't require an ABI bump.
+/// - **`ProposalExpiredOrExecuted` (E1001)** — reserved for a future v2
+///   expiry model. v1 has no proposal expiry; the already-executed case
+///   is `E4001 AlreadyExecuted`. Kept reserved for the same reason as
+///   `E1000`.
+/// - **`ImageIdMismatch` (E2001)** — reported by the SDK when a receipt
+///   was produced against a different image-id than the one this program
+///   pins. On chain, the symptom is that the outer SPEL receipt fails to
+///   verify (the inner `env::verify` composition assumption cannot be
+///   discharged); the handler never reaches this code. The SDK maps that
+///   off-chain failure to `E2001` so consumers have a single ABI-aligned
+///   error to match on.
+/// - **`NullifierAlreadyUsed` (E3000)** — double-vote rejection is enforced
+///   by SPEL's `#[account(init)]` macro on the `NullifierEntry` PDA;
+///   init-fails-if-exists means the second approval reverts with SPEL's
+///   `AccountAlreadyInitialized` framework error. This variant is the
+///   ABI-aligned shape the SDK maps that failure to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
 pub enum CoreError {
+    /// Reserved for v2 lifecycle. Never emitted by v1 handlers.
     #[error("E1000: instance not active")]
     InstanceNotActive,
+    /// Reserved for v2 expiry. v1 uses `AlreadyExecuted` (E4001) for the
+    /// already-executed case and has no proposal expiry.
     #[error("E1001: proposal expired or executed")]
     ProposalExpiredOrExecuted,
     #[error("E1002: action bytes too long")]
@@ -36,6 +91,8 @@ pub enum CoreError {
 
     #[error("E2000: invalid receipt")]
     InvalidReceipt,
+    /// SDK-surfaced. The on-chain handler never returns this directly —
+    /// wrong image-id makes the outer SPEL receipt fail to verify.
     #[error("E2001: image id mismatch")]
     ImageIdMismatch,
     #[error("E2002: root mismatch")]
@@ -43,6 +100,9 @@ pub enum CoreError {
     #[error("E2003: proposal id mismatch")]
     ProposalIdMismatch,
 
+    /// SDK-surfaced. SPEL's `#[account(init)]` on the `NullifierEntry`
+    /// PDA fails-if-exists with `AccountAlreadyInitialized`; the SDK maps
+    /// that to this variant for ABI consistency.
     #[error("E3000: nullifier already used")]
     NullifierAlreadyUsed,
 
@@ -146,7 +206,7 @@ mod tests {
     fn from_code_rejects_unknown() {
         assert_eq!(CoreError::from_code(0), None);
         assert_eq!(CoreError::from_code(999), None);
-        // 1005 is now ArithmeticOverflow (FINDING-V5); 1006 is the next unused.
+        // 1005 is ArithmeticOverflow; 1006 is the next unused slot.
         assert_eq!(CoreError::from_code(1006), None);
         assert_eq!(CoreError::from_code(2999), None);
         assert_eq!(CoreError::from_code(5000), None);
