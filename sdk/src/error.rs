@@ -62,11 +62,12 @@ pub enum SdkError {
     #[error("E5031: Risc0 receipt verification failed: {0}")]
     ReceiptVerificationFailed(String),
 
-    #[error("E5032: image ID mismatch (pinned vs. computed)")]
-    ImageIdMismatch,
-
-    #[error("E5033: DEV_MODE=1 receipt passed to non-dev-mode prover")]
-    DevModeReceiptInProdProver,
+    // Reserved E5032 / E5033: the v1 SDK does not distinguish image-id
+    // mismatch from other receipt verification failures, and does not
+    // explicitly check for dev-mode receipts being submitted to a
+    // non-dev-mode prover. A future typed mapping layer can claim these
+    // codes; until then they are off-limits to avoid documenting unimplemented
+    // behavior. See `core::error::CoreError::ImageIdMismatch` (E2001).
 
     // --- Session persistence ---
     #[error("E5040: session store open failed: {0}")]
@@ -131,8 +132,6 @@ impl SdkError {
             SdkError::BuilderAlreadyFinalized => 5023,
             SdkError::ProofGenerationFailed(_) => 5030,
             SdkError::ReceiptVerificationFailed(_) => 5031,
-            SdkError::ImageIdMismatch => 5032,
-            SdkError::DevModeReceiptInProdProver => 5033,
             SdkError::SessionStoreOpenFailed(_) => 5040,
             SdkError::SessionNotFound => 5041,
             SdkError::SessionCorrupted => 5042,
