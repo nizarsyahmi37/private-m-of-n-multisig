@@ -256,37 +256,64 @@ fn api_image_id_hex_runs_in_under_1ms() {
 }
 
 // ---------------------------------------------------------------------------
-// 12. Dependency-pin sentinel: risc0-zkvm is pinned to the "3.0" minor.
-//     A silent bump to "3.1" or "4.0" can change the image-id and would
-//     invalidate every receipt the verifier knows about.
+// 12. Dependency-pin sentinel: risc0-zkvm is pinned exactly to "=3.0.5"
+//     in every manifest that consumes it. A silent bump to "3.1" or
+//     "4.0" — or a drift where the guest pin and the host pin disagree —
+//     can change the image-id and would invalidate every receipt the
+//     verifier knows about. We check three pin sites in lockstep:
+//       1. `private_multisig_program/Cargo.toml` (this crate; host)
+//       2. `methods/guest/Cargo.toml` (the Risc0 guest source of truth)
+//       3. `sdk/Cargo.toml` (host-side prover)
 // ---------------------------------------------------------------------------
 #[test]
 fn api_cargo_toml_dep_versions_are_pinned_appropriately() {
-    // Look for a line of the form: risc0-zkvm = "3.0"
-    // We tolerate spaces around `=` but require the exact "3.0" version.
-    let mut found = false;
-    for line in CARGO_TOML.lines() {
-        let t = line.trim();
-        if !t.starts_with("risc0-zkvm") {
-            continue;
+    fn assert_risc0_zkvm_pinned(manifest_path: &str, contents: &str) {
+        let mut found = false;
+        for line in contents.lines() {
+            let t = line.trim();
+            if !t.starts_with("risc0-zkvm") {
+                continue;
+            }
+            // Accept either bare-string form (`risc0-zkvm = "=3.0.5"`) or
+            // table form (`risc0-zkvm = { version = "=3.0.5", ... }`).
+            // Both must contain the exact `"=3.0.5"` literal somewhere on
+            // the line; anything else is a drift.
+            assert!(
+                t.contains("\"=3.0.5\""),
+                "risc0-zkvm dep in {manifest_path} must contain \"=3.0.5\" \
+                 (got line: {t:?}). Bumping minor/major can drift the \
+                 image-id; if intentional, update this sentinel AND \
+                 re-snapshot the image-id."
+            );
+            found = true;
+            break;
         }
-        // Strip everything up to the first `=`, then look at the right side.
-        let Some((_, rhs)) = t.split_once('=') else {
-            continue;
-        };
-        let rhs_trim = rhs.trim();
         assert!(
-            rhs_trim.starts_with("\"=3.0.5\""),
-            "risc0-zkvm dep must be pinned to \"=3.0.5\" (got: {rhs_trim:?}). \
-             Bumping minor/major can drift the image-id; if intentional, \
-             update this sentinel AND re-snapshot the image-id."
+            found,
+            "no `risc0-zkvm = ...` line found in {manifest_path} — \
+             has the dep been removed?"
         );
-        found = true;
-        break;
     }
-    assert!(
-        found,
-        "no `risc0-zkvm = ...` line found in Cargo.toml — has the dep been removed?"
+
+    let manifest_dir = env!("CARGO_MANIFEST_DIR");
+    let guest_manifest = format!("{manifest_dir}/../methods/guest/Cargo.toml");
+    let sdk_manifest = format!("{manifest_dir}/../sdk/Cargo.toml");
+
+    assert_risc0_zkvm_pinned(
+        "private_multisig_program/Cargo.toml",
+        CARGO_TOML,
+    );
+    assert_risc0_zkvm_pinned(
+        "methods/guest/Cargo.toml",
+        &std::fs::read_to_string(&guest_manifest).unwrap_or_else(|e| {
+            panic!("could not read {guest_manifest}: {e}")
+        }),
+    );
+    assert_risc0_zkvm_pinned(
+        "sdk/Cargo.toml",
+        &std::fs::read_to_string(&sdk_manifest).unwrap_or_else(|e| {
+            panic!("could not read {sdk_manifest}: {e}")
+        }),
     );
 }
 
