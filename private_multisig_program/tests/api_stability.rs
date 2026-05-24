@@ -272,7 +272,7 @@ fn api_cargo_toml_dep_versions_are_pinned_appropriately() {
         // Match `^<dep_name>\s*=` exactly. `starts_with(dep_name)` alone
         // would accept `risc0-zkvm-platform = "0.x"` as a hit and then
         // skip the real `risc0-zkvm` line below it.
-        let mut found = false;
+        let mut match_count = 0usize;
         for line in contents.lines() {
             let t = line.trim();
             if !t.starts_with(dep_name) {
@@ -289,7 +289,9 @@ fn api_cargo_toml_dep_versions_are_pinned_appropriately() {
             // Accept either bare-string form (`<dep> = "=3.0.5"`) or
             // table form (`<dep> = { version = "=3.0.5", ... }`). Both
             // must contain the exact `"=3.0.5"` literal somewhere on the
-            // line; anything else is a drift.
+            // line; anything else is a drift. Check EVERY match (not just
+            // the first) so a `[dev-dependencies]` re-declaration that
+            // drifts is also caught.
             assert!(
                 t.contains("\"=3.0.5\""),
                 "{dep_name} dep in {manifest_path} must contain \"=3.0.5\" \
@@ -297,11 +299,22 @@ fn api_cargo_toml_dep_versions_are_pinned_appropriately() {
                  image-id; if intentional, update this sentinel AND \
                  re-snapshot the image-id."
             );
-            found = true;
-            break;
+            // Reject same-line `git = ` / `path = ` source overrides.
+            // Without this check, `risc0-zkvm = { version = "=3.0.5", git
+            // = "https://evil.example/risc0" }` would pass the version
+            // assertion while silently redirecting the source. cargo-deny
+            // `[sources] allow-git` catches it independently, but
+            // belt-and-braces.
+            assert!(
+                !t.contains("git =") && !t.contains("path ="),
+                "{dep_name} dep in {manifest_path} must not redirect to \
+                 a git or path source on the same line (got: {t:?}). \
+                 risc0 crates ship via crates.io only."
+            );
+            match_count += 1;
         }
         assert!(
-            found,
+            match_count > 0,
             "no `{dep_name} = ...` line found in {manifest_path} — \
              has the dep been removed?"
         );
