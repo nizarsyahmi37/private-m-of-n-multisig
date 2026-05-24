@@ -321,6 +321,7 @@ These risks are not fully mitigated in v1 and must appear in the submission's "S
 6. **Catastrophic chain reorgs deeper than `N` blocks** silently undo approvals; SDK surfaces a warning but cannot recover.
 7. **Single-relayer censorship** is recoverable; coordinated censorship across all known relayers requires the self-relay path.
 8. **Post-compromise of a member device** cannot be recovered v1; v2 ships hardware-wallet support.
+9. **`approve` end-to-end submission against a remote sequencer** is deferred. The verifier's `env::verify(APPROVE_CIRCUIT_IMAGE_ID, public_inputs)` call adds a Risc0 composition assumption that the outer prover must discharge via `ExecutorEnv::add_assumption(receipt)`. `sequencer_service_rpc` v0.2.0-rc3 does not accept attached receipts on the public transaction wire — only the 96-byte `public_inputs` and 32-byte `nullifier` ride the instruction data. Consequence: `pmsig approve` (the step-6 CLI subcommand) will not finalize against a live remote sequencer in v1. The happy path is exercised end-to-end in the step-7 integration test, which runs the outer prover in-process with both receipts on hand. Production submission requires either (a) a sequencer RPC extension that accepts attached receipts, or (b) a local-prove path that produces a full outer receipt before submitting — both deferred to follow-on work per PLAN.md §"Out of scope for this plan (explicit)". This is a capability gap, not a soundness risk: the failure mode is "transaction does not finalize," not "an invalid approval is accepted."
 
 ---
 
