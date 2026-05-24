@@ -85,19 +85,15 @@ jobs:
       # idl-gen emits the canonical IDL JSON the CLI consumes via spel.toml.
       # The CLI itself is excluded from the workspace because it transitively
       # requires `logos-blockchain-circuits` at build time; CI does not set
-      # that up. We do verify here that the IDL has the expected shape:
-      # six instructions whose names match the verifier's `#[instruction]`
-      # handlers, and the external instruction-type wiring is intact.
-      - name: Generate IDL and verify schema
+      # that up. We regenerate the IDL into a temp file and diff against the
+      # committed golden artifact — this catches not just instruction
+      # name/count drift but also silent PDA-seed changes, args reshapes,
+      # or new accounts being added to a handler, any of which would
+      # invalidate the on-chain ABI contract.
+      - name: Verify IDL matches committed golden artifact
         run: |
-          cargo run -p private_multisig_idl_gen > private_multisig.idl.json
-          jq -e '
-            .name == "private_multisig" and
-            .instruction_type == "private_multisig_core::Instruction" and
-            (.instructions | length == 6) and
-            ([.instructions[].name] | sort ==
-              ["approve", "create_multisig", "create_vault", "execute", "propose", "reject"])
-          ' private_multisig.idl.json
+          cargo run -p private_multisig_idl_gen > /tmp/regenerated.idl.json
+          diff -u private_multisig.idl.json /tmp/regenerated.idl.json
 
   audit:
     name: Supply-chain audit
