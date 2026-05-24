@@ -18,7 +18,33 @@ all-features = true
 [advisories]
 version = 2
 yanked = "deny"
-ignore = []
+# Every ignore here is a transitive dep with no safe upgrade in the current
+# Risc0 (3.0.5) or sled (0.34.7) graph. Revisit on every Risc0 bump and on
+# the planned sled → redb migration; drop the corresponding entry as soon
+# as the underlying crate is gone from the graph.
+ignore = [
+    # Marvin timing attack on RSA decryption. `rsa 0.9` has no fix
+    # available; pulled in via Risc0's Groth16 verifier chain (we don't
+    # use RSA for any private-multisig logic).
+    { id = "RUSTSEC-2023-0071", reason = "rsa 0.9.x has no fix; only used by Risc0 transitively, not by our crypto" },
+    # Tracing's ansi-escape log poisoning. Transitive through Risc0's
+    # observability stack; the SDK does not emit untrusted text into log
+    # messages.
+    { id = "RUSTSEC-2025-0055", reason = "tracing transitive via risc0-zkvm; SDK does not log untrusted text" },
+    # bincode 1.3.3 is the only stable major as of this writing; switching
+    # to wincode/postcard requires reworking our Receipt persistence and
+    # Risc0's own usage. Tracked as a follow-on.
+    { id = "RUSTSEC-2025-0141", reason = "bincode 1.x has no actively-maintained drop-in replacement; planned migration with Receipt persistence rework" },
+    # `derivative` is unmaintained but pulled in only by ark-* via
+    # Risc0's Groth16 path; no behavioural impact.
+    { id = "RUSTSEC-2024-0388", reason = "derivative is transitive via risc0-groth16 → ark-crypto-primitives; no derive macros we author" },
+    # `paste` archived by author; transitive through Risc0 macro plumbing.
+    { id = "RUSTSEC-2024-0436", reason = "paste archived but stable; transitive via risc0-zkvm macros" },
+    # `instant` and `fxhash` come exclusively from `sled 0.34`; both will
+    # disappear when the SDK migrates off sled.
+    { id = "RUSTSEC-2024-0384", reason = "instant transitive via sled 0.34 → parking_lot; gone once we migrate the session store" },
+    { id = "RUSTSEC-2025-0057", reason = "fxhash transitive via sled 0.34; gone once we migrate the session store" },
+]
 
 [licenses]
 version = 2
