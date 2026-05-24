@@ -1,0 +1,33 @@
+version: 2
+
+updates:
+  # Keep GitHub Actions SHA pins fresh. Dependabot rewrites both the SHA
+  # and the trailing `# version` comment when a newer release is published,
+  # so the SHA-pin discipline in `.github/workflows/ci.yml` stays current
+  # without a manual `git ls-remote` per action.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore(ci)
+
+  # Cargo dependency bumps. The Risc0 and SPEL git deps are pinned to tags
+  # in their respective Cargo.toml files; Dependabot does not bump git
+  # tags, so those still need manual review on each Risc0 release. crates.io
+  # deps (sled, bincode, dirs, argon2, ...) are auto-bumped here.
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore(deps)
+    # Risc0 toolchain crates are version-locked to `=3.0.5` across the
+    # workspace because bumping requires regenerating
+    # `APPROVE_CIRCUIT_IMAGE_ID_PINNED` in `sdk/src/lib.rs`. Block
+    # Dependabot from filing those PRs.
+    ignore:
+      - dependency-name: risc0-zkvm
+      - dependency-name: risc0-build
