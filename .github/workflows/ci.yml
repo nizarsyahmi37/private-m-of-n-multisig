@@ -34,14 +34,15 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       # The `methods` crate's build.rs invokes `risc0_build::embed_methods()`,
-      # which requires the Risc0 RISC-V toolchain. Installed via rzup (the
-      # supported Risc0 installer; the older `cargo-risczero install` route
-      # no longer ships).
-      - name: Install Risc0 toolchain
-        run: |
-          curl -L https://risczero.com/install | bash
-          echo "$HOME/.risc0/bin" >> "$GITHUB_PATH"
-          "$HOME/.risc0/bin/rzup" install rust "$RISC0_TOOLCHAIN_VERSION"
+      # which requires the Risc0 RISC-V toolchain. `rzup` is fetched via
+      # `cargo install` (using crates.io's HTTPS + checksum integrity rather
+      # than a piped `curl` from risczero.com) and installed into
+      # ~/.cargo/bin, which the rust-toolchain step already added to PATH.
+      - name: Install rzup
+        run: cargo install --locked --version 0.5.1 rzup
+
+      - name: Install Risc0 rust toolchain
+        run: rzup install rust "$RISC0_TOOLCHAIN_VERSION"
 
       - name: Format check
         run: cargo fmt --all --check
