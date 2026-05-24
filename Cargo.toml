@@ -12,6 +12,10 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/nizarsyahmi37/private-m-of-n-multisig"
 rust-version = "1.80"
+# Workspace members are not published to crates.io; this lets `cargo deny`
+# treat the inter-crate `path = ...` deps as private wildcards rather than
+# rejecting them as public-crate wildcards.
+publish = false
 
 [workspace.dependencies]
 sha2 = { version = "0.10", default-features = false }
