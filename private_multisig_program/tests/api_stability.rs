@@ -393,7 +393,7 @@ fn api_nssa_core_lockfile_sha_matches_audited_value() {
 }
 
 // ---------------------------------------------------------------------------
-// 13b. SPEL Cargo.lock rev sentinel. The four consuming manifests
+// 14. SPEL Cargo.lock rev sentinel. The four consuming manifests
 //      (idl-gen, cli, methods/guest, private_multisig_program) all carry
 //      `rev = "84f50d4a..."`, but a manifest-only review is the only
 //      enforcement — there is no `cargo`-level reject of a rev mismatch
@@ -439,7 +439,7 @@ fn api_spel_framework_lockfile_rev_matches_audited_value() {
 }
 
 // ---------------------------------------------------------------------------
-// 14. deny.toml allow-git sentinel. The SPEL license-clarify blocks
+// 15. deny.toml allow-git sentinel. The SPEL license-clarify blocks
 //     (deny.toml [[licenses.clarify]] for spel-framework{,-core,-macros})
 //     bind by crate name only — cargo-deny 0.19.7's schema does not
 //     accept a `version` key. The compensating defense is the
@@ -491,7 +491,7 @@ fn api_deny_toml_keeps_spel_source_in_allowlist() {
 }
 
 // ---------------------------------------------------------------------------
-// 15. PDA-seed shape sentinel for the `approve` handler's NullifierEntry.
+// 16. PDA-seed shape sentinel for the `approve` handler's NullifierEntry.
 //     The double-vote-rejection invariant (THREAT_MODEL T2.2 / T3.x) hinges
 //     on the nullifier-entry PDA being seeded by `(proposal, nullifier)` —
 //     binding each nullifier to its proposal. A malicious or careless PR
@@ -572,7 +572,7 @@ fn api_approve_nullifier_entry_pda_seed_shape_is_audited() {
 }
 
 // ---------------------------------------------------------------------------
-// 14. Unit-test count pin: src/lib.rs has five `#[test]` cases inside its
+// 17. Unit-test count pin: src/lib.rs has five `#[test]` cases inside its
 //     `#[cfg(test)] mod tests` block. Catches accidental deletion or
 //     uncontrolled growth of the in-lib smoke tests.
 // ---------------------------------------------------------------------------
@@ -610,7 +610,7 @@ fn api_test_count_in_lib_unit_tests_is_5() {
 }
 
 // ---------------------------------------------------------------------------
-// 14. Step-4 consumption note: the crate-level //! docs explicitly mention
+// 18. Step-4 consumption note: the crate-level //! docs explicitly mention
 //     that PLAN.md step 4 consumes APPROVE_CIRCUIT_IMAGE_ID from this crate.
 // ---------------------------------------------------------------------------
 #[test]
