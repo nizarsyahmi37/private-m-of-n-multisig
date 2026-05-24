@@ -82,6 +82,23 @@ jobs:
       - name: Test SDK with prover feature
         run: cargo test -p private_multisig_sdk --features prover
 
+      # idl-gen emits the canonical IDL JSON the CLI consumes via spel.toml.
+      # The CLI itself is excluded from the workspace because it transitively
+      # requires `logos-blockchain-circuits` at build time; CI does not set
+      # that up. We do verify here that the IDL has the expected shape:
+      # six instructions whose names match the verifier's `#[instruction]`
+      # handlers, and the external instruction-type wiring is intact.
+      - name: Generate IDL and verify schema
+        run: |
+          cargo run -p private_multisig_idl_gen > private_multisig.idl.json
+          jq -e '
+            .name == "private_multisig" and
+            .instruction_type == "private_multisig_core::Instruction" and
+            (.instructions | length == 6) and
+            ([.instructions[].name] | sort ==
+              ["approve", "create_multisig", "create_vault", "execute", "propose", "reject"])
+          ' private_multisig.idl.json
+
   audit:
     name: Supply-chain audit
     runs-on: ubuntu-latest
