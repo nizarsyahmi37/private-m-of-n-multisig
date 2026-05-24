@@ -380,6 +380,52 @@ fn api_nssa_core_lockfile_sha_matches_audited_value() {
 }
 
 // ---------------------------------------------------------------------------
+// 13b. SPEL Cargo.lock rev sentinel. The four consuming manifests
+//      (idl-gen, cli, methods/guest, private_multisig_program) all carry
+//      `rev = "84f50d4a..."`, but a manifest-only review is the only
+//      enforcement — there is no `cargo`-level reject of a rev mismatch
+//      between manifests so long as Cargo.lock resolves consistently.
+//      §11 schema-gates lists "SPEL rev pin" as a CI gate; this sentinel
+//      makes that claim load-bearing by asserting the resolved SHA in
+//      Cargo.lock matches the audited value, mirroring the nssa_core
+//      defense.
+// ---------------------------------------------------------------------------
+const SPEL_AUDITED_REV: &str = "84f50d4aa473a70b72a16a7fb468c5618277cdd7";
+
+#[test]
+fn api_spel_framework_lockfile_rev_matches_audited_value() {
+    let manifest_dir = env!("CARGO_MANIFEST_DIR");
+    let lockfile_path = format!("{manifest_dir}/../Cargo.lock");
+    let lockfile = std::fs::read_to_string(&lockfile_path)
+        .unwrap_or_else(|e| panic!("could not read {lockfile_path}: {e}"));
+
+    // SPEL is split into three crates (spel-framework, spel-framework-core,
+    // spel-framework-macros), each emitted as its own [[package]] block.
+    // We assert each one's source URL references the audited rev SHA.
+    for crate_name in [
+        "spel-framework",
+        "spel-framework-core",
+        "spel-framework-macros",
+    ] {
+        let needle = format!("name = \"{crate_name}\"\n");
+        let Some(name_pos) = lockfile.find(&needle) else {
+            panic!(
+                "no `[[package]] name = \"{crate_name}\"` block found in \
+                 Cargo.lock — has the dep been removed?"
+            );
+        };
+        let after_name = &lockfile[name_pos + needle.len()..];
+        let block = &after_name[..after_name.len().min(400)];
+        assert!(
+            block.contains(SPEL_AUDITED_REV),
+            "{crate_name} block in Cargo.lock does not reference the audited \
+             SPEL rev `{SPEL_AUDITED_REV}`. A consuming manifest may have \
+             bumped the rev without going through audit. Block window:\n{block}"
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------
 // 14. deny.toml allow-git sentinel. The SPEL license-clarify blocks
 //     (deny.toml [[licenses.clarify]] for spel-framework{,-core,-macros})
 //     bind by crate name only — cargo-deny 0.19.7's schema does not
