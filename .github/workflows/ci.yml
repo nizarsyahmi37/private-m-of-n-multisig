@@ -12,9 +12,11 @@ env:
   # because real proving takes minutes per receipt. PLAN.md §Verification
   # step 7 calls out a nightly job for the RISC0_DEV_MODE=0 path.
   RISC0_DEV_MODE: "1"
-  # Pin the Risc0 toolchain version so `cargo risczero install` is
-  # deterministic and a passive Risc0 release doesn't change CI behavior.
-  RISC0_TOOLCHAIN_VERSION: "1.85.0"
+  # Pin the Risc0 rust toolchain so the guest builds reproducibly. Bumping
+  # this changes the compiled ELF and therefore the image-id, so
+  # `sdk/src/lib.rs::APPROVE_CIRCUIT_IMAGE_ID_PINNED` must be regenerated
+  # in lockstep — `sdk/tests/image_id_pin_parity.rs` enforces that.
+  RISC0_TOOLCHAIN_VERSION: "1.94.1"
 
 jobs:
   build-and-test:
@@ -32,12 +34,14 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       # The `methods` crate's build.rs invokes `risc0_build::embed_methods()`,
-      # which requires the Risc0 RISC-V toolchain. Without this the workspace
-      # build itself fails.
+      # which requires the Risc0 RISC-V toolchain. Installed via rzup (the
+      # supported Risc0 installer; the older `cargo-risczero install` route
+      # no longer ships).
       - name: Install Risc0 toolchain
         run: |
-          cargo install --version 1.4.0 cargo-risczero
-          cargo risczero install --version "$RISC0_TOOLCHAIN_VERSION"
+          curl -L https://risczero.com/install | bash
+          echo "$HOME/.risc0/bin" >> "$GITHUB_PATH"
+          "$HOME/.risc0/bin/rzup" install rust "$RISC0_TOOLCHAIN_VERSION"
 
       - name: Format check
         run: cargo fmt --all --check
