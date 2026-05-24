@@ -67,11 +67,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Pre-built actions avoid a several-minute `cargo install` per PR.
-      - name: Audit dependencies for known vulnerabilities
-        uses: rustsec/audit-check@v2.0.0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Check licenses, sources, and advisories
+      # `cargo deny check` runs the same RustSec advisory DB as `cargo audit`
+      # plus licenses, sources, and bans — one tool, one config (`deny.toml`).
+      - name: Check advisories, licenses, sources, and bans
         uses: EmbarkStudios/cargo-deny-action@v2
