@@ -71,7 +71,10 @@ confidence-threshold = 0.93
 # settles (the Risc0 toolchain pulls in older versions of common crates).
 # Set to "deny" once duplicates are reviewed.
 multiple-versions = "warn"
+# Reject `crate = "*"` in published deps but accept it for in-workspace
+# path-dep cross-references like `crypto = { path = "..." }`.
 wildcards = "deny"
+allow-wildcard-paths = true
 highlight = "all"
 
 [sources]
