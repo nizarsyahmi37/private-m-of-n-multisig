@@ -74,6 +74,27 @@ allow = [
 # Confidence threshold for unclear license texts.
 confidence-threshold = 0.93
 
+# SPEL v0.3.0's per-crate `Cargo.toml` files don't declare a `license`
+# field even though the workspace ships both `LICENSE-MIT` and
+# `LICENSE-APACHE-v2` at the repo root. These clarify blocks tell
+# cargo-deny that the three SPEL crates we pull in are dual-licensed
+# under MIT OR Apache-2.0, matching the upstream LICENSE files. Drop
+# these once SPEL adds the `license` field to its manifests upstream.
+[[licenses.clarify]]
+crate = "spel-framework"
+expression = "MIT OR Apache-2.0"
+license-files = []
+
+[[licenses.clarify]]
+crate = "spel-framework-core"
+expression = "MIT OR Apache-2.0"
+license-files = []
+
+[[licenses.clarify]]
+crate = "spel-framework-macros"
+expression = "MIT OR Apache-2.0"
+license-files = []
+
 [bans]
 # Allow multiple major versions of the same crate while the ecosystem
 # settles (the Risc0 toolchain pulls in older versions of common crates).
