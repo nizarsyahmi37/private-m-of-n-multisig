@@ -17,10 +17,34 @@
 /private_multisig.idl.json                               @nizarsyahmi37
 
 # The verifier program — every handler signature is part of the ABI.
-/methods/guest/src/bin/                                  @nizarsyahmi37
+# `methods/guest/` carries both the verifier source AND the SPEL rev
+# pin + nssa_core tag pin in its Cargo.toml. `methods/Cargo.toml` pins
+# `risc0-build = "=3.0.5"` — drift here changes the image-id.
+/methods/                                                @nizarsyahmi37
 
-# Host-side program crate and its api_stability sentinels.
+# Host-side program crate and its api_stability sentinels (which now
+# enforce the IDL shape, SPEL/nssa SHAs, risc0 four-site pin, and
+# nullifier-entry PDA seed shape — see THREAT_MODEL §11).
 /private_multisig_program/                               @nizarsyahmi37
+
+# Core types: the ABI error codes (E1xxx-E4xxx) referenced in
+# THREAT_MODEL and consumed by the SDK + on-chain verifier.
+/private_multisig_core/                                  @nizarsyahmi37
+
+# SDK: hosts `APPROVE_CIRCUIT_IMAGE_ID_PINNED` (the host-side image-id
+# pin enforced by `sdk/tests/image_id_pin_parity.rs`) and pins
+# `risc0-zkvm = "=3.0.5"` in its Cargo.toml.
+/sdk/                                                    @nizarsyahmi37
+
+# IDL generator and CLI: both carry the SPEL rev pin in their
+# Cargo.toml deps. A rev bump in any of these without a coordinated
+# Cargo.lock update bypasses the lockfile SHA sentinel.
+/idl-gen/                                                @nizarsyahmi37
+/cli/                                                    @nizarsyahmi37
+
+# Workspace root: member list + resolver setting. Removing a member
+# silently excludes it from `cargo test --workspace`.
+/Cargo.toml                                              @nizarsyahmi37
 
 # Resolved dep graph — captures the audited SHAs for git deps that
 # cannot be source-pinned in manifests (notably nssa_core).
