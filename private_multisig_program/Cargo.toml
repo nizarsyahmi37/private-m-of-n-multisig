@@ -20,5 +20,8 @@ borsh = { workspace = true }
 [dev-dependencies]
 hex = { workspace = true }
 rand = { workspace = true }
-spel-framework = { git = "https://github.com/logos-co/spel", tag = "v0.3.0" }
+spel-framework = { git = "https://github.com/logos-co/spel", rev = "84f50d4aa473a70b72a16a7fb468c5618277cdd7" }
+# `nssa_core` stays on `tag = "v0.2.0-rc3"` to unify with SPEL's
+# transitive pin (Cargo splits the dep tree on URL+pin form, not on
+# resolved SHA). Detailed rationale in `methods/guest/Cargo.toml`.
 nssa_core = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.2.0-rc3" }

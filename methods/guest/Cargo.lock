@@ -2839,7 +2839,7 @@ dependencies = [
 [[package]]
 name = "spel-framework"
 version = "0.3.0"
-source = "git+https://github.com/logos-co/spel?tag=v0.3.0#ea07765e4291bd253e1de267ddb1cde0e38062d3"
+source = "git+https://github.com/logos-co/spel?rev=84f50d4aa473a70b72a16a7fb468c5618277cdd7#84f50d4aa473a70b72a16a7fb468c5618277cdd7"
 dependencies = [
  "borsh",
  "nssa_core",
@@ -2851,7 +2851,7 @@ dependencies = [
 [[package]]
 name = "spel-framework-core"
 version = "0.3.0"
-source = "git+https://github.com/logos-co/spel?tag=v0.3.0#ea07765e4291bd253e1de267ddb1cde0e38062d3"
+source = "git+https://github.com/logos-co/spel?rev=84f50d4aa473a70b72a16a7fb468c5618277cdd7#84f50d4aa473a70b72a16a7fb468c5618277cdd7"
 dependencies = [
  "borsh",
  "nssa_core",
@@ -2866,7 +2866,7 @@ dependencies = [
 [[package]]
 name = "spel-framework-macros"
 version = "0.3.0"
-source = "git+https://github.com/logos-co/spel?tag=v0.3.0#ea07765e4291bd253e1de267ddb1cde0e38062d3"
+source = "git+https://github.com/logos-co/spel?rev=84f50d4aa473a70b72a16a7fb468c5618277cdd7#84f50d4aa473a70b72a16a7fb468c5618277cdd7"
 dependencies = [
  "proc-macro2",
  "quote",

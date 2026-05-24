@@ -31,7 +31,14 @@ risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["std"] 
 # approve_circuit's ELF dead-code-eliminates anything it doesn't import.
 crypto = { path = "../../crypto" }
 private_multisig_core = { path = "../../private_multisig_core" }
-spel-framework = { git = "https://github.com/logos-co/spel", tag = "v0.3.0" }
+spel-framework = { git = "https://github.com/logos-co/spel", rev = "84f50d4aa473a70b72a16a7fb468c5618277cdd7" }
+# `nssa_core` is intentionally still tag-pinned: SPEL v0.3.0 declares its
+# own transitive `nssa_core = { tag = "v0.2.0-rc3" }`, and Cargo unifies
+# git deps by URL+pin form, not by resolved SHA. Pinning by `rev` here
+# would split the dep tree into two `nssa_core` instances with
+# incompatible types (`spel_framework::prelude::AccountId` vs
+# `nssa_core::account::AccountId`). Unifies once SPEL upstream switches
+# to `rev` itself; tracked alongside the SPEL bump checklist.
 nssa_core = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.2.0-rc3" }
 borsh = { version = "1", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }
