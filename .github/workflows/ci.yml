@@ -6,6 +6,14 @@ on:
   pull_request:
     branches: [main]
 
+# Workflow-level default: the GITHUB_TOKEN handed to every job is scoped
+# down to read-only repository contents. Dependabot PRs (and any future
+# fork PRs) cannot exfiltrate or mutate via a malicious build-script
+# even if a secret is later added to the workflow env. Jobs that need
+# more (e.g. posting comments, writing checks) must opt in explicitly.
+permissions:
+  contents: read
+
 env:
   CARGO_TERM_COLOR: always
   # RISC0_DEV_MODE produces fast but non-SNARK receipts. Required for CI
