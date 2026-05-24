@@ -355,6 +355,14 @@ These risks are not fully mitigated in v1 and must appear in the submission's "S
 - T5.2 (hash parameters reviewed against latest analyses)
 - T7.x (release tooling, signing, docs)
 
+### Repository configuration prerequisites (out-of-tree, must be set in GitHub)
+
+These cannot be enforced by code in this repo and must be configured at the GitHub repository settings level. They are listed here so a future maintainer auditing §11 sees the full enforcement chain.
+
+- **Branch protection on `main` with "Require review from Code Owners" enabled.** Without this toggle, `.github/CODEOWNERS` is purely advisory — a solo-approver PR can still land changes to the security-critical paths the file claims to guard. Verify in Settings → Branches → branch protection rule for `main`.
+- **Branch protection with "Require status checks to pass before merging"** for the CI workflow's `build-and-test` and `audit` jobs. Without this, the schema-gate sentinels and supply-chain checks above can be bypassed on a PR with red CI.
+- **Branch protection with "Require linear history"** (recommended) to prevent merge-commit history rewrites that could obscure the audited rev SHAs in `Cargo.lock`.
+
 ### Threats accepted as residual
 
 - T1.5, T1.6, T4.4 (v1), and items in §10.
