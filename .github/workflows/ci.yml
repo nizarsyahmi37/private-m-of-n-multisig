@@ -78,4 +78,4 @@ jobs:
       # `cargo deny check` runs the same RustSec advisory DB as `cargo audit`
       # plus licenses, sources, and bans — one tool, one config (`deny.toml`).
       - name: Check advisories, licenses, sources, and bans
-        uses: EmbarkStudios/cargo-deny-action@d6d27f1b02f0c07f9db6ffc34e7871bba5ab5816 # v2.0.9
+        uses: EmbarkStudios/cargo-deny-action@d8395c1c8c9df74d968a3bcbba5533e396ff43cf # v2.0.9
