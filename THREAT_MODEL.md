@@ -321,7 +321,7 @@ These risks are not fully mitigated in v1 and must appear in the submission's "S
 6. **Catastrophic chain reorgs deeper than `N` blocks** silently undo approvals; SDK surfaces a warning but cannot recover.
 7. **Single-relayer censorship** is recoverable; coordinated censorship across all known relayers requires the self-relay path.
 8. **Post-compromise of a member device** cannot be recovered v1; v2 ships hardware-wallet support.
-9. **`approve` end-to-end submission against a remote sequencer** is deferred. The verifier's `env::verify(APPROVE_CIRCUIT_IMAGE_ID, public_inputs)` call adds a Risc0 composition assumption that the outer prover must discharge via `ExecutorEnv::add_assumption(receipt)`. `sequencer_service_rpc` v0.2.0-rc3 does not accept attached receipts on the public transaction wire — only the 96-byte `public_inputs` and 32-byte `nullifier` ride the instruction data. Consequence: `pmsig approve` (the step-6 CLI subcommand) will not finalize against a live remote sequencer in v1. The happy path is exercised end-to-end in the step-7 integration test, which runs the outer prover in-process with both receipts on hand. Production submission requires either (a) a sequencer RPC extension that accepts attached receipts, or (b) a local-prove path that produces a full outer receipt before submitting — both deferred to follow-on work per PLAN.md §"Out of scope for this plan (explicit)". This is a capability gap, not a soundness risk: the failure mode is "transaction does not finalize," not "an invalid approval is accepted."
+9. **`approve` end-to-end submission against a remote sequencer** is deferred. The verifier's `env::verify(APPROVE_CIRCUIT_IMAGE_ID, public_inputs)` call adds a Risc0 composition assumption that the outer prover must discharge via `ExecutorEnv::add_assumption(receipt)`. `sequencer_service_rpc` v0.2.0-rc3 does not accept attached receipts on the public transaction wire — only the 96-byte `public_inputs` and 32-byte `nullifier` ride the instruction data. Consequence: `pmsig approve` (the step-6 CLI subcommand) will not finalize against a live remote sequencer in v1. The happy path is exercised end-to-end in the [PLAN.md step 7 integration test](./PLAN.md#implementation-order), which runs the outer prover in-process with both receipts on hand. Production submission requires either (a) a sequencer RPC extension that accepts attached receipts, or (b) a local-prove path that produces a full outer receipt before submitting — both deferred to follow-on work per [PLAN.md §"Out of scope for this plan (explicit)"](./PLAN.md#out-of-scope-for-this-plan-explicit). This is a capability gap, not a soundness risk: the failure mode is "transaction does not finalize," not "an invalid approval is accepted."
 
 ---
 
@@ -337,6 +337,15 @@ These risks are not fully mitigated in v1 and must appear in the submission's "S
 - T5.3 guest-vs-verifier parameter parity
 - T6.1 `Debug` redaction
 - T6.4 `cargo fuzz` corpus (continuous fuzz)
+
+### Threats verified by CI schema gates (assert on source-tree shape, not transaction behaviour)
+
+- **Golden IDL diff** (`.github/workflows/ci.yml`): regenerates `private_multisig.idl.json` from the verifier source and `diff -u`s against the committed file. Catches accidental drift in instruction count, names, account lists, PDA seeds, or arg types — any of which would silently invalidate the on-chain ABI consumed by the CLI and the SDK.
+- **`risc0-zkvm` / `risc0-build` four-site pin sentinel** (`private_multisig_program/tests/api_stability.rs`): asserts the exact `=3.0.5` version literal in `private_multisig_program/Cargo.toml`, `methods/guest/Cargo.toml`, `sdk/Cargo.toml`, and `methods/Cargo.toml`. A drift across any of the four sites changes the compiled ELF and the image-id.
+- **SPEL `rev` pin** in every consumer manifest (`idl-gen`, `cli`, `methods/guest`, `private_multisig_program`): observed `v0.3.0` upstream tag mutation in round 7 forced this defensive pin. Manifest-level rev SHA + cargo-deny `[sources] allow-git` whitelist anchor the trust chain.
+- **`nssa_core` Cargo.lock SHA sentinel** (`api_stability.rs`): asserts the resolved SHA matches the audited value, defending against silent retag of the upstream `v0.2.0-rc3` tag.
+- **NullifierEntry PDA seed shape sentinel** (`api_stability.rs`): independent source-text check that the verifier source still binds the nullifier-entry PDA seed list to `[literal("pmsig_nulli__"), account("proposal"), arg("nullifier")]`. Golden IDL diff alone is insufficient because a coordinated PR that mutates both the handler and the IDL would still pass.
+- **`deny.toml` allow-git sentinel** (`api_stability.rs`): pins the SPEL URL in the `[sources] allow-git` list so the SPEL license-clarify trust scope stays bound to the audited source.
 
 ### Threats verified by manual review at the testnet-deployment checkpoint
 
