@@ -16,7 +16,8 @@ updates:
   # Cargo dependency bumps. The Risc0 and SPEL git deps are pinned to tags
   # in their respective Cargo.toml files; Dependabot does not bump git
   # tags, so those still need manual review on each Risc0 release. crates.io
-  # deps (sled, bincode, dirs, argon2, ...) are auto-bumped here.
+  # deps (dirs, argon2, secrecy, zeroize, chacha20poly1305, ...) are
+  # auto-bumped here.
   - package-ecosystem: cargo
     directory: /
     schedule:
@@ -24,10 +25,20 @@ updates:
     open-pull-requests-limit: 5
     commit-message:
       prefix: chore(deps)
-    # Risc0 toolchain crates are version-locked to `=3.0.5` across the
-    # workspace because bumping requires regenerating
-    # `APPROVE_CIRCUIT_IMAGE_ID_PINNED` in `sdk/src/lib.rs`. Block
-    # Dependabot from filing those PRs.
     ignore:
-      - dependency-name: risc0-zkvm
-      - dependency-name: risc0-build
+      # Risc0 toolchain crates are version-locked to `=3.0.5` across the
+      # workspace because bumping regenerates the compiled ELF and
+      # therefore `APPROVE_CIRCUIT_IMAGE_ID_PINNED` in `sdk/src/lib.rs`.
+      # The `risc0-*` glob catches future direct deps like risc0-binfmt
+      # or risc0-circuit-* without needing a new ignore entry each time.
+      - dependency-name: "risc0-*"
+      # sled is pinned at 0.34 pending the planned session-store
+      # migration; sled 1.0-alpha has a completely different API and
+      # would compile-break the SDK's session module. See
+      # deny.toml advisory ignores for RUSTSEC-2024-0384 / 2025-0057.
+      - dependency-name: sled
+      # bincode 1.3 is required for Receipt encoding compatibility with
+      # Risc0 3.0.5's bincode-1 derives. A 2.x bump would compile-break
+      # `sdk/src/prover.rs` Receipt persistence. See deny.toml advisory
+      # ignore for RUSTSEC-2025-0141.
+      - dependency-name: bincode
