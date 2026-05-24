@@ -23,15 +23,17 @@ jobs:
     name: Build and test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      # `@master` respects `rust-toolchain.toml`; `@stable` ignores it.
-      - uses: dtolnay/rust-toolchain@master
+      # Pinned by SHA (latest `master` at the time of this commit); `@master`
+      # would float. `dtolnay/rust-toolchain` does not publish version tags
+      # past `v1`, so SHA is the only reliable pinning option.
+      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master 2026-05-23
         with:
           toolchain: stable
           components: rustfmt, clippy
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@23869a5bd66c73db3c0ac40331f3206eb23791dc # v2.9.1
 
       # The `methods` crate's build.rs invokes `risc0_build::embed_methods()`,
       # which requires the Risc0 RISC-V toolchain. `rzup` is fetched via
@@ -66,9 +68,9 @@ jobs:
     name: Supply-chain audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       # `cargo deny check` runs the same RustSec advisory DB as `cargo audit`
       # plus licenses, sources, and bans — one tool, one config (`deny.toml`).
       - name: Check advisories, licenses, sources, and bans
-        uses: EmbarkStudios/cargo-deny-action@v2
+        uses: EmbarkStudios/cargo-deny-action@d6d27f1b02f0c07f9db6ffc34e7871bba5ab5816 # v2.0.9
