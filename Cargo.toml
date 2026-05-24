@@ -8,11 +8,16 @@ members = [
     "sdk",
     "idl-gen",
 ]
-# The Risc0 guest crate at `methods/guest/` is a standalone Cargo project that
-# compiles under the Risc0-managed RISC-V toolchain. It is intentionally NOT
-# a workspace member — `risc0-build` invokes its own cargo over it from
-# `methods/build.rs`.
-exclude = ["methods/guest"]
+# `methods/guest/` builds under the Risc0-managed RISC-V toolchain;
+# `risc0-build` invokes its own cargo over it from `methods/build.rs`.
+# `cli/` is excluded because the LEZ sequencer client stack (`nssa`,
+# `sequencer_service_rpc`, `wallet`) it pulls in via `spel::run()` has a
+# hard build-time prerequisite on the `logos-blockchain-circuits` v0.4.2
+# release being available at `~/.logos-blockchain-circuits/` or via
+# `LOGOS_BLOCKCHAIN_CIRCUITS`. Building the CLI requires that prereq;
+# excluding it from the host workspace lets `cargo build --workspace`
+# work for contributors who only touch the core/sdk/program crates.
+exclude = ["methods/guest", "cli"]
 
 [workspace.package]
 edition = "2021"
