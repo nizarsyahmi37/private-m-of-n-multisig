@@ -1,0 +1,31 @@
+[package]
+name = "private_multisig_cli"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/nizarsyahmi37/private-m-of-n-multisig"
+rust-version = "1.80"
+publish = false
+
+# This crate is intentionally NOT a workspace member of the project root —
+# `spel::run()` transitively pulls in the LEZ sequencer client stack, which
+# has a hard build-time prerequisite on `logos-blockchain-circuits` v0.4.2
+# being on disk. The empty `[workspace]` table prevents Cargo from walking
+# up and inheriting the parent workspace.
+[workspace]
+
+[[bin]]
+name = "pmsig"
+path = "src/main.rs"
+
+[dependencies]
+# SPEL ships a generic IDL-driven CLI as a library. `spel::run()` parses
+# the IDL JSON declared in `spel.toml`, derives subcommands from each
+# `#[instruction]` handler, computes PDAs from `pda = [...]` annotations,
+# serializes args via risc0 wire format, and submits via `sequencer_service_rpc`.
+# This single dep gives us the entire CLI surface for 5 of the 6 handlers
+# (see `src/main.rs` for the `approve` deferral).
+spel = { git = "https://github.com/logos-co/spel", tag = "v0.3.0" }
+
+# Required for `#[tokio::main]` — spel::run() is async.
+tokio = { version = "1.28.2", features = ["net", "rt-multi-thread", "sync", "macros"] }

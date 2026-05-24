@@ -1,0 +1,8 @@
+# SPEL CLI config — read by `spel::run()` to locate the IDL JSON and the
+# compiled guest binary. Regenerate the IDL with `make idl` (or
+# `cargo run -p private_multisig_idl_gen > private_multisig.idl.json`)
+# whenever the verifier handler shape or any account-type struct changes.
+
+[program]
+idl = "private_multisig.idl.json"
+binary = "methods/guest/target/riscv32im-risc0-zkvm-elf/docker/private_multisig.bin"
