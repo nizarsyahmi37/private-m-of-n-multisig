@@ -392,20 +392,18 @@ fn red3_risc0_zkvm_version_pin_sentinel() {
     let contents = std::fs::read_to_string(&cargo_toml_path)
         .unwrap_or_else(|e| panic!("could not read {cargo_toml_path}: {e}"));
 
-    // Find the `risc0-zkvm = ` line; require it to begin with the major.minor
-    // `3.0` prefix in some recognized form. We tolerate either bare `"3.0"`
-    // or table-form `{ version = "3.0", ... }` but reject any other major or
-    // minor.
+    // Find the `risc0-zkvm = ` line; require the exact `=3.0.5` pin. Round 6
+    // tightened the pin across the workspace because a caret `"3.0"` would
+    // let a passive `cargo update` drift the resolved version and the
+    // image-id with it. If a future PR bumps to `=3.0.6` or `=3.1.x`
+    // intentionally, update this sentinel AND re-snapshot the image-id
+    // sentinel together.
     let mut found = false;
     for line in contents.lines() {
         let l = line.trim_start();
         if l.starts_with("risc0-zkvm") {
-            // Strict pin: the line must contain the exact substring `"3.0"`.
-            // If a future PR bumps to "3.1" or "4.0" silently, this assertion
-            // surfaces the drift loud and clear together with the image-id
-            // sentinel (which would also fire after a real rebuild).
             assert!(
-                l.contains("\"3.0\""),
+                l.contains("\"=3.0.5\""),
                 "FINDING: risc0-zkvm version drift — line: {l:?}"
             );
             found = true;
