@@ -2382,6 +2382,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "private_multisig_idl_gen"
+version = "0.1.0"
+dependencies = [
+ "spel-framework",
+]
+
+[[package]]
 name = "private_multisig_program"
 version = "0.1.0"
 dependencies = [
