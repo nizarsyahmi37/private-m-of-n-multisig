@@ -25,7 +25,10 @@ path = "src/main.rs"
 # serializes args via risc0 wire format, and submits via `sequencer_service_rpc`.
 # This single dep gives us the entire CLI surface for 5 of the 6 handlers
 # (see `src/main.rs` for the `approve` deferral).
-spel = { git = "https://github.com/logos-co/spel", tag = "v0.3.0" }
+# Pinned by `rev` (SPEL v0.3.0 SHA at the time of this commit) rather
+# than `tag = "v0.3.0"` — upstream tags are mutable; we observed v0.3.0
+# move once already.
+spel = { git = "https://github.com/logos-co/spel", rev = "84f50d4aa473a70b72a16a7fb468c5618277cdd7" }
 
 # Required for `#[tokio::main]` — spel::run() is async.
 tokio = { version = "1.28.2", features = ["net", "rt-multi-thread", "sync", "macros"] }

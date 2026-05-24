@@ -14,5 +14,9 @@ path = "src/main.rs"
 [dependencies]
 # `spel_framework::generate_idl!` parses the guest source with `syn` at
 # host-compile time and emits a `main()` that prints the IDL JSON.
-# Tag-pinned to match the rest of the workspace.
-spel-framework = { git = "https://github.com/logos-co/spel", tag = "v0.3.0" }
+# Pinned by `rev` rather than `tag = "v0.3.0"` because round 7 observed
+# the upstream `v0.3.0` tag move between sessions (rev: ea07765e →
+# 84f50d4a) while leaving the same tag string in our manifest. SHA pins
+# are immutable; bumping requires updating every site in lockstep
+# (`grep -rn 84f50d4a Cargo.toml`).
+spel-framework = { git = "https://github.com/logos-co/spel", rev = "84f50d4aa473a70b72a16a7fb468c5618277cdd7" }
