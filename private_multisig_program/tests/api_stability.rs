@@ -256,31 +256,43 @@ fn api_image_id_hex_runs_in_under_1ms() {
 }
 
 // ---------------------------------------------------------------------------
-// 12. Dependency-pin sentinel: risc0-zkvm is pinned exactly to "=3.0.5"
-//     in every manifest that consumes it. A silent bump to "3.1" or
-//     "4.0" — or a drift where the guest pin and the host pin disagree —
-//     can change the image-id and would invalidate every receipt the
-//     verifier knows about. We check three pin sites in lockstep:
-//       1. `private_multisig_program/Cargo.toml` (this crate; host)
-//       2. `methods/guest/Cargo.toml` (the Risc0 guest source of truth)
-//       3. `sdk/Cargo.toml` (host-side prover)
+// 12. Dependency-pin sentinel: every risc0 crate the workspace consumes is
+//     pinned exactly to "=3.0.5". A silent bump to "3.1" or "4.0" — or a
+//     drift where the guest pin and the host pin disagree — can change the
+//     image-id and would invalidate every receipt the verifier knows about.
+//     We check four pin sites in lockstep:
+//       1. `private_multisig_program/Cargo.toml` (this crate; host) — risc0-zkvm
+//       2. `methods/guest/Cargo.toml` (the Risc0 guest source of truth) — risc0-zkvm
+//       3. `sdk/Cargo.toml` (host-side prover) — risc0-zkvm
+//       4. `methods/Cargo.toml` (host build glue) — risc0-build
 // ---------------------------------------------------------------------------
 #[test]
 fn api_cargo_toml_dep_versions_are_pinned_appropriately() {
-    fn assert_risc0_zkvm_pinned(manifest_path: &str, contents: &str) {
+    fn assert_dep_pinned(manifest_path: &str, dep_name: &str, contents: &str) {
+        // Match `^<dep_name>\s*=` exactly. `starts_with(dep_name)` alone
+        // would accept `risc0-zkvm-platform = "0.x"` as a hit and then
+        // skip the real `risc0-zkvm` line below it.
         let mut found = false;
         for line in contents.lines() {
             let t = line.trim();
-            if !t.starts_with("risc0-zkvm") {
+            if !t.starts_with(dep_name) {
                 continue;
             }
-            // Accept either bare-string form (`risc0-zkvm = "=3.0.5"`) or
-            // table form (`risc0-zkvm = { version = "=3.0.5", ... }`).
-            // Both must contain the exact `"=3.0.5"` literal somewhere on
-            // the line; anything else is a drift.
+            let rest = &t[dep_name.len()..];
+            let next = rest.chars().next();
+            // The next char after the dep name must be whitespace or `=`
+            // — anything else (`-`, alphanumeric, `_`) means we matched a
+            // longer dep name (e.g. `risc0-zkvm-platform`).
+            if !matches!(next, Some(c) if c == '=' || c.is_whitespace()) {
+                continue;
+            }
+            // Accept either bare-string form (`<dep> = "=3.0.5"`) or
+            // table form (`<dep> = { version = "=3.0.5", ... }`). Both
+            // must contain the exact `"=3.0.5"` literal somewhere on the
+            // line; anything else is a drift.
             assert!(
                 t.contains("\"=3.0.5\""),
-                "risc0-zkvm dep in {manifest_path} must contain \"=3.0.5\" \
+                "{dep_name} dep in {manifest_path} must contain \"=3.0.5\" \
                  (got line: {t:?}). Bumping minor/major can drift the \
                  image-id; if intentional, update this sentinel AND \
                  re-snapshot the image-id."
@@ -290,7 +302,7 @@ fn api_cargo_toml_dep_versions_are_pinned_appropriately() {
         }
         assert!(
             found,
-            "no `risc0-zkvm = ...` line found in {manifest_path} — \
+            "no `{dep_name} = ...` line found in {manifest_path} — \
              has the dep been removed?"
         );
     }
@@ -298,17 +310,30 @@ fn api_cargo_toml_dep_versions_are_pinned_appropriately() {
     let manifest_dir = env!("CARGO_MANIFEST_DIR");
     let guest_manifest = format!("{manifest_dir}/../methods/guest/Cargo.toml");
     let sdk_manifest = format!("{manifest_dir}/../sdk/Cargo.toml");
+    let methods_manifest = format!("{manifest_dir}/../methods/Cargo.toml");
 
-    assert_risc0_zkvm_pinned("private_multisig_program/Cargo.toml", CARGO_TOML);
-    assert_risc0_zkvm_pinned(
+    assert_dep_pinned(
+        "private_multisig_program/Cargo.toml",
+        "risc0-zkvm",
+        CARGO_TOML,
+    );
+    assert_dep_pinned(
         "methods/guest/Cargo.toml",
+        "risc0-zkvm",
         &std::fs::read_to_string(&guest_manifest)
             .unwrap_or_else(|e| panic!("could not read {guest_manifest}: {e}")),
     );
-    assert_risc0_zkvm_pinned(
+    assert_dep_pinned(
         "sdk/Cargo.toml",
+        "risc0-zkvm",
         &std::fs::read_to_string(&sdk_manifest)
             .unwrap_or_else(|e| panic!("could not read {sdk_manifest}: {e}")),
+    );
+    assert_dep_pinned(
+        "methods/Cargo.toml",
+        "risc0-build",
+        &std::fs::read_to_string(&methods_manifest)
+            .unwrap_or_else(|e| panic!("could not read {methods_manifest}: {e}")),
     );
 }
 
