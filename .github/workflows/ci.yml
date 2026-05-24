@@ -40,10 +40,15 @@ jobs:
       # `cargo install` (using crates.io's HTTPS + checksum integrity rather
       # than a piped `curl` from risczero.com) and installed into
       # ~/.cargo/bin, which the rust-toolchain step already added to PATH.
+      # Cold compile is ~3 minutes; 10 minutes is 3x headroom and bounds the
+      # damage if rzup or any of its transitive deps becomes unfetchable
+      # mid-PR. Without this, the default 6-hour GitHub timeout applies.
       - name: Install rzup
+        timeout-minutes: 10
         run: cargo install --locked --version 0.5.1 rzup
 
       - name: Install Risc0 rust toolchain
+        timeout-minutes: 10
         run: rzup install rust "$RISC0_TOOLCHAIN_VERSION"
 
       - name: Format check
