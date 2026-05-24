@@ -11,7 +11,10 @@ publish.workspace = true
 methods = { path = "../methods" }
 crypto = { path = "../crypto" }
 private_multisig_core = { path = "../private_multisig_core" }
-risc0-zkvm = "3.0"
+# Pinned tight to match `=3.0.5` in the SDK, methods, and methods/guest;
+# bumping any of these requires regenerating the image-id pin in
+# `sdk/src/lib.rs::APPROVE_CIRCUIT_IMAGE_ID_PINNED`.
+risc0-zkvm = "=3.0.5"
 borsh = { workspace = true }
 
 [dev-dependencies]
