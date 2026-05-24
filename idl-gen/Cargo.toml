@@ -15,4 +15,4 @@ path = "src/main.rs"
 # `spel_framework::generate_idl!` parses the guest source with `syn` at
 # host-compile time and emits a `main()` that prints the IDL JSON.
 # Tag-pinned to match the rest of the workspace.
-spel-framework = { git = "https://github.com/logos-co/spel", tag = "v0.3.0" }
+spel-framework = { git = "https://github.com/logos-co/spel", tag = "v0.4.0" }

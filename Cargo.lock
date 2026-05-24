@@ -2490,7 +2490,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a56d757972c98b346a9b766e3f02746cde6dd1cd1d1d563472929fdd74bec4d"
 dependencies = [
  "anyhow",
- "itertools 0.10.5",
+ "itertools 0.13.0",
  "proc-macro2",
  "quote",
  "syn 2.0.117",
@@ -3430,8 +3430,8 @@ dependencies = [
 
 [[package]]
 name = "spel-framework"
-version = "0.3.0"
-source = "git+https://github.com/logos-co/spel?tag=v0.3.0#84f50d4aa473a70b72a16a7fb468c5618277cdd7"
+version = "0.4.0"
+source = "git+https://github.com/logos-co/spel?tag=v0.4.0#43523275e1f95b97a0cf84cd83361449ea9bd1bf"
 dependencies = [
  "borsh",
  "nssa_core",
@@ -3442,9 +3442,10 @@ dependencies = [
 
 [[package]]
 name = "spel-framework-core"
-version = "0.3.0"
-source = "git+https://github.com/logos-co/spel?tag=v0.3.0#84f50d4aa473a70b72a16a7fb468c5618277cdd7"
+version = "0.4.0"
+source = "git+https://github.com/logos-co/spel?tag=v0.4.0#43523275e1f95b97a0cf84cd83361449ea9bd1bf"
 dependencies = [
+ "base58",
  "borsh",
  "nssa_core",
  "proc-macro2",
@@ -3453,12 +3454,13 @@ dependencies = [
  "sha2",
  "syn 2.0.117",
  "thiserror 1.0.69",
+ "toml",
 ]
 
 [[package]]
 name = "spel-framework-macros"
-version = "0.3.0"
-source = "git+https://github.com/logos-co/spel?tag=v0.3.0#84f50d4aa473a70b72a16a7fb468c5618277cdd7"
+version = "0.4.0"
+source = "git+https://github.com/logos-co/spel?tag=v0.4.0#43523275e1f95b97a0cf84cd83361449ea9bd1bf"
 dependencies = [
  "proc-macro2",
  "quote",
