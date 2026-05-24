@@ -1,6 +1,13 @@
 [workspace]
 resolver = "2"
-members = ["crypto", "private_multisig_core", "methods", "private_multisig_program", "sdk"]
+members = [
+    "crypto",
+    "private_multisig_core",
+    "methods",
+    "private_multisig_program",
+    "sdk",
+    "idl-gen",
+]
 # The Risc0 guest crate at `methods/guest/` is a standalone Cargo project that
 # compiles under the Risc0-managed RISC-V toolchain. It is intentionally NOT
 # a workspace member — `risc0-build` invokes its own cargo over it from

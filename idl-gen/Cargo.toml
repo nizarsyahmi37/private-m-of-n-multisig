@@ -1,0 +1,18 @@
+[package]
+name = "private_multisig_idl_gen"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "private-multisig-idl-gen"
+path = "src/main.rs"
+
+[dependencies]
+# `spel_framework::generate_idl!` parses the guest source with `syn` at
+# host-compile time and emits a `main()` that prints the IDL JSON.
+# Tag-pinned to match the rest of the workspace.
+spel-framework = { git = "https://github.com/logos-co/spel", tag = "v0.3.0" }
