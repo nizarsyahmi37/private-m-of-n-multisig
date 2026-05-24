@@ -1,0 +1,34 @@
+# Code owners for security-critical files. GitHub requires the listed
+# accounts to review and approve any PR that touches these paths. Branch
+# protection on `main` should be configured to require code-owner
+# review for these files specifically.
+#
+# Rationale: the round-8 audit observed that golden artifacts
+# (`private_multisig.idl.json`), the verifier source
+# (`methods/guest/src/bin/private_multisig.rs`), Cargo.lock, and
+# `deny.toml` are now load-bearing for the on-chain ABI contract and the
+# supply-chain trust chain. A solo-approver PR that mutates any of
+# these in a coordinated way (e.g., handler + IDL together) could
+# regress security invariants while CI stays green. CODEOWNERS forces a
+# second human into the review loop for those paths.
+
+# The golden IDL is the audited on-chain ABI shape. Changing it without
+# a corresponding (reviewed) verifier handler change indicates drift.
+/private_multisig.idl.json                               @nizarsyahmi37
+
+# The verifier program — every handler signature is part of the ABI.
+/methods/guest/src/bin/                                  @nizarsyahmi37
+
+# Host-side program crate and its api_stability sentinels.
+/private_multisig_program/                               @nizarsyahmi37
+
+# Resolved dep graph — captures the audited SHAs for git deps that
+# cannot be source-pinned in manifests (notably nssa_core).
+/Cargo.lock                                              @nizarsyahmi37
+
+# Supply-chain policy.
+/deny.toml                                               @nizarsyahmi37
+
+# Workflow + dependabot config — the CI is the only continuous
+# guardrail; tampering with the workflow would silence other checks.
+/.github/                                                @nizarsyahmi37
