@@ -18,23 +18,31 @@ all-features = true
 [advisories]
 version = 2
 yanked = "deny"
-# Every ignore here is a transitive dep with no safe upgrade in the current
-# Risc0 (3.0.5) or sled (0.34.7) graph. Revisit on every Risc0 bump and on
-# the planned sled → redb migration; drop the corresponding entry as soon
-# as the underlying crate is gone from the graph.
+# Every ignore here is either a transitive dep with no safe upgrade in the
+# current Risc0 (3.0.5) or sled (0.34.7) graph, or a direct dep flagged as
+# unmaintained (bincode 1.x) that we deliberately pin until a coordinated
+# migration. Full advisory text at https://rustsec.org/advisories/<id>.html.
+# Revisit on every Risc0 bump and on the planned sled → redb migration;
+# drop the corresponding entry as soon as the underlying crate is gone.
 ignore = [
-    # Marvin timing attack on RSA decryption. `rsa 0.9` has no fix
-    # available; pulled in via Risc0's Groth16 verifier chain (we don't
-    # use RSA for any private-multisig logic).
-    { id = "RUSTSEC-2023-0071", reason = "rsa 0.9.x has no fix; only used by Risc0 transitively, not by our crypto" },
+    # Marvin timing attack on RSA decryption. `rsa 0.9` has no fix.
+    # Pulled in transitively via `rzup` (the Risc0 toolchain installer that
+    # ships with `risc0-build` / `risc0-zkvm`); RSA is used only for the
+    # installer's signed-manifest verification at build-time, not by
+    # `risc0-groth16` or anything on our runtime path.
+    { id = "RUSTSEC-2023-0071", reason = "rsa 0.9.x has no fix; transitive via rzup installer at build-time only, never decrypts attacker-controlled ciphertext at runtime" },
     # Tracing's ansi-escape log poisoning. Transitive through Risc0's
     # observability stack; the SDK does not emit untrusted text into log
     # messages.
     { id = "RUSTSEC-2025-0055", reason = "tracing transitive via risc0-zkvm; SDK does not log untrusted text" },
-    # bincode 1.3.3 is the only stable major as of this writing; switching
-    # to wincode/postcard requires reworking our Receipt persistence and
-    # Risc0's own usage. Tracked as a follow-on.
-    { id = "RUSTSEC-2025-0141", reason = "bincode 1.x has no actively-maintained drop-in replacement; planned migration with Receipt persistence rework" },
+    # bincode 1.3.3 is a DIRECT dep — `sdk/src/prover.rs` uses
+    # `bincode::serialize(&receipt)` to persist Risc0 receipts in the
+    # resumable session store. The advisory flags bincode 1.x as
+    # unmaintained (not vulnerable), and the receipt bytes we decode are
+    # our own output rather than adversary input. bincode 2.x exists but
+    # diverges from the bincode-1 derives Risc0's `Receipt` ships with.
+    # Tracked as a follow-on alongside the Receipt persistence rework.
+    { id = "RUSTSEC-2025-0141", reason = "bincode 1.x used directly in sdk/prover.rs for Receipt persistence; unmaintained but not vulnerable, no drop-in replacement available; planned migration with the Receipt persistence rework" },
     # `derivative` is unmaintained but pulled in only by ark-* via
     # Risc0's Groth16 path; no behavioural impact.
     { id = "RUSTSEC-2024-0388", reason = "derivative is transitive via risc0-groth16 → ark-crypto-primitives; no derive macros we author" },
