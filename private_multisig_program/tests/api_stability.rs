@@ -398,14 +398,36 @@ fn api_deny_toml_keeps_spel_source_in_allowlist() {
     let deny = std::fs::read_to_string(&deny_path)
         .unwrap_or_else(|e| panic!("could not read {deny_path}: {e}"));
 
+    // Locate the `allow-git = [` opening and the matching `]`. We then
+    // assert the SPEL URL is inside that bracket group, with leading
+    // whitespace + quote — a comment elsewhere in the file that happens
+    // to contain the URL string would NOT satisfy the assertion.
+    let open = deny
+        .find("allow-git = [")
+        .unwrap_or_else(|| panic!("deny.toml does not declare an `allow-git = [` array"));
+    let after_open = open + "allow-git = [".len();
+    let close = deny[after_open..]
+        .find(']')
+        .unwrap_or_else(|| panic!("deny.toml `allow-git = [` array is not terminated by `]`"));
+    let group = &deny[after_open..after_open + close];
+
+    // Within the array, every URL is on its own line as `    "url",` after
+    // optional whitespace. Stripping leading whitespace from each line and
+    // matching on the quoted form rejects both bare-string and
+    // comment-shadowed mentions.
+    let url_quoted = "\"https://github.com/logos-co/spel\"";
+    let found = group
+        .lines()
+        .map(str::trim_start)
+        .any(|l| !l.starts_with('#') && l.contains(url_quoted));
     assert!(
-        deny.contains("\"https://github.com/logos-co/spel\""),
-        "deny.toml [sources] allow-git must keep the SPEL URL \
-         `\"https://github.com/logos-co/spel\"` — removing it would \
-         break the defense-in-depth chain documented at the \
-         [[licenses.clarify]] blocks (cargo-deny clarify binds by \
-         crate name only; the allow-git URL is what scopes the trust \
-         grant to the audited source)."
+        found,
+        "deny.toml `[sources] allow-git` must keep the SPEL URL \
+         {url_quoted} as a live array entry (comments don't count) — \
+         removing it would break the defense-in-depth chain documented \
+         at the [[licenses.clarify]] blocks (cargo-deny clarify binds \
+         by crate name only; the allow-git URL is what scopes the trust \
+         grant to the audited source). Got group:\n{group}"
     );
 }
 
