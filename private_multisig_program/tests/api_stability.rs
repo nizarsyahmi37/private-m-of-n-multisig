@@ -276,8 +276,8 @@ fn api_cargo_toml_dep_versions_are_pinned_appropriately() {
         };
         let rhs_trim = rhs.trim();
         assert!(
-            rhs_trim.starts_with("\"3.0\""),
-            "risc0-zkvm dep must be pinned to \"3.0\" (got: {rhs_trim:?}). \
+            rhs_trim.starts_with("\"=3.0.5\""),
+            "risc0-zkvm dep must be pinned to \"=3.0.5\" (got: {rhs_trim:?}). \
              Bumping minor/major can drift the image-id; if intentional, \
              update this sentinel AND re-snapshot the image-id."
         );
