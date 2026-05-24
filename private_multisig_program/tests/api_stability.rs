@@ -380,7 +380,37 @@ fn api_nssa_core_lockfile_sha_matches_audited_value() {
 }
 
 // ---------------------------------------------------------------------------
-// 14. PDA-seed shape sentinel for the `approve` handler's NullifierEntry.
+// 14. deny.toml allow-git sentinel. The SPEL license-clarify blocks
+//     (deny.toml [[licenses.clarify]] for spel-framework{,-core,-macros})
+//     bind by crate name only — cargo-deny 0.19.7's schema does not
+//     accept a `version` key. The compensating defense is the
+//     `[sources] allow-git` whitelist that limits the SPEL crate name to
+//     coming from `github.com/logos-co/spel` only. If a future PR
+//     accidentally relaxes that allowlist (adds a wildcard, removes the
+//     entry), the clarify becomes a name-only trust grant for any
+//     `spel-framework`-named crate from any source. This sentinel
+//     ensures the canonical SPEL URL stays in the allowlist.
+// ---------------------------------------------------------------------------
+#[test]
+fn api_deny_toml_keeps_spel_source_in_allowlist() {
+    let manifest_dir = env!("CARGO_MANIFEST_DIR");
+    let deny_path = format!("{manifest_dir}/../deny.toml");
+    let deny = std::fs::read_to_string(&deny_path)
+        .unwrap_or_else(|e| panic!("could not read {deny_path}: {e}"));
+
+    assert!(
+        deny.contains("\"https://github.com/logos-co/spel\""),
+        "deny.toml [sources] allow-git must keep the SPEL URL \
+         `\"https://github.com/logos-co/spel\"` — removing it would \
+         break the defense-in-depth chain documented at the \
+         [[licenses.clarify]] blocks (cargo-deny clarify binds by \
+         crate name only; the allow-git URL is what scopes the trust \
+         grant to the audited source)."
+    );
+}
+
+// ---------------------------------------------------------------------------
+// 15. PDA-seed shape sentinel for the `approve` handler's NullifierEntry.
 //     The double-vote-rejection invariant (THREAT_MODEL T2.2 / T3.x) hinges
 //     on the nullifier-entry PDA being seeded by `(proposal, nullifier)` —
 //     binding each nullifier to its proposal. A malicious or careless PR
