@@ -313,7 +313,58 @@ fn api_cargo_toml_dep_versions_are_pinned_appropriately() {
 }
 
 // ---------------------------------------------------------------------------
-// 13. Unit-test count pin: src/lib.rs has five `#[test]` cases inside its
+// 13. PDA-seed shape sentinel for the `approve` handler's NullifierEntry.
+//     The double-vote-rejection invariant (THREAT_MODEL T2.2 / T3.x) hinges
+//     on the nullifier-entry PDA being seeded by `(proposal, nullifier)` —
+//     binding each nullifier to its proposal. A malicious or careless PR
+//     that drops `account("proposal")` from the seed list would still pass
+//     the golden-IDL diff if the IDL is regenerated alongside the change.
+//     This source-text check is the independent semantic guard: it asserts
+//     the literal seed shape in the verifier source matches the audited
+//     form.
+// ---------------------------------------------------------------------------
+#[test]
+fn api_approve_nullifier_entry_pda_seed_shape_is_audited() {
+    let manifest_dir = env!("CARGO_MANIFEST_DIR");
+    let verifier_src_path = format!("{manifest_dir}/../methods/guest/src/bin/private_multisig.rs");
+    let verifier_src = std::fs::read_to_string(&verifier_src_path)
+        .unwrap_or_else(|e| panic!("could not read {verifier_src_path}: {e}"));
+
+    // Audited shape: NullifierEntry is `#[account(init, pda = [
+    //     literal("pmsig_nulli__"), account("proposal"), arg("nullifier")
+    // ])]`. Drop `account("proposal")` and a cross-proposal replay becomes
+    // possible; drop `arg("nullifier")` and a single member can vote twice
+    // on the same proposal. We assert all three substrings appear within a
+    // 200-char window centered on the literal `"pmsig_nulli__"` so the
+    // check is robust to whitespace and formatting changes within the
+    // attribute.
+    let nulli = verifier_src
+        .find(r#"literal("pmsig_nulli__")"#)
+        .expect("nullifier-entry PDA seed list with `literal(\"pmsig_nulli__\")` not found in verifier source");
+    let window_start = nulli.saturating_sub(50);
+    let window_end = (nulli + 200).min(verifier_src.len());
+    let window = &verifier_src[window_start..window_end];
+
+    assert!(
+        window.contains(r#"literal("pmsig_nulli__")"#),
+        "nullifier-entry PDA seed must contain `literal(\"pmsig_nulli__\")`"
+    );
+    assert!(
+        window.contains(r#"account("proposal")"#),
+        "nullifier-entry PDA seed must bind to the proposal account via \
+         `account(\"proposal\")` — without it, the same nullifier can be \
+         replayed across proposals (T2.2 regression). Got:\n{window}"
+    );
+    assert!(
+        window.contains(r#"arg("nullifier")"#),
+        "nullifier-entry PDA seed must include `arg(\"nullifier\")` — \
+         without it, a single member can double-vote on the same proposal. \
+         Got:\n{window}"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// 14. Unit-test count pin: src/lib.rs has five `#[test]` cases inside its
 //     `#[cfg(test)] mod tests` block. Catches accidental deletion or
 //     uncontrolled growth of the in-lib smoke tests.
 // ---------------------------------------------------------------------------
