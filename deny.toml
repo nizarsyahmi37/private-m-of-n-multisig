@@ -80,6 +80,21 @@ confidence-threshold = 0.93
 # cargo-deny that the three SPEL crates we pull in are dual-licensed
 # under MIT OR Apache-2.0, matching the upstream LICENSE files. Drop
 # these once SPEL adds the `license` field to its manifests upstream.
+# cargo-deny 0.19.7 `[[licenses.clarify]]` schema accepts only `crate`,
+# `expression`, and `license-files`. There is no `version` key, so the
+# clarify scope cannot be narrowed to "spel-framework = 0.3.0" alone —
+# any crate named `spel-framework` at any version would match. Two
+# guardrails compensate:
+#
+#  1. `[sources] allow-git` (below) whitelists only `logos-co/spel`,
+#     so a same-name crate from a different source is rejected at the
+#     source check before reaching the licenses check.
+#  2. SPEL is pinned by SHA in every `Cargo.toml` git dep (round 7
+#     `b4f7e97`), so a future maintainer cannot silently float the
+#     version without an explicit rev bump that re-triggers review.
+#
+# Drop these blocks once SPEL upstream adds the `license` field to its
+# manifests.
 [[licenses.clarify]]
 crate = "spel-framework"
 expression = "MIT OR Apache-2.0"
