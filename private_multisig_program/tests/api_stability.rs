@@ -338,7 +338,49 @@ fn api_cargo_toml_dep_versions_are_pinned_appropriately() {
 }
 
 // ---------------------------------------------------------------------------
-// 13. PDA-seed shape sentinel for the `approve` handler's NullifierEntry.
+// 13. nssa_core Cargo.lock SHA sentinel. `nssa_core` is intentionally
+//     still tag-pinned at `v0.2.0-rc3` (see methods/guest/Cargo.toml for
+//     the unification rationale with SPEL's transitive pin), but a tag
+//     can be retagged upstream — `Cargo.lock` is the only place that
+//     records the resolved SHA. If LEZ maintainers retag v0.2.0-rc3 to a
+//     different commit, the next `cargo update -p nssa_core` would
+//     silently swap it. This sentinel asserts the lockfile records the
+//     SHA we audited; the same defense the SPEL rev pin provides at the
+//     manifest level.
+// ---------------------------------------------------------------------------
+const NSSA_CORE_AUDITED_SHA: &str = "cf3639d8252040d13b3d4e933feb19b42c76e14a";
+
+#[test]
+fn api_nssa_core_lockfile_sha_matches_audited_value() {
+    let manifest_dir = env!("CARGO_MANIFEST_DIR");
+    let lockfile_path = format!("{manifest_dir}/../Cargo.lock");
+    let lockfile = std::fs::read_to_string(&lockfile_path)
+        .unwrap_or_else(|e| panic!("could not read {lockfile_path}: {e}"));
+
+    // Find the `[[package]]` block whose `name = "nssa_core"` and read
+    // the next `source =` line. Anchor on the exact name to avoid a
+    // future `nssa_core_extras` etc. matching by prefix.
+    let needle = "name = \"nssa_core\"\n";
+    let Some(name_pos) = lockfile.find(needle) else {
+        panic!(
+            "no `[[package]] name = \"nssa_core\"` block found in \
+             Cargo.lock — has the dep been removed?"
+        );
+    };
+    let after_name = &lockfile[name_pos + needle.len()..];
+    // The `source` line is within a small window of the name line in
+    // the [[package]] block (cargo emits ~3-5 lines per package).
+    let block = &after_name[..after_name.len().min(400)];
+    assert!(
+        block.contains(NSSA_CORE_AUDITED_SHA),
+        "nssa_core block in Cargo.lock does not reference the audited \
+         SHA `{NSSA_CORE_AUDITED_SHA}`. The v0.2.0-rc3 tag may have been \
+         retagged upstream. Block window:\n{block}"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// 14. PDA-seed shape sentinel for the `approve` handler's NullifierEntry.
 //     The double-vote-rejection invariant (THREAT_MODEL T2.2 / T3.x) hinges
 //     on the nullifier-entry PDA being seeded by `(proposal, nullifier)` —
 //     binding each nullifier to its proposal. A malicious or careless PR
