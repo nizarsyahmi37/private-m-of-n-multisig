@@ -1,0 +1,67 @@
+[package]
+name = "private_multisig_e2e_tests"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/nizarsyahmi37/private-m-of-n-multisig"
+rust-version = "1.80"
+publish = false
+
+# This crate is intentionally NOT a workspace member of the project root.
+# It carries an optional `lez-integration` feature that, when enabled,
+# transitively pulls `nssa`/`sequencer_service`/`indexer_service`/`wallet`
+# from `logos-execution-zone`. Those crates have a hard build-time
+# prerequisite on `logos-blockchain-circuits` v0.4.2 being available at
+# `~/.logos-blockchain-circuits/` or `LOGOS_BLOCKCHAIN_CIRCUITS`. The
+# empty `[workspace]` table prevents Cargo from walking up and pulling
+# the LEZ deps into the host workspace.
+[workspace]
+
+[features]
+default = []
+# Layer-B: full LEZ sequencer harness (testcontainers + in-process
+# sequencer + indexer + wallet). Requires logos-blockchain-circuits
+# v0.4.2 on disk; see e2e_tests/README.md for the install instructions.
+lez-integration = [
+    "dep:nssa",
+    "dep:sequencer_service",
+    "dep:sequencer_service_rpc",
+    "dep:indexer_service",
+    "dep:wallet",
+    "dep:testcontainers",
+    "dep:tempfile",
+]
+
+[dependencies]
+# Inner ZK proving stack — Layer A's only dependency surface beyond
+# Risc0 itself. No LEZ client deps, so this compiles without the
+# circuits prereq.
+private_multisig_sdk = { path = "../sdk", features = ["prover"] }
+private_multisig_core = { path = "../private_multisig_core" }
+private_multisig_program = { path = "../private_multisig_program" }
+crypto = { path = "../crypto" }
+risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["client"] }
+bincode = "1.3"
+anyhow = "1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+
+# Layer-B-only LEZ client stack. Pinned to the same `v0.2.0-rc3` tag
+# the verifier guest uses for `nssa_core` so the dep graph stays
+# unified. Optional — only pulled in when `--features lez-integration`
+# is set.
+nssa = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.2.0-rc3", optional = true }
+sequencer_service = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.2.0-rc3", optional = true }
+sequencer_service_rpc = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.2.0-rc3", features = ["client"], optional = true }
+indexer_service = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.2.0-rc3", optional = true }
+wallet = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.2.0-rc3", optional = true }
+testcontainers = { version = "0.27", optional = true }
+tempfile = { version = "3", optional = true }
+
+[build-dependencies]
+# Compiles the bundled `noop` guest at `e2e_tests/guest/` so the chained
+# call from `execute` has a target program to land in. Pinned to match
+# the rest of the workspace.
+risc0-build = "=3.0.5"
+
+[package.metadata.risc0]
+methods = ["guest"]

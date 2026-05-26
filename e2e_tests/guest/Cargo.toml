@@ -1,0 +1,28 @@
+[package]
+name = "noop_guest"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.80"
+
+# Standalone Cargo project under the Risc0 RISC-V toolchain — same
+# pattern as `methods/guest/`. The empty `[workspace]` table prevents
+# Cargo from walking up to the parent.
+[workspace]
+
+[[bin]]
+name = "noop"
+path = "src/bin/noop.rs"
+
+[dependencies]
+# Pinned tight to match the workspace's `=3.0.5` risc0 discipline.
+risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["std"] }
+# nssa_core gives us `ProgramInput`/`ProgramOutput`/`read_nssa_inputs`
+# so the noop matches the SPEL host's call shape. Same tag the verifier
+# guest uses; unifies via Cargo's URL+pin matching.
+nssa_core = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.2.0-rc3" }
+serde = { version = "1", default-features = false, features = ["derive"] }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+opt-level = 3
