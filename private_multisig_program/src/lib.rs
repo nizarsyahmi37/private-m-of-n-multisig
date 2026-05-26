@@ -3,6 +3,11 @@
 //! ## What this crate exposes
 //!
 //! - `APPROVE_CIRCUIT_ELF`, `APPROVE_CIRCUIT_IMAGE_ID` — Risc0 artifacts
+//!   for the inner ZK approval circuit
+//! - `VERIFIER_PROGRAM_ELF`, `VERIFIER_PROGRAM_IMAGE_ID` — Risc0
+//!   artifacts for the SPEL verifier program. Used by the step-7 e2e
+//!   harness to drive the outer prover in-process so it can discharge
+//!   the inner approve receipt's composition assumption.
 //! - `image_id_hex()` — release-note / pin-by-string helper
 //! - `APPROVE_WITNESS_LEN`, `pack_approve_witness(…)` — the canonical
 //!   host → guest wire format helper
@@ -30,6 +35,20 @@ pub const APPROVE_CIRCUIT_ELF: &[u8] = methods::APPROVE_CIRCUIT_ELF;
 /// program checks every receipt against this image-id; a receipt produced
 /// by any other guest is rejected with `E2001 ImageIdMismatch`.
 pub const APPROVE_CIRCUIT_IMAGE_ID: [u32; 8] = methods::APPROVE_CIRCUIT_ID;
+
+/// Compiled RISC-V ELF bytes of the SPEL verifier program. Hand to
+/// `risc0_zkvm::default_prover()` when the step-7 e2e harness needs to
+/// produce an outer receipt locally — passing `inner_approve_receipt`
+/// via `ExecutorEnv::add_assumption` discharges the verifier's
+/// `env::verify(APPROVE_CIRCUIT_IMAGE_ID, public_inputs)` composition
+/// assumption.
+pub const VERIFIER_PROGRAM_ELF: &[u8] = methods::PRIVATE_MULTISIG_ELF;
+
+/// Image ID of the SPEL verifier program. Pin alongside the `approve`
+/// circuit's image-id whenever the on-chain ABI is snapshotted — a
+/// verifier-source change without a coordinated `APPROVE_CIRCUIT_IMAGE_ID`
+/// re-snapshot would silently land a receipt-validation drift.
+pub const VERIFIER_PROGRAM_IMAGE_ID: [u32; 8] = methods::PRIVATE_MULTISIG_ID;
 
 /// Hex-encoded helper: returns the image-id as a 64-char lowercase hex
 /// string suitable for embedding in release notes or pinning in

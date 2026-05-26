@@ -16,7 +16,10 @@
 #![allow(clippy::let_underscore_untyped)]
 #![allow(clippy::manual_range_contains)]
 
-use private_multisig_program::{image_id_hex, APPROVE_CIRCUIT_ELF, APPROVE_CIRCUIT_IMAGE_ID};
+use private_multisig_program::{
+    image_id_hex, APPROVE_CIRCUIT_ELF, APPROVE_CIRCUIT_IMAGE_ID, VERIFIER_PROGRAM_ELF,
+    VERIFIER_PROGRAM_IMAGE_ID,
+};
 
 /// Embedded snapshot of `src/lib.rs` parsed by the source-scanning sentinels
 /// below. `include_str!` is resolved at compile time relative to this file.
@@ -39,6 +42,35 @@ fn api_apprrove_circuit_elf_type_pin() {
 #[test]
 fn api_apprrove_circuit_image_id_type_pin() {
     let _: [u32; 8] = APPROVE_CIRCUIT_IMAGE_ID;
+}
+
+// ---------------------------------------------------------------------------
+// 2b. Compile-time type pins for the SPEL verifier program's ELF + image-id.
+//     Step-7 e2e harness consumes these to discharge the approve receipt's
+//     composition assumption via the outer prover.
+// ---------------------------------------------------------------------------
+#[test]
+fn api_verifier_program_elf_type_pin() {
+    let _: &'static [u8] = VERIFIER_PROGRAM_ELF;
+    assert!(
+        !VERIFIER_PROGRAM_ELF.is_empty(),
+        "verifier program ELF must not be empty"
+    );
+}
+
+#[test]
+fn api_verifier_program_image_id_type_pin() {
+    let _: [u32; 8] = VERIFIER_PROGRAM_IMAGE_ID;
+    // A freshly-compiled image cannot have an all-zero id without SHA-256
+    // producing a zero digest on the ELF (preimage-hard).
+    assert_ne!(VERIFIER_PROGRAM_IMAGE_ID, [0u32; 8]);
+    // The two image-ids must be distinct — same image-id would mean the
+    // verifier and approve circuits compiled to byte-identical ELFs,
+    // which would be a build-system bug.
+    assert_ne!(
+        VERIFIER_PROGRAM_IMAGE_ID, APPROVE_CIRCUIT_IMAGE_ID,
+        "verifier program and approve circuit must have distinct image-ids"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -70,13 +102,14 @@ fn api_image_id_hex_output_format() {
 }
 
 // ---------------------------------------------------------------------------
-// 5. Public-item count pin: src/lib.rs exposes exactly five `pub ` items
-//    (APPROVE_CIRCUIT_ELF, APPROVE_CIRCUIT_IMAGE_ID, image_id_hex,
-//    APPROVE_WITNESS_LEN, pack_approve_witness). A future PR that adds a
-//    new pub item must update this constant AND add a rustdoc block
-//    (enforced by the next sentinel).
+// 5. Public-item count pin: src/lib.rs exposes exactly seven `pub ` items
+//    (APPROVE_CIRCUIT_ELF, APPROVE_CIRCUIT_IMAGE_ID, VERIFIER_PROGRAM_ELF,
+//    VERIFIER_PROGRAM_IMAGE_ID, image_id_hex, APPROVE_WITNESS_LEN,
+//    pack_approve_witness). A future PR that adds a new pub item must
+//    update this constant AND add a rustdoc block (enforced by the next
+//    sentinel).
 // ---------------------------------------------------------------------------
-const EXPECTED_PUB_ITEM_COUNT: usize = 5;
+const EXPECTED_PUB_ITEM_COUNT: usize = 7;
 
 /// Returns the line indices (0-based) of every line in `lib.rs` that is the
 /// *declaration* of a pub item — i.e. starts with `pub ` after trimming
