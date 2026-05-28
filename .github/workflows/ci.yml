@@ -82,6 +82,18 @@ jobs:
       - name: Test SDK with prover feature
         run: cargo test -p private_multisig_sdk --features prover
 
+      # `e2e_tests/` is excluded from the root workspace (its optional
+      # `lez-integration` feature pulls the LEZ client stack, which needs
+      # logos-blockchain-circuits at build time). The default-feature build
+      # has no such prerequisite, so CI runs the Layer A test — three
+      # dev-mode approve proofs verified against the pinned image-id, plus
+      # the same-member nullifier-replay rejection. Layer B (the full
+      # sequencer harness) is gated off and never built here.
+      - name: E2E Layer A test (dev-mode proofs)
+        run: |
+          cargo test --manifest-path e2e_tests/Cargo.toml \
+            --test create_propose_approve_execute
+
       # idl-gen emits the canonical IDL JSON the CLI consumes via spel.toml.
       # The CLI itself is excluded from the workspace because it transitively
       # requires `logos-blockchain-circuits` at build time; CI does not set

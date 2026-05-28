@@ -1,0 +1,81 @@
+name: Nightly E2E (real proofs)
+
+# PLAN.md §Verification step 7: a scheduled job runs the e2e flow with
+# RISC0_DEV_MODE=0 so real SNARK receipts are generated and verified,
+# guarding against real-prover regressions that the dev-mode CI path
+# (RISC0_DEV_MODE=1) cannot catch. Proof-generation timing is uploaded as
+# a benchmark artifact to feed the eventual prize-submission benchmark
+# table.
+#
+# Scope note: this runs the Layer A flow (pure Risc0 composition) with
+# real proofs — the part that runs on GitHub-hosted runners. The Layer B
+# full-stack sequencer harness (`--features lez-integration`) needs
+# logos-blockchain-circuits v0.4.2 on disk plus Docker, neither of which
+# a hosted runner provides; running it nightly requires a self-hosted
+# runner and is tracked separately (see e2e_tests/README.md).
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 06:00 UTC daily.
+    - cron: "0 6 * * *"
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  # The whole point of this job: real proofs, not dev-mode receipts.
+  RISC0_DEV_MODE: "0"
+  # Same pin as ci.yml — bumping changes the compiled ELF and image-id.
+  RISC0_TOOLCHAIN_VERSION: "1.94.1"
+
+jobs:
+  real-proof-e2e:
+    name: Layer A e2e with real proofs
+    runs-on: ubuntu-latest
+    # Real proving is 1–10 minutes per receipt; the Layer A test proves
+    # three. 90 minutes bounds a cold build + three real proofs with
+    # headroom while still capping a hung prover.
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master @ 2026-03-27 ("Add 1.94.1 patch release")
+        with:
+          toolchain: stable
+
+      - uses: Swatinem/rust-cache@23869a5bd66c73db3c0ac40331f3206eb23791dc # v2.9.1
+
+      - name: Install rzup
+        timeout-minutes: 10
+        run: cargo install --locked --version 0.5.1 rzup
+
+      - name: Install Risc0 rust toolchain
+        timeout-minutes: 10
+        run: rzup install rust "$RISC0_TOOLCHAIN_VERSION"
+
+      # Time the real-proof run and emit a small benchmark file. The test
+      # itself proves three approve receipts and verifies each against the
+      # pinned image-id; wall-clock here is dominated by proving, so it is
+      # a usable real-prover regression signal even though it is not a
+      # per-receipt breakdown.
+      - name: Run Layer A e2e with real proofs (timed)
+        run: |
+          mkdir -p bench
+          start=$(date +%s)
+          cargo test --manifest-path e2e_tests/Cargo.toml \
+            --release --test create_propose_approve_execute -- --nocapture
+          end=$(date +%s)
+          elapsed=$((end - start))
+          printf '{"test":"create_propose_two_approve_layer_a","risc0_dev_mode":0,"wall_seconds":%s,"commit":"%s","run_at":"%s"}\n' \
+            "$elapsed" "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            | tee bench/proof_timing.json
+          echo "Real-proof Layer A e2e completed in ${elapsed}s"
+
+      - name: Upload proof-timing benchmark
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: proof-timing-${{ github.run_id }}
+          path: bench/proof_timing.json
+          if-no-files-found: error
