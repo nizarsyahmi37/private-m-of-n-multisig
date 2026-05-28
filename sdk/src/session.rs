@@ -466,12 +466,12 @@ mod tests {
 
     #[test]
     fn session_status_transitions() {
-        assert!(SessionStatus::Drafted.has_receipt() == false);
-        assert!(SessionStatus::Proving.has_receipt() == false);
-        assert!(SessionStatus::Proved.has_receipt() == true);
-        assert!(SessionStatus::Submitted.has_receipt() == true);
-        assert!(SessionStatus::Confirmed.has_receipt() == true);
-        assert!(SessionStatus::Failed.has_receipt() == false);
+        assert!(!SessionStatus::Drafted.has_receipt());
+        assert!(!SessionStatus::Proving.has_receipt());
+        assert!(SessionStatus::Proved.has_receipt());
+        assert!(SessionStatus::Submitted.has_receipt());
+        assert!(SessionStatus::Confirmed.has_receipt());
+        assert!(!SessionStatus::Failed.has_receipt());
     }
 
     #[test]
@@ -561,11 +561,11 @@ mod tests {
         session.mark_submitted(100).unwrap();
 
         // 31 blocks past — not yet confirmed under N=32.
-        assert_eq!(session.try_confirm(131, 32).unwrap(), false);
+        assert!(!session.try_confirm(131, 32).unwrap());
         assert_eq!(session.status, SessionStatus::Submitted);
 
         // 32 blocks past — boundary, now confirmed.
-        assert_eq!(session.try_confirm(132, 32).unwrap(), true);
+        assert!(session.try_confirm(132, 32).unwrap());
         assert_eq!(session.status, SessionStatus::Confirmed);
 
         // try_confirm on a non-Submitted session returns Err.
