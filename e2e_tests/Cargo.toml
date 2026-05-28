@@ -23,6 +23,8 @@ default = []
 # sequencer + indexer + wallet). Requires logos-blockchain-circuits
 # v0.4.2 on disk; see e2e_tests/README.md for the install instructions.
 lez-integration = [
+    "dep:integration_tests",
+    "dep:common",
     "dep:nssa",
     "dep:sequencer_service",
     "dep:sequencer_service_rpc",
@@ -30,6 +32,7 @@ lez-integration = [
     "dep:wallet",
     "dep:testcontainers",
     "dep:tempfile",
+    "dep:borsh",
 ]
 
 [dependencies]
@@ -49,6 +52,19 @@ tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 # the verifier guest uses for `nssa_core` so the dep graph stays
 # unified. Optional — only pulled in when `--features lez-integration`
 # is set.
+#
+# `integration_tests` is LEZ's own test-support crate: it owns the
+# `TestContext` that brings up Bedrock (via testcontainers) + an
+# in-process sequencer + indexer + wallet. We depend on it rather than
+# re-implementing `setup.rs`/`config.rs` so the fragile infra wiring
+# stays on LEZ's tested code path and our harness only adds the
+# multisig-specific flow on top. Its `CARGO_MANIFEST_DIR`-relative
+# paths (`../bedrock/docker-compose.yml`) resolve inside the git
+# checkout, so it works as an external dependency.
+integration_tests = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.2.0-rc3", optional = true }
+# `common` owns `NSSATransaction`, the transaction envelope `send_transaction`
+# takes. LEZ's own `program_deployment` test imports it the same way.
+common = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.2.0-rc3", optional = true }
 nssa = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.2.0-rc3", optional = true }
 sequencer_service = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.2.0-rc3", optional = true }
 sequencer_service_rpc = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.2.0-rc3", features = ["client"], optional = true }
@@ -56,6 +72,9 @@ indexer_service = { git = "https://github.com/logos-blockchain/logos-execution-z
 wallet = { git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.2.0-rc3", optional = true }
 testcontainers = { version = "0.27", optional = true }
 tempfile = { version = "3", optional = true }
+# Decodes on-chain account data (`MultisigState`/`Proposal`) in the Layer B
+# assertions. Same major as the workspace core crate's borsh.
+borsh = { version = "1", default-features = false, features = ["derive"], optional = true }
 
 [build-dependencies]
 # Compiles the bundled `noop` guest at `e2e_tests/guest/` so the chained
