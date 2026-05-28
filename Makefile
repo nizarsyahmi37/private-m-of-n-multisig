@@ -26,7 +26,7 @@ define save_var
 	@mv $(STATE_FILE).tmp $(STATE_FILE)
 endef
 
-.PHONY: help build idl cli deploy setup inspect status clean test deny
+.PHONY: help build idl cli deploy setup inspect status clean test test-e2e test-e2e-full deny
 
 help: ## Show this help
 	@echo "LP-0002 Private M-of-N Multisig"
@@ -38,8 +38,10 @@ help: ## Show this help
 	@echo "  make setup       Create signer account via wallet"
 	@echo "  make inspect     Show ProgramId for built binary"
 	@echo "  make status      Show saved state and binary info"
-	@echo "  make test        Run all workspace tests"
-	@echo "  make deny        Run cargo deny check"
+	@echo "  make test          Run all workspace tests"
+	@echo "  make test-e2e      Run the Layer A e2e test (dev-mode proofs)"
+	@echo "  make test-e2e-full Run the Layer B full-stack e2e test (needs circuits + Docker)"
+	@echo "  make deny          Run cargo deny check"
 	@echo "  make clean       Remove saved state"
 	@echo ""
 	@echo "Example:"
@@ -89,6 +91,22 @@ status: ## Show saved state and binary info
 
 test: ## Run the full workspace test suite
 	cargo test --workspace
+
+# `e2e_tests/` is its own workspace (excluded from the root), so it needs
+# its own manifest path — `cargo test --workspace` does not reach it.
+test-e2e: ## Run the Layer A e2e test (pure crypto, dev-mode proofs)
+	RISC0_DEV_MODE=1 cargo test --manifest-path e2e_tests/Cargo.toml \
+		--test create_propose_approve_execute
+
+# Layer B stands up Bedrock + sequencer + indexer + wallet and proves real
+# receipts, so it is `#[ignore]`d and opt-in. Requires the
+# logos-blockchain-circuits prerequisite (see e2e_tests/README.md) and a
+# running Docker daemon. Honors a caller-supplied RISC0_DEV_MODE; defaults
+# to dev-mode for a fast structural smoke, set RISC0_DEV_MODE=0 for the
+# real-prover run.
+test-e2e-full: ## Run the Layer B full-stack e2e test (needs circuits + Docker)
+	RISC0_DEV_MODE=$${RISC0_DEV_MODE:-1} cargo test --manifest-path e2e_tests/Cargo.toml \
+		--features lez-integration --test lez_full_flow -- --ignored --nocapture
 
 deny: ## Run cargo deny check (advisories, bans, licenses, sources)
 	cargo deny check
