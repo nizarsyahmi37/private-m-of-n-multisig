@@ -55,6 +55,14 @@ jobs:
         timeout-minutes: 10
         run: rzup install rust "$RISC0_TOOLCHAIN_VERSION"
 
+      # Real proving (RISC0_DEV_MODE=0) goes through `default_prover()` →
+      # ExternalProver → the `r0vm` server, so the binary must be installed
+      # or the run fails immediately with "No such file or directory".
+      # Pinned to the risc0-zkvm version (=3.0.5); bump in lockstep.
+      - name: Install r0vm prover
+        timeout-minutes: 10
+        run: rzup install r0vm 3.0.5
+
       # Time the real-proof run and emit a small benchmark file. The test
       # itself proves three approve receipts and verifies each against the
       # pinned image-id; wall-clock here is dominated by proving, so it is

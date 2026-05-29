@@ -64,6 +64,16 @@ jobs:
         timeout-minutes: 10
         run: rzup install rust "$RISC0_TOOLCHAIN_VERSION"
 
+      # The proving tests call `risc0_zkvm::default_prover()`, which (without
+      # the heavy native `prove` feature) returns the ExternalProver and
+      # shells out to the `r0vm` server. r0vm honors RISC0_DEV_MODE, so the
+      # dev-mode test run stays fast — but the binary must be present or
+      # proving fails with "No such file or directory". Pinned to the
+      # risc0-zkvm version (=3.0.5); bump in lockstep with that pin.
+      - name: Install r0vm prover
+        timeout-minutes: 10
+        run: rzup install r0vm 3.0.5
+
       - name: Format check
         run: cargo fmt --all --check
 
