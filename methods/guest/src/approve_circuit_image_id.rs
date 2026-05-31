@@ -11,11 +11,14 @@
 // against the freshly-built image-id, so any drift fails CI loudly with
 // instructions to update both pins together.
 //
-// The 8 little-endian `u32` words below are identical to
+// The 8 little-endian `u32` words below are the canonical
+// reproducible-Docker-build image-id (produced under
+// `RISC0_USE_DOCKER=1` against the `risczero/risc0-guest-builder` image
+// tag pinned in `methods/build.rs`). They are identical to
 // `private_multisig_program::APPROVE_CIRCUIT_IMAGE_ID` and the
 // `PINNED_IMAGE_ID_WORDS` constant in
 // `private_multisig_program/tests/image_id_stability.rs`. Updating the
 // `approve_circuit` source means updating ALL THREE pins in lockstep.
 pub const APPROVE_CIRCUIT_IMAGE_ID: [u32; 8] = [
-    763539168, 1016753994, 1524795730, 877238783, 502029817, 1373722446, 3332462251, 4034702986,
+    1683419497, 2665931562, 2484565372, 1634782365, 3092099954, 3316541401, 2039021021, 3470376700,
 ];
