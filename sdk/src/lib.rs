@@ -78,5 +78,5 @@ pub use private_multisig_core::proof::ApprovePublicInputs;
 /// id re-exported by `private_multisig_program::APPROVE_CIRCUIT_IMAGE_ID`
 /// so any drift fails CI even when the prover feature is off.
 pub const APPROVE_CIRCUIT_IMAGE_ID_PINNED: [u32; 8] = [
-    763539168, 1016753994, 1524795730, 877238783, 502029817, 1373722446, 3332462251, 4034702986,
+    1683419497, 2665931562, 2484565372, 1634782365, 3092099954, 3316541401, 2039021021, 3470376700,
 ];

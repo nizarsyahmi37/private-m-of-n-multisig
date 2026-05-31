@@ -934,11 +934,12 @@ fn v4_pack_approve_witness_with_5000_member_tree() {
 #[test]
 fn v4_image_id_unchanged_after_helper_addition() {
     // Pinned hex from `tests/image_id_stability.rs::PINNED_IMAGE_ID_HEX`.
-    // Shifted again when the verifier handlers gained real logic and the
-    // guest crate enabled `private_multisig_core/std` for `MultisigState` +
-    // `Proposal` to be reachable.
+    // Canonical value is the reproducible-Docker-build image-id; the
+    // assertion is gated on `BUILD_USED_DOCKER` because a plain host
+    // build's image-id intentionally diverges (paths/toolchain bake into
+    // the ELF).
     const PINNED_IMAGE_ID_HEX: &str =
-        "e0ae822d4a6f9a3c5289e25aff994934f95dec1d4e57e151ab56a1c68aae7cf0";
+        "69f156642ae3e69e7c7517949dcc706172b34db8d967aec5ddfd8879fcbed9ce";
 
     let actual = image_id_hex();
     assert_eq!(
@@ -946,12 +947,24 @@ fn v4_image_id_unchanged_after_helper_addition() {
         64,
         "image_id_hex() length must remain 64 hex chars (32 bytes)"
     );
-    assert_eq!(
-        actual, PINNED_IMAGE_ID_HEX,
-        "image_id_hex() drifted after `pack_approve_witness` was added! \
-         The helper is HOST-SIDE only — adding it must NOT change the guest \
-         ELF or its image-id. Expected: {PINNED_IMAGE_ID_HEX}, actual: {actual}"
-    );
+
+    if !private_multisig_program::BUILD_USED_DOCKER {
+        eprintln!(
+            "SKIP: image-id stability check requires a reproducible Docker build. \
+             Re-run with `RISC0_USE_DOCKER=1 cargo test -p private_multisig_program \
+             --test blue_team_program_v4` to enforce."
+        );
+        // The LE-decode round-trip below stays meaningful even off-Docker
+        // (it cross-checks `image_id_hex` against `APPROVE_CIRCUIT_IMAGE_ID`,
+        // both live), so fall through into it after skipping the pin assert.
+    } else {
+        assert_eq!(
+            actual, PINNED_IMAGE_ID_HEX,
+            "image_id_hex() drifted after `pack_approve_witness` was added! \
+             The helper is HOST-SIDE only — adding it must NOT change the guest \
+             ELF or its image-id. Expected: {PINNED_IMAGE_ID_HEX}, actual: {actual}"
+        );
+    }
 
     // Cross-check via the word array: same constant in two representations.
     let bytes = hex::decode(&actual).expect("image_id_hex must be valid hex");

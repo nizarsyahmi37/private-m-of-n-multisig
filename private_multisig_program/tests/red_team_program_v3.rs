@@ -150,9 +150,12 @@ fn happy_witness(i: usize) -> (Identity, Witness, [u8; 32]) {
 /// Locally-pinned hex string. Mirrors `tests/image_id_stability.rs` so the
 /// cross-test endianness sentinel below can compare against it independently.
 /// If `image_id_stability.rs` is updated for a legitimate ABI bump, update
-/// here too; both pins must move together.
+/// here too; both pins must move together. Canonical value is the
+/// reproducible-Docker-build image-id; sentinels are gated on
+/// `private_multisig_program::BUILD_USED_DOCKER` because a plain host build
+/// produces an intentionally divergent image-id.
 const PINNED_IMAGE_ID_HEX_V3: &str =
-    "e0ae822d4a6f9a3c5289e25aff994934f95dec1d4e57e151ab56a1c68aae7cf0";
+    "69f156642ae3e69e7c7517949dcc706172b34db8d967aec5ddfd8879fcbed9ce";
 
 // ===========================================================================
 // 1. image_id_hex() — lowercase, length 64, restricted alphabet.
@@ -207,6 +210,15 @@ fn red3_image_id_hex_lowercase_and_capacity_sentinel() {
 
 #[test]
 fn red3_image_id_hex_endianness_matches_pinned_stability() {
+    if !private_multisig_program::BUILD_USED_DOCKER {
+        eprintln!(
+            "SKIP: image-id endianness-vs-pin check requires a reproducible Docker build. \
+             Re-run with `RISC0_USE_DOCKER=1 cargo test -p private_multisig_program \
+             --test red_team_program_v3` to enforce."
+        );
+        return;
+    }
+
     // Reconstruct the canonical hex manually, byte by byte, little-endian per
     // word. Avoids piggybacking on the implementation of `image_id_hex()`.
     let mut rebuilt = String::with_capacity(64);

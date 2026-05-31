@@ -30,7 +30,7 @@
 //!   independent pin of the canonical hex sentinel from
 //!   `image_id_stability.rs`)
 //! - explicit little-endian pin for `APPROVE_CIRCUIT_IMAGE_ID[0]` derived
-//!   from the hex sentinel `e0ae822d…`
+//!   from the hex sentinel `69f15664…`
 //! - per-field byte slice assertion (each `[0..32)`, `[32..64)`, `[64..96)`
 //!   isolably checked so a failure tells you which field drifted)
 //! - explicit no-leak sentinel: a witness with a recognizable `0xDEADBEEF…`
@@ -416,29 +416,37 @@ fn v3_image_id_hex_decodes_to_image_id_words() {
 }
 
 // ---------------------------------------------------------------------------
-// 6. Endianness pin: first 4 bytes of the canonical hex `e0 ae 82 2d`
-//    interpret as LE u32 == 0x2d82aee0 == 763_539_168.
+// 6. Endianness pin: first 4 bytes of the canonical hex `69 f1 56 64`
+//    interpret as LE u32 == 0x6456f169 == 1_683_419_497.
 //
-//    The image-id shifted again when the SPEL verifier handlers (create,
-//    propose, execute) gained real logic and the guest crate enabled
-//    `private_multisig_core/std` so `MultisigState` + `Proposal` are
-//    reachable. The new pinned hex lives in image_id_stability.rs as
-//    `PINNED_IMAGE_ID_HEX`.
+//    The pinned hex lives in image_id_stability.rs as `PINNED_IMAGE_ID_HEX`
+//    and is the canonical reproducible-Docker-build image-id; only enforced
+//    against builds done via `RISC0_USE_DOCKER=1` (a plain host build's
+//    image-id bakes in source paths and toolchain version and intentionally
+//    diverges).
 // ---------------------------------------------------------------------------
 
 #[test]
 fn v3_image_id_word_array_endianness_is_little_endian() {
     // The canonical hex sentinel in image_id_stability.rs starts with
-    // "e0ae822d…". As LITTLE-endian u32 that is:
-    //   byte[0]=0xe0, byte[1]=0xae, byte[2]=0x82, byte[3]=0x2d
-    //   → u32 = 0x2d82aee0 = 763,539,168
+    // "69f15664…". As LITTLE-endian u32 that is:
+    //   byte[0]=0x69, byte[1]=0xf1, byte[2]=0x56, byte[3]=0x64
+    //   → u32 = 0x6456f169 = 1,683,419,497
     // If the hex helper ever serialized as big-endian instead, the first
-    // word would be 0xe0ae822d = 3,769,860,141, and this test would fail.
+    // word would be 0x69f15664 = 1,777,423,972, and this test would fail.
+    if !private_multisig_program::BUILD_USED_DOCKER {
+        eprintln!(
+            "SKIP: image-id endianness pin requires a reproducible Docker build. \
+             Re-run with `RISC0_USE_DOCKER=1 cargo test -p private_multisig_program \
+             --test blue_team_program_v3` to enforce."
+        );
+        return;
+    }
     assert_eq!(
-        APPROVE_CIRCUIT_IMAGE_ID[0], 763_539_168u32,
-        "endianness pin failed: APPROVE_CIRCUIT_IMAGE_ID[0] = {}, expected 763_539_168 \
-         (which is 0x{:08x}, the LE interpretation of the hex prefix e0 ae 82 2d)",
-        APPROVE_CIRCUIT_IMAGE_ID[0], 0x2d82_aee0u32,
+        APPROVE_CIRCUIT_IMAGE_ID[0], 1_683_419_497u32,
+        "endianness pin failed: APPROVE_CIRCUIT_IMAGE_ID[0] = {}, expected 1_683_419_497 \
+         (which is 0x{:08x}, the LE interpretation of the hex prefix 69 f1 56 64)",
+        APPROVE_CIRCUIT_IMAGE_ID[0], 0x6456_f169u32,
     );
 
     // Cross-check the LE interpretation explicitly: pull the first 4 bytes
@@ -452,7 +460,7 @@ fn v3_image_id_word_array_endianness_is_little_endian() {
         .try_into()
         .expect("4-byte prefix array");
     let le = u32::from_le_bytes(prefix_arr);
-    assert_eq!(le, 763_539_168u32, "LE re-decode of hex prefix disagreed");
+    assert_eq!(le, 1_683_419_497u32, "LE re-decode of hex prefix disagreed");
     assert_eq!(
         le, APPROVE_CIRCUIT_IMAGE_ID[0],
         "hex prefix LE decode disagreed with APPROVE_CIRCUIT_IMAGE_ID[0]"
@@ -770,16 +778,24 @@ fn v3_image_id_word_array_is_pinned_constant() {
     // Same value as `PINNED_IMAGE_ID_WORDS` in image_id_stability.rs.
     // Duplicated here intentionally — the redundancy is the point.
     const EXPECTED: [u32; 8] = [
-        763_539_168,
-        1_016_753_994,
-        1_524_795_730,
-        877_238_783,
-        502_029_817,
-        1_373_722_446,
-        3_332_462_251,
-        4_034_702_986,
+        1_683_419_497,
+        2_665_931_562,
+        2_484_565_372,
+        1_634_782_365,
+        3_092_099_954,
+        3_316_541_401,
+        2_039_021_021,
+        3_470_376_700,
     ];
 
+    if !private_multisig_program::BUILD_USED_DOCKER {
+        eprintln!(
+            "SKIP: image-id pin assertion requires a reproducible Docker build. \
+             Re-run with `RISC0_USE_DOCKER=1 cargo test -p private_multisig_program \
+             --test blue_team_program_v3` to enforce."
+        );
+        return;
+    }
     assert_eq!(
         APPROVE_CIRCUIT_IMAGE_ID, EXPECTED,
         "APPROVE_CIRCUIT_IMAGE_ID drift! pinned: {:?}, actual: {:?}",
@@ -788,7 +804,7 @@ fn v3_image_id_word_array_is_pinned_constant() {
 
     // Cross-check element 0 stays exactly the LE-decoded value of the
     // canonical hex sentinel prefix (defensive duplication of test 6).
-    assert_eq!(EXPECTED[0], 763_539_168u32);
+    assert_eq!(EXPECTED[0], 1_683_419_497u32);
 }
 
 // ---------------------------------------------------------------------------
