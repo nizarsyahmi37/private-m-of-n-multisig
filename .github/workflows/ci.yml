@@ -23,18 +23,32 @@ env:
   # Pin the Risc0 rust toolchain so the guest builds reproducibly. Bumping
   # this changes the compiled ELF and therefore the image-id, so
   # `sdk/src/lib.rs::APPROVE_CIRCUIT_IMAGE_ID_PINNED` must be regenerated
-  # in lockstep — `sdk/tests/image_id_pin_parity.rs` enforces that.
+  # in lockstep — `sdk/tests/image_id_pin_parity.rs` enforces that. With
+  # Docker reproducible builds enabled below the host-side toolchain is
+  # unused at compile time, but rzup still installs it for the r0vm host
+  # path (used by ExternalProver at test time).
   RISC0_TOOLCHAIN_VERSION: "1.94.1"
+  # Build the Risc0 guest binaries inside the pinned
+  # `risczero/risc0-guest-builder` container so the resulting image-id is
+  # host-independent. Without this, image-ids drift between e.g. macOS dev
+  # machines and Linux CI runners, and the on-chain ABI sentinels in
+  # `private_multisig_program/tests/image_id_stability.rs`,
+  # `blue_team_program_v3.rs`, `blue_team_program_v4.rs`,
+  # `red_team_program_v3.rs`, and `sdk/tests/image_id_pin_parity.rs`
+  # fail noisily. The reproducible-build mode is consumed by
+  # `methods/build.rs` and reflected in
+  # `methods::BUILD_USED_DOCKER`, which gates the pin assertions.
+  RISC0_USE_DOCKER: "1"
 
 jobs:
   build-and-test:
     name: Build and test
     runs-on: ubuntu-latest
-    # Job-level ceiling. Cold workspace + Risc0 guest build is realistically
-    # 5–12 minutes; 30 covers that with headroom. Without this, a hung
-    # `cargo build` would inherit GitHub's 6-hour default and burn runner
-    # minutes until someone notices.
-    timeout-minutes: 30
+    # Job-level ceiling. Reproducible Docker guest builds add a one-time
+    # image pull (~1–2 GB) plus an in-container `cargo fetch` + cross-compile
+    # of the guest. Cold path is ~20–30 minutes; 60 minutes covers it with
+    # headroom and still caps a hung Docker / cargo / r0vm run.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 

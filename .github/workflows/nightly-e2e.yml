@@ -29,6 +29,10 @@ env:
   RISC0_DEV_MODE: "0"
   # Same pin as ci.yml — bumping changes the compiled ELF and image-id.
   RISC0_TOOLCHAIN_VERSION: "1.94.1"
+  # Build the guest under `risczero/risc0-guest-builder` so the image-id
+  # is host-independent and matches the canonical pins. See ci.yml for the
+  # full rationale.
+  RISC0_USE_DOCKER: "1"
 
 jobs:
   real-proof-e2e:
