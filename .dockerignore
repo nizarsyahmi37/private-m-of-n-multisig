@@ -1,0 +1,9 @@
+# Keep the risc0 reproducible-guest-build Docker context small and
+# deterministic. risc0-build copies the whole workspace root (the guest's
+# path deps live at ../../crypto and ../../private_multisig_core, so the
+# build context must be the repo root) — without this, multi-GB target/
+# dirs and local state would be shipped into the build image, making the
+# build slow and the image-id sensitive to local artifacts.
+target/
+**/target/
+.git/

@@ -19,3 +19,19 @@
 //! program" without threading the `methods` crate name everywhere.
 
 include!(concat!(env!("OUT_DIR"), "/methods.rs"));
+
+/// True iff the guest binaries were produced by a reproducible Docker build
+/// (`RISC0_USE_DOCKER=1`). The image-id pin assertions across the workspace
+/// only enforce against this build mode — a plain host build leaks paths,
+/// toolchain, and ~/.cargo/registry into the ELF, so its image-id is
+/// host-specific and intentionally doesn't match the canonical pins. Tests
+/// that compare against the pinned constants must short-circuit (skip) when
+/// this is `false`, otherwise local `cargo test` on a developer machine
+/// would fail the drift sentinel even though nothing actually drifted.
+///
+/// Set by `methods/build.rs` via `cargo:rustc-env=METHODS_BUILD_USED_DOCKER`
+/// (emitted only when Docker mode is active). `is_some()` on
+/// `Option<&'static str>` is const-stable since Rust 1.66 — `matches!` on a
+/// `&str` literal is not allowed in a const context, which is why we just
+/// check presence rather than compare the value.
+pub const BUILD_USED_DOCKER: bool = option_env!("METHODS_BUILD_USED_DOCKER").is_some();
