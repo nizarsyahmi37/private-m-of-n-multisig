@@ -50,6 +50,14 @@ pub const VERIFIER_PROGRAM_ELF: &[u8] = methods::PRIVATE_MULTISIG_ELF;
 /// re-snapshot would silently land a receipt-validation drift.
 pub const VERIFIER_PROGRAM_IMAGE_ID: [u32; 8] = methods::PRIVATE_MULTISIG_ID;
 
+/// True iff the guest ELFs above came from a reproducible Docker build
+/// (`RISC0_USE_DOCKER=1`). Re-exported from the `methods` crate so the
+/// drift-sentinel tests in `tests/image_id_stability.rs` and
+/// `tests/blue_team_program_v3.rs` can skip themselves when running against
+/// a host build (whose image-id is intentionally path-dependent and won't
+/// match the canonical pins).
+pub const BUILD_USED_DOCKER: bool = methods::BUILD_USED_DOCKER;
+
 /// Hex-encoded helper: returns the image-id as a 64-char lowercase hex
 /// string suitable for embedding in release notes or pinning in
 /// integration tests. Stable as long as `APPROVE_CIRCUIT_IMAGE_ID` is.
