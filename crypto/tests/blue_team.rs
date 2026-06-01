@@ -7,23 +7,23 @@ use crypto::{
     merkle::verify_proof, nullifier, Hash, Hasher, Identity, MerkleTree, Sha256Hasher, HASH_LEN,
     MERKLE_DEPTH,
 };
-use rand::RngCore;
+use rand::Rng;
 
 // ---------- helpers ----------
 
-fn random_hash(rng: &mut impl RngCore) -> Hash {
+fn random_hash(rng: &mut impl Rng) -> Hash {
     let mut h = [0u8; HASH_LEN];
     rng.fill_bytes(&mut h);
     h
 }
 
-fn random_sk(rng: &mut impl RngCore) -> [u8; 32] {
+fn random_sk(rng: &mut impl Rng) -> [u8; 32] {
     let mut s = [0u8; 32];
     rng.fill_bytes(&mut s);
     s
 }
 
-fn build_tree(n: usize, rng: &mut impl RngCore) -> (MerkleTree<Sha256Hasher>, Vec<Hash>) {
+fn build_tree(n: usize, rng: &mut impl Rng) -> (MerkleTree<Sha256Hasher>, Vec<Hash>) {
     let mut t = MerkleTree::<Sha256Hasher>::new();
     let mut leaves = Vec::with_capacity(n);
     for _ in 0..n {

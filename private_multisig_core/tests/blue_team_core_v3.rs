@@ -28,7 +28,7 @@
 
 use borsh::to_vec;
 use rand::rngs::StdRng;
-use rand::{Rng, SeedableRng};
+use rand::{RngExt, SeedableRng};
 
 use crypto::{Identity, MerkleTree, Sha256Hasher, SALT_LEN, SK_LEN};
 use private_multisig_core::{

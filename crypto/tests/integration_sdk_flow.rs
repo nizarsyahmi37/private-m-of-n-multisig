@@ -43,7 +43,7 @@ use crypto::{
 };
 
 use rand::rngs::StdRng;
-use rand::{Rng, RngCore, SeedableRng};
+use rand::{Rng, RngExt, SeedableRng};
 
 // ---------------------------------------------------------------------------
 // Test helpers — only call into the public API, no internal access.
@@ -53,10 +53,10 @@ use rand::{Rng, RngCore, SeedableRng};
 /// helper every SDK consumer will write on day one; the crate doesn't
 /// provide it.
 ///
-/// FINDING (Nit): an `Identity::random<R: RngCore>(rng: &mut R)` constructor
+/// FINDING (Nit): an `Identity::random<R: Rng>(rng: &mut R)` constructor
 /// (gated behind a `std` / `rand` feature so the Risc0 guest stays no-std)
 /// would save every consumer from writing this. Not a blocker.
-fn random_identity<R: RngCore>(rng: &mut R) -> Identity {
+fn random_identity<R: Rng>(rng: &mut R) -> Identity {
     let mut sk = [0u8; SK_LEN];
     let mut salt = [0u8; SALT_LEN];
     rng.fill_bytes(&mut sk);

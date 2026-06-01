@@ -54,7 +54,7 @@ use crypto::{
     merkle::{verify_proof, MerkleError, MerkleProof, MAX_LEAVES, MERKLE_DEPTH},
     nullifier, Hash, Hasher, Identity, IdentityCommitment, MerkleTree, Sha256Hasher,
 };
-use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
+use rand::{rngs::StdRng, Rng, RngExt, SeedableRng};
 use sha2::{Digest, Sha256};
 
 // ---------------------------------------------------------------------------

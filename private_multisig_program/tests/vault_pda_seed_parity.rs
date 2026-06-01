@@ -79,7 +79,7 @@ fn manual_vault_seed_matches_spel_compute_pda() {
 #[test]
 fn manual_vault_seed_matches_spel_compute_pda_over_random_inputs() {
     use rand::rngs::StdRng;
-    use rand::{Rng, SeedableRng};
+    use rand::{RngExt, SeedableRng};
     let mut rng = StdRng::seed_from_u64(0xC0FFEE);
 
     for _ in 0..64 {

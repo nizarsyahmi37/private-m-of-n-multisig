@@ -24,7 +24,7 @@ use private_multisig_core::{
     derive_multisig_state_pda, derive_proposal_id, ApprovePublicInputs, ChainId,
     APPROVE_PUBLIC_INPUTS_LEN, SEED_MULTISIG_STATE,
 };
-use rand::{rngs::StdRng, RngCore, SeedableRng};
+use rand::{rngs::StdRng, Rng, SeedableRng};
 
 // ---------------------------------------------------------------------------
 // Helpers

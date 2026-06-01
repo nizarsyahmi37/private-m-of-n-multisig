@@ -17,7 +17,7 @@ use private_multisig_core::{
     derive_multisig_state_pda, derive_nullifier_entry_pda, derive_proposal_pda,
 };
 use rand::rngs::StdRng;
-use rand::{Rng, SeedableRng};
+use rand::{RngExt, SeedableRng};
 use spel_framework::pda::{compute_pda, seed_from_str, ToSeed};
 
 fn spel_state_account_id(self_program_id: &ProgramId, create_key: &[u8; 32]) -> AccountId {

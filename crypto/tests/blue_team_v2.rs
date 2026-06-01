@@ -21,7 +21,7 @@ use crypto::{
     merkle::verify_proof,
     Hash, Hasher, MerkleProof, MerkleTree, Sha256Hasher, HASH_LEN, MERKLE_DEPTH,
 };
-use rand::{rngs::StdRng, RngCore, SeedableRng};
+use rand::{rngs::StdRng, Rng, SeedableRng};
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -50,7 +50,7 @@ fn undomained_zero_chain() -> [Hash; MERKLE_DEPTH + 1] {
     z
 }
 
-fn random_hash(rng: &mut impl RngCore) -> Hash {
+fn random_hash(rng: &mut impl Rng) -> Hash {
     let mut h = [0u8; HASH_LEN];
     rng.fill_bytes(&mut h);
     h

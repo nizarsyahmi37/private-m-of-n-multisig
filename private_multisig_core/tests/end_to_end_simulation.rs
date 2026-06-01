@@ -20,7 +20,7 @@ use std::collections::HashSet;
 use borsh::{to_vec, BorshDeserialize};
 use crypto::{Identity, MerkleTree, Sha256Hasher};
 use rand::rngs::StdRng;
-use rand::{Rng, RngCore, SeedableRng};
+use rand::{Rng, RngExt, SeedableRng};
 
 use private_multisig_core::{
     derive_multisig_state_pda, derive_nullifier_entry_pda, derive_proposal_id, derive_proposal_pda,

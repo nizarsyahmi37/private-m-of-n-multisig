@@ -27,7 +27,7 @@ use std::sync::Arc;
 use std::thread;
 
 use rand::rngs::StdRng;
-use rand::{Rng, RngCore, SeedableRng};
+use rand::{Rng, RngExt, SeedableRng};
 use sha2::{Digest, Sha256};
 
 use crypto::{
@@ -67,7 +67,7 @@ fn build_tree(leaves: &[Hash]) -> MerkleTree<Sha256Hasher> {
 
 /// Random leaf that is guaranteed non-zero (the all-zero leaf trips the
 /// FINDING-1b guard inside `verify_proof`).
-fn random_nonzero_leaf<R: RngCore>(rng: &mut R) -> Hash {
+fn random_nonzero_leaf<R: Rng>(rng: &mut R) -> Hash {
     loop {
         let mut leaf = [0u8; HASH_LEN];
         rng.fill_bytes(&mut leaf);

@@ -43,7 +43,7 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use borsh::{to_vec, BorshDeserialize};
 use rand::rngs::StdRng;
-use rand::{Rng, RngCore, SeedableRng};
+use rand::{Rng, RngExt, SeedableRng};
 
 use private_multisig_core::{
     ApprovePublicInputs, Instruction, MultisigState, NullifierEntry, Proposal, Vault,

@@ -54,7 +54,7 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use borsh::{to_vec, BorshDeserialize};
 use rand::rngs::StdRng;
-use rand::{Rng, RngCore, SeedableRng};
+use rand::{Rng, RngExt, SeedableRng};
 
 use private_multisig_core::{
     derive_multisig_state_pda, derive_proposal_id, derive_proposal_pda, derive_vault_pda,

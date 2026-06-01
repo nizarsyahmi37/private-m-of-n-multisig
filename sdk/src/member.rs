@@ -28,8 +28,8 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use chacha20poly1305::aead::AeadInPlace;
 use chacha20poly1305::KeyInit;
-use rand::rngs::OsRng;
-use rand::TryRngCore;
+use rand::rngs::SysRng;
+use rand::TryRng;
 use secrecy::SecretBox;
 use zeroize::Zeroize;
 
@@ -52,21 +52,23 @@ pub struct Member {
 impl Member {
     /// Generate a fresh identity with cryptographically random `sk` and `salt`.
     ///
-    /// Uses `OsRng` so the source is the OS-level CSPRNG, not a deterministic
+    /// Uses `SysRng` so the source is the OS-level CSPRNG, not a deterministic
     /// seeded generator. No network entropy is required.
     pub fn new() -> Result<Self, SdkError> {
         let mut sk = [0u8; 32];
         let mut salt = [0u8; 32];
-        // In rand 0.9 `OsRng` only implements `TryRngCore`; `try_fill_bytes`
-        // returns the OS-level error if the syscall fails. We `expect()`
-        // here because a `getrandom`/`/dev/urandom` failure is fatal for
-        // the SDK — no fallback is meaningful at this layer.
-        OsRng
+        // In rand 0.10 `OsRng` was replaced by `SysRng` (re-exported from
+        // `getrandom`) and only implements the fallible `TryRng` trait.
+        // `try_fill_bytes` returns the OS-level error if the syscall
+        // fails; we `expect()` here because a `getrandom`/`/dev/urandom`
+        // failure is fatal for the SDK — no fallback is meaningful at
+        // this layer.
+        SysRng
             .try_fill_bytes(&mut sk)
-            .expect("OsRng::try_fill_bytes failed — kernel CSPRNG unavailable");
-        OsRng
+            .expect("SysRng::try_fill_bytes failed — kernel CSPRNG unavailable");
+        SysRng
             .try_fill_bytes(&mut salt)
-            .expect("OsRng::try_fill_bytes failed — kernel CSPRNG unavailable");
+            .expect("SysRng::try_fill_bytes failed — kernel CSPRNG unavailable");
         Ok(Self {
             identity: Identity::new(sk, salt),
         })
@@ -127,15 +129,15 @@ impl Member {
 
         // 128-bit random salt for Argon2id.
         let mut argon_salt = [0u8; 16];
-        OsRng
+        SysRng
             .try_fill_bytes(&mut argon_salt)
-            .expect("OsRng::try_fill_bytes failed — kernel CSPRNG unavailable");
+            .expect("SysRng::try_fill_bytes failed — kernel CSPRNG unavailable");
 
         // 96-bit random nonce for ChaCha20-Poly1305.
         let mut nonce_bytes = [0u8; 12];
-        OsRng
+        SysRng
             .try_fill_bytes(&mut nonce_bytes)
-            .expect("OsRng::try_fill_bytes failed — kernel CSPRNG unavailable");
+            .expect("SysRng::try_fill_bytes failed — kernel CSPRNG unavailable");
 
         // Argon2id parameters: 64 MiB memory, 3 iterations, 4 parallelism.
         // RFC 9106 "interactive" parameters — fast for CLI, costly to brute-force.

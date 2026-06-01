@@ -34,7 +34,7 @@ use crypto::{
     nullifier, Hash, Hasher, Identity, IdentityCommitment, MerkleTree, Sha256Hasher,
 };
 use proptest::prelude::*;
-use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
+use rand::{rngs::StdRng, Rng, RngExt, SeedableRng};
 use sha2::{Digest, Sha256};
 use std::collections::{HashMap, HashSet};
 

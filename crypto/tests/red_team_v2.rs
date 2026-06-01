@@ -27,7 +27,7 @@ use crypto::{
     merkle::{verify_proof, MerkleError, MerkleProof, MERKLE_DEPTH},
     nullifier, Hash, Hasher, Identity, MerkleTree, Sha256Hasher,
 };
-use rand::{rngs::StdRng, Rng, SeedableRng};
+use rand::{rngs::StdRng, RngExt, SeedableRng};
 use sha2::{Digest, Sha256};
 
 // ---------------------------------------------------------------------------

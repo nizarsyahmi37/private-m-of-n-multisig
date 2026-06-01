@@ -12,7 +12,7 @@ use crypto::merkle::{MerkleProof, MerkleTree, MERKLE_DEPTH};
 use crypto::nullifier;
 use crypto::Identity;
 use rand::rngs::StdRng;
-use rand::{Rng, RngCore, SeedableRng};
+use rand::{Rng, RngExt, SeedableRng};
 
 // ---------------------------------------------------------------------------
 // Local helpers.

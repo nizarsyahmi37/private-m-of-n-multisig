@@ -21,7 +21,7 @@ use private_multisig_core::{
     derive_vault_pda, ApprovePublicInputs, ChainId, CoreError, Instruction, MultisigState,
     Proposal, APPROVE_PUBLIC_INPUTS_LEN, MAX_ACTION_BYTES_LEN,
 };
-use rand::{rngs::StdRng, RngCore, SeedableRng};
+use rand::{rngs::StdRng, Rng, SeedableRng};
 
 // ---------------------------------------------------------------------------
 // Helpers (the kind of thing the SDK will likely wrap)
