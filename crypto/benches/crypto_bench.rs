@@ -7,7 +7,9 @@
 //!
 //! Run with: `cargo bench -p crypto`.
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use std::hint::black_box;
+
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 
 use crypto::{
     nullifier, verify_proof, Hasher, Identity, MerkleTree, Sha256Hasher, HASH_LEN, MERKLE_DEPTH,
