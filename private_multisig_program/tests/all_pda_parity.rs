@@ -79,10 +79,10 @@ fn state_pda_matches_spel_compute_pda() {
 fn state_pda_matches_spel_over_random_inputs() {
     let mut rng = StdRng::seed_from_u64(0xC0FFEE);
     for _ in 0..64 {
-        let create_key: [u8; 32] = rng.gen();
+        let create_key: [u8; 32] = rng.random();
         let mut program_words = [0u32; 8];
         for w in &mut program_words {
-            *w = rng.gen();
+            *w = rng.random();
         }
         let mut program_bytes = [0u8; 32];
         for (i, w) in program_words.iter().enumerate() {
@@ -120,11 +120,11 @@ fn proposal_pda_matches_spel_compute_pda() {
 fn proposal_pda_matches_spel_over_random_inputs() {
     let mut rng = StdRng::seed_from_u64(0xDEAD_BEEF);
     for _ in 0..64 {
-        let create_key: [u8; 32] = rng.gen();
-        let index: u64 = rng.gen();
+        let create_key: [u8; 32] = rng.random();
+        let index: u64 = rng.random();
         let mut program_words = [0u32; 8];
         for w in &mut program_words {
-            *w = rng.gen();
+            *w = rng.random();
         }
         let mut program_bytes = [0u8; 32];
         for (i, w) in program_words.iter().enumerate() {
@@ -158,11 +158,11 @@ fn nullifier_entry_pda_matches_spel_compute_pda() {
 fn nullifier_entry_pda_matches_spel_over_random_inputs() {
     let mut rng = StdRng::seed_from_u64(0xFEED_FACE);
     for _ in 0..64 {
-        let proposal_pda: [u8; 32] = rng.gen();
-        let nullifier: [u8; 32] = rng.gen();
+        let proposal_pda: [u8; 32] = rng.random();
+        let nullifier: [u8; 32] = rng.random();
         let mut program_words = [0u32; 8];
         for w in &mut program_words {
-            *w = rng.gen();
+            *w = rng.random();
         }
         let mut program_bytes = [0u8; 32];
         for (i, w) in program_words.iter().enumerate() {

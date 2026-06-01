@@ -350,8 +350,8 @@ fn v4_attack_6a_proposal_id_collision_under_5_input_simultaneous_sweep_10k() {
     for i in 0..10_000usize {
         let cid = ChainId::new(random_32(&mut r));
         let state_pda = random_32(&mut r);
-        let index: u64 = r.gen();
-        let action_len = r.gen_range(0..=128);
+        let index: u64 = r.random();
+        let action_len = r.random_range(0..=128);
         let mut action = vec![0u8; action_len];
         r.fill_bytes(&mut action);
         let target = random_32(&mut r);
@@ -376,8 +376,8 @@ fn v4_attack_6a_proposal_id_collision_under_5_input_simultaneous_sweep_10k() {
 fn v4_attack_7a_validate_method_matches_threshold_100_random_pairs() {
     let mut r = StdRng::seed_from_u64(0xB10E_2002_A1B2_0701_u64);
     for _ in 0..100 {
-        let m: u8 = r.gen();
-        let n: u32 = r.gen();
+        let m: u8 = r.random();
+        let n: u32 = r.random();
         let state = MultisigState {
             create_key: [0; 32],
             members_root: [0; 32],
@@ -651,7 +651,7 @@ fn v4_attack_12a_replacement_for_random_2k_byte_blobs() {
     let mut accepted_roundtrip = 0usize;
     let total = 5_000;
     for _ in 0..total {
-        let len = r.gen_range(0..200);
+        let len = r.random_range(0..200);
         let mut buf = vec![0u8; len];
         r.fill_bytes(&mut buf);
         let res = catch_unwind(AssertUnwindSafe(|| Instruction::try_from_slice(&buf)));
@@ -844,7 +844,7 @@ fn v4_attack_13c_instruction_approve_embeds_public_inputs_byvalue() {
         let public_inputs_bytes = inputs.to_bytes().to_vec();
         let ix = Instruction::Approve {
             create_key: random_32(&mut r),
-            index: r.gen(),
+            index: r.random(),
             nullifier: inputs.nullifier,
             public_inputs: public_inputs_bytes.clone(),
         };
@@ -877,7 +877,7 @@ fn v4_attack_13d_proposal_pda_le_pin_1000_indices() {
     let mut r = StdRng::seed_from_u64(0xABCD_EF01_DEAD_BEEFu64);
     let mut tested = 0u32;
     while tested < 1_000 {
-        let i: u64 = r.gen();
+        let i: u64 = r.random();
         let swapped = i.swap_bytes();
         if i == swapped {
             continue; // palindrome — LE and BE produce the same bytes
@@ -904,8 +904,8 @@ fn v4_attack_13e_validate_threshold_error_variant_is_constant() {
     let mut r = StdRng::seed_from_u64(0x0123_4567_89AB_CDEFu64);
     let mut rejected = 0u32;
     for _ in 0..256 {
-        let m: u8 = r.gen();
-        let n: u32 = r.gen();
+        let m: u8 = r.random();
+        let n: u32 = r.random();
         if let Err(e) = MultisigState::validate_threshold(m, n) {
             assert_eq!(
                 e,
@@ -972,8 +972,8 @@ fn v4_attack_13f_seed_constants_no_byte_alias_under_rotation() {
 fn v4_attack_13g_validate_ignores_non_threshold_fields() {
     let mut r = StdRng::seed_from_u64(0xFEED_FACE_BAAD_F00Du64);
     for _ in 0..50 {
-        let m: u8 = r.gen_range(0..=10);
-        let n: u32 = r.gen_range(0..=10);
+        let m: u8 = r.random_range(0..=10);
+        let n: u32 = r.random_range(0..=10);
         let expected = MultisigState::validate_threshold(m, n);
         for _ in 0..5 {
             let s = MultisigState {
@@ -981,7 +981,7 @@ fn v4_attack_13g_validate_ignores_non_threshold_fields() {
                 members_root: random_32(&mut r),
                 m,
                 n,
-                proposal_count: r.gen(),
+                proposal_count: r.random(),
             };
             assert_eq!(
                 s.validate(),
@@ -1067,7 +1067,7 @@ fn v4_attack_13i_proposal_id_neq_proposal_pda() {
     let state_pda = derive_multisig_state_pda(&program_id, &[0xABu8; 32]);
     for _ in 0..1_000 {
         let ck = random_32(&mut r);
-        let idx: u64 = r.gen();
+        let idx: u64 = r.random();
         let pid = derive_proposal_id(&chain, &state_pda, idx, action, &target);
         let pda = derive_proposal_pda(&program_id, &ck, idx);
         assert_ne!(

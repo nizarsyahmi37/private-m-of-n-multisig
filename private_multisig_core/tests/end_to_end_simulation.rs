@@ -326,7 +326,7 @@ fn e2e_hundred_multisigs_complete_lifecycle() {
             let _ = build_create_ix_bytes(&inst);
 
             // Random action_bytes in [0, 200].
-            let action_len = rng.gen_range(0..=200usize);
+            let action_len = rng.random_range(0..=200usize);
             let mut action_bytes = vec![0u8; action_len];
             rng.fill_bytes(&mut action_bytes);
             assert!(Proposal::validate_action_bytes(&action_bytes).is_ok());
@@ -812,7 +812,7 @@ fn e2e_thousand_random_full_lifecycles() {
     let mut total_approvals = 0usize;
 
     for iter in 0..1000u32 {
-        let (m, n) = mn_options[rng.gen_range(0..mn_options.len())];
+        let (m, n) = mn_options[rng.random_range(0..mn_options.len())];
         let mut create_key = [0u8; 32];
         rng.fill_bytes(&mut create_key);
         let state_pda = derive_multisig_state_pda(&PROGRAM_ID, &create_key);
@@ -840,7 +840,7 @@ fn e2e_thousand_random_full_lifecycles() {
 
         // Random action_bytes up to MAX_ACTION_BYTES_LEN (smaller for speed —
         // cap at 256 here; the max-size case is exercised by scenario 9).
-        let action_len = rng.gen_range(0..=256usize);
+        let action_len = rng.random_range(0..=256usize);
         let mut action_bytes = vec![0u8; action_len];
         rng.fill_bytes(&mut action_bytes);
 
@@ -849,8 +849,8 @@ fn e2e_thousand_random_full_lifecycles() {
         rng.fill_bytes(&mut target_program);
 
         // Random chain_id and proposal index.
-        let chain_id = ChainId::from_u64(rng.gen_range(1u64..=1024));
-        let index: u64 = rng.gen_range(0u64..=64);
+        let chain_id = ChainId::from_u64(rng.random_range(1u64..=1024));
+        let index: u64 = rng.random_range(0u64..=64);
 
         let _ = build_propose_ix_bytes(&inst, index, &action_bytes, &target_program);
 

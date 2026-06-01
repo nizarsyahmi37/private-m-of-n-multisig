@@ -116,7 +116,7 @@ fn rng() -> StdRng {
 fn ref_sha256_matches_hash() {
     let mut r = rng();
     for i in 0..N {
-        let len = r.gen_range(0..=4096);
+        let len = r.random_range(0..=4096);
         let mut input = vec![0u8; len];
         r.fill_bytes(&mut input);
 

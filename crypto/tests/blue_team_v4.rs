@@ -739,5 +739,5 @@ fn helper_random_nonzero_leaf_is_nonzero() {
     // Quick smoke check on a few Rng calls so unused-import lints don't
     // bite if the API ever changes.
     let mut rng2 = StdRng::seed_from_u64(2);
-    let _: u32 = rng2.gen();
+    let _: u32 = rng2.random();
 }

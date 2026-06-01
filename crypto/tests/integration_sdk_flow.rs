@@ -318,7 +318,7 @@ fn sdk_flow_non_member_cannot_construct_valid_proof() {
             rng.fill_bytes(s);
         }
         for b in indices.iter_mut() {
-            *b = rng.gen();
+            *b = rng.random();
         }
         let random_proof = MerkleProof { siblings, indices };
         assert!(!verify_proof::<Sha256Hasher>(

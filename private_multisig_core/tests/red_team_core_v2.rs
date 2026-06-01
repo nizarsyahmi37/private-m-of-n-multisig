@@ -503,7 +503,7 @@ fn v2_attack_7a_instruction_random_oracle_10k() {
     let mut r = rng();
     let mut accepted = 0usize;
     for _ in 0..10_000 {
-        let len = r.gen_range(0..=2048usize);
+        let len = r.random_range(0..=2048usize);
         let mut buf = alloc::vec![0u8; len];
         r.fill_bytes(&mut buf);
         // `try_from_slice` is total — must not panic.
@@ -669,7 +669,7 @@ fn v2_attack_10b_proposal_id_vs_pda_domain_separation() {
     let mut pdas = std::collections::HashSet::new();
     for _ in 0..5_000 {
         let ck = random_32(&mut r);
-        let idx: u64 = r.gen();
+        let idx: u64 = r.random();
         let action = random_32(&mut r);
         let target = random_32(&mut r);
         let pda = derive_multisig_state_pda(&program_id, &ck);
@@ -821,8 +821,8 @@ fn v2_attack_10i_chain_id_index_swap_no_collision() {
     let pda = [0xAA; 32];
     let target = [0xBB; 32];
     for _ in 0..1_000 {
-        let a: u64 = r.gen();
-        let b: u64 = r.gen();
+        let a: u64 = r.random();
+        let b: u64 = r.random();
         if a == b {
             continue;
         }

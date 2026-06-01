@@ -1039,7 +1039,7 @@ fn attack_chosen_sibling_to_force_root_mitigated() {
     let mut hits = 0usize;
     for _ in 0..2_000 {
         let mut p = real_proof.clone();
-        let level: usize = rng.gen_range(0..MERKLE_DEPTH);
+        let level: usize = rng.random_range(0..MERKLE_DEPTH);
         rng.fill(&mut p.siblings[level]);
         if verify_proof::<Sha256Hasher>(&root, &bad_leaf, &p) {
             hits += 1;
@@ -1090,7 +1090,7 @@ fn attack_undomained_commitment_as_sibling_mitigated() {
 fn attack_randomized_full_sweep_mitigated() {
     let mut rng = StdRng::seed_from_u64(0xFADE_C0DE_FAB_4CE);
     for _trial in 0..30 {
-        let size: usize = rng.gen_range(1..=33);
+        let size: usize = rng.random_range(1..=33);
         let mut leaves: Vec<Hash> = Vec::with_capacity(size);
         let mut t = MerkleTree::<Sha256Hasher>::new();
         for _ in 0..size {
@@ -1109,7 +1109,7 @@ fn attack_randomized_full_sweep_mitigated() {
 
         // Tamper: a random non-member leaf with a random member's proof must
         // not verify (with overwhelming probability).
-        let target_idx: usize = rng.gen_range(0..size);
+        let target_idx: usize = rng.random_range(0..size);
         let p = t.proof(target_idx).unwrap();
         let mut non_member = [0u8; HASH_LEN];
         rng.fill(&mut non_member);

@@ -837,7 +837,7 @@ dependencies = [
  "criterion",
  "hex",
  "proptest",
- "rand 0.8.6",
+ "rand 0.9.4",
  "sha2",
  "thiserror 1.0.69",
 ]
@@ -2368,7 +2368,7 @@ dependencies = [
  "criterion",
  "crypto",
  "hex",
- "rand 0.8.6",
+ "rand 0.9.4",
  "serde",
  "thiserror 1.0.69",
 ]
@@ -2390,7 +2390,7 @@ dependencies = [
  "methods",
  "nssa_core",
  "private_multisig_core",
- "rand 0.8.6",
+ "rand 0.9.4",
  "risc0-zkvm",
  "spel-framework",
 ]
@@ -2407,7 +2407,7 @@ dependencies = [
  "dirs 5.0.1",
  "private_multisig_core",
  "private_multisig_program",
- "rand 0.8.6",
+ "rand 0.9.4",
  "risc0-zkvm",
  "secrecy",
  "sled",
@@ -2576,7 +2576,6 @@ version = "0.8.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5ca0ecfa931c29007047d1bc58e623ab12e5590e8c7cc53200d5202b69266d8a"
 dependencies = [
- "libc",
  "rand_chacha 0.3.1",
  "rand_core 0.6.4",
 ]

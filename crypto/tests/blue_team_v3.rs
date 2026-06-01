@@ -472,5 +472,5 @@ fn finding1b_does_not_reject_other_special_values() {
         "near-zero leaf (single bit set) wrongly rejected"
     );
     // And nudge the Rng import alive so clippy doesn't complain.
-    let _ = StdRng::seed_from_u64(0).gen::<u8>();
+    let _ = StdRng::seed_from_u64(0).random::<u8>();
 }

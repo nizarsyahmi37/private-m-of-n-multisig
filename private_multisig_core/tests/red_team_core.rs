@@ -80,7 +80,7 @@ fn attack_1b_proposal_pda_collision_100k() {
     let mut seen: HashMap<[u8; 32], ([u8; 32], u64)> = HashMap::with_capacity(N);
     for _ in 0..N {
         let ck = random_32(&mut r);
-        let ix = r.gen::<u64>();
+        let ix = r.random::<u64>();
         let pda = derive_proposal_pda(&FIXED_PROGRAM, &ck, ix);
         if let Some(prev) = seen.insert(pda, (ck, ix)) {
             assert_eq!(prev, (ck, ix), "proposal PDA collision");
@@ -116,7 +116,7 @@ fn attack_1d_cross_class_pda_collisions_50k() {
     for _ in 0..N {
         let pid = random_32(&mut r);
         let ck = random_32(&mut r);
-        let ix = r.gen::<u64>();
+        let ix = r.random::<u64>();
         let s = derive_multisig_state_pda(&pid, &ck);
         let p = derive_proposal_pda(&pid, &ck, ix);
         let v = derive_vault_pda(&pid, &ck);
@@ -168,7 +168,7 @@ fn attack_2a_proposal_id_avalanche_single_bit_chain_id() {
             b"action",
             &FIXED_TARGET,
         );
-        let flip_bit = r.gen_range(0..256);
+        let flip_bit = r.random_range(0..256);
         cid_bytes[flip_bit / 8] ^= 1 << (flip_bit % 8);
         let mutated = derive_proposal_id(
             &ChainId::new(cid_bytes),
@@ -192,7 +192,7 @@ fn attack_2b_proposal_id_avalanche_state_pda_bit_flip() {
     for _ in 0..200 {
         let mut pda = random_32(&mut r);
         let baseline = derive_proposal_id(&ChainId::from_u64(1), &pda, 0, b"action", &FIXED_TARGET);
-        let flip_bit = r.gen_range(0..256);
+        let flip_bit = r.random_range(0..256);
         pda[flip_bit / 8] ^= 1 << (flip_bit % 8);
         let mutated = derive_proposal_id(&ChainId::from_u64(1), &pda, 0, b"action", &FIXED_TARGET);
         let hd = hamming_distance(&baseline, &mutated);
@@ -248,7 +248,7 @@ fn attack_2d_proposal_id_avalanche_action_bytes_bit_flip() {
         r.fill_bytes(&mut action);
         let baseline =
             derive_proposal_id(&ChainId::from_u64(1), &state_pda, 0, &action, &FIXED_TARGET);
-        let flip_bit = r.gen_range(0..(action.len() * 8));
+        let flip_bit = r.random_range(0..(action.len() * 8));
         action[flip_bit / 8] ^= 1 << (flip_bit % 8);
         let mutated =
             derive_proposal_id(&ChainId::from_u64(1), &state_pda, 0, &action, &FIXED_TARGET);
@@ -267,7 +267,7 @@ fn attack_2e_proposal_id_avalanche_target_program_bit_flip() {
     for _ in 0..200 {
         let mut tgt = random_32(&mut r);
         let baseline = derive_proposal_id(&ChainId::from_u64(1), &state_pda, 0, b"action", &tgt);
-        let flip_bit = r.gen_range(0..256);
+        let flip_bit = r.random_range(0..256);
         tgt[flip_bit / 8] ^= 1 << (flip_bit % 8);
         let mutated = derive_proposal_id(&ChainId::from_u64(1), &state_pda, 0, b"action", &tgt);
         let hd = hamming_distance(&baseline, &mutated);
@@ -288,8 +288,8 @@ fn attack_2f_proposal_id_collision_50k() {
     for i in 0..N {
         let cid = ChainId::new(random_32(&mut r));
         let state_pda = random_32(&mut r);
-        let ix = r.gen::<u64>();
-        let alen = r.gen_range(0..64);
+        let ix = r.random::<u64>();
+        let alen = r.random_range(0..64);
         let mut action = vec![0u8; alen];
         r.fill_bytes(&mut action);
         let tgt = random_32(&mut r);
@@ -446,7 +446,7 @@ fn attack_3h_random_byte_streams_dont_decode_to_instruction() {
         let mut buf = vec![0u8; 32];
         r.fill_bytes(&mut buf);
         // Force a discriminant >= 4 (no valid variant)
-        buf[0] = r.gen_range(4u8..=255);
+        buf[0] = r.random_range(4u8..=255);
         let res = catch_unwind(AssertUnwindSafe(|| Instruction::try_from_slice(&buf)));
         match res {
             Ok(Ok(_)) => accepted += 1,
@@ -713,7 +713,7 @@ fn attack_7c_chain_id_from_u64_is_injective_10k() {
     let mut seen: HashMap<[u8; 32], u64> = HashMap::with_capacity(10_000);
     let mut r = rng();
     for _ in 0..10_000 {
-        let v = r.gen::<u64>();
+        let v = r.random::<u64>();
         let cid = ChainId::from_u64(v);
         if let Some(prev) = seen.insert(*cid.as_bytes(), v) {
             assert_eq!(prev, v, "ChainId from {prev} == ChainId from {v}");
@@ -794,7 +794,7 @@ fn attack_9b_random_2k_byte_blobs_never_become_instructions() {
     let mut accepted = 0usize;
     let total = 5000;
     for _ in 0..total {
-        let len = r.gen_range(0..200);
+        let len = r.random_range(0..200);
         let mut buf = vec![0u8; len];
         r.fill_bytes(&mut buf);
         let res = catch_unwind(AssertUnwindSafe(|| Instruction::try_from_slice(&buf)));

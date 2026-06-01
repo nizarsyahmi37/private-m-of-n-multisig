@@ -685,7 +685,7 @@ fn v3_attack_9b_chainid_construction_path_independence_sweep() {
     let state_pda = [0xAA; 32];
     let target = [0xBB; 32];
     for _ in 0..1_000 {
-        let v: u64 = r.gen();
+        let v: u64 = r.random();
         let from_u64 = ChainId::from_u64(v);
         let mut bytes = [0u8; 32];
         bytes[..8].copy_from_slice(&v.to_le_bytes());
@@ -1047,9 +1047,9 @@ fn v3_attack_15b_replacement_for_no_public_mutator() {
     for _ in 0..100 {
         let create_key = random_32(&mut r);
         let members_root = random_32(&mut r);
-        let m: u8 = r.gen();
-        let n: u32 = r.gen();
-        let proposal_count: u64 = r.gen();
+        let m: u8 = r.random();
+        let n: u32 = r.random();
+        let proposal_count: u64 = r.random();
 
         let s = MultisigState {
             create_key,

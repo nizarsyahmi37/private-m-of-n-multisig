@@ -31,7 +31,7 @@ publish = false
 
 [workspace.dependencies]
 sha2 = { version = "0.10", default-features = false }
-rand = "0.8"
+rand = "0.9"
 hex = "0.4"
 thiserror = "1"
 borsh = { version = "1", default-features = false, features = ["derive"] }

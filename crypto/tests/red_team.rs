@@ -78,11 +78,11 @@ fn attack_forge_proof_random_bitflips() {
     // 4096 random tampers on siblings + indices. None should verify.
     for _ in 0..4096 {
         let mut p = real.clone();
-        let level: usize = rng.gen_range(0..MERKLE_DEPTH);
-        let byte: usize = rng.gen_range(0..HASH_LEN);
-        let mask: u8 = rng.gen();
+        let level: usize = rng.random_range(0..MERKLE_DEPTH);
+        let byte: usize = rng.random_range(0..HASH_LEN);
+        let mask: u8 = rng.random();
         p.siblings[level][byte] ^= mask;
-        if rng.gen_bool(0.5) {
+        if rng.random_bool(0.5) {
             p.indices[level] = !p.indices[level];
         }
         // Use an outsider leaf to make the attack interesting.
