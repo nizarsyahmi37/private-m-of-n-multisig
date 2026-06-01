@@ -102,14 +102,14 @@ fn api_image_id_hex_output_format() {
 }
 
 // ---------------------------------------------------------------------------
-// 5. Public-item count pin: src/lib.rs exposes exactly seven `pub ` items
+// 5. Public-item count pin: src/lib.rs exposes exactly eight `pub ` items
 //    (APPROVE_CIRCUIT_ELF, APPROVE_CIRCUIT_IMAGE_ID, VERIFIER_PROGRAM_ELF,
-//    VERIFIER_PROGRAM_IMAGE_ID, image_id_hex, APPROVE_WITNESS_LEN,
-//    pack_approve_witness). A future PR that adds a new pub item must
-//    update this constant AND add a rustdoc block (enforced by the next
-//    sentinel).
+//    VERIFIER_PROGRAM_IMAGE_ID, BUILD_USED_DOCKER, image_id_hex,
+//    APPROVE_WITNESS_LEN, pack_approve_witness). A future PR that adds a
+//    new pub item must update this constant AND add a rustdoc block
+//    (enforced by the next sentinel).
 // ---------------------------------------------------------------------------
-const EXPECTED_PUB_ITEM_COUNT: usize = 7;
+const EXPECTED_PUB_ITEM_COUNT: usize = 8;
 
 /// Returns the line indices (0-based) of every line in `lib.rs` that is the
 /// *declaration* of a pub item — i.e. starts with `pub ` after trimming
