@@ -341,11 +341,11 @@ fn v4_100_run_determinism() {
     let mut rng = StdRng::seed_from_u64(0xD3B0_07D3_u64);
 
     for case in 0..5 {
-        let program_id: [u8; 32] = rng.gen();
-        let create_key: [u8; 32] = rng.gen();
-        let chain_id_inner: [u8; 32] = rng.gen();
+        let program_id: [u8; 32] = rng.random();
+        let create_key: [u8; 32] = rng.random();
+        let chain_id_inner: [u8; 32] = rng.random();
         let index: u64 = rng.next_u64();
-        let target_program: [u8; 32] = rng.gen();
+        let target_program: [u8; 32] = rng.random();
         let action_len = (rng.next_u32() % 256) as usize;
         let mut action_bytes = vec![0u8; action_len];
         rng.fill_bytes(&mut action_bytes);
@@ -555,8 +555,8 @@ fn v4_parallel_validate_threshold_no_panic() {
         handles.push(thread::spawn(move || {
             let mut rng = StdRng::seed_from_u64(0x0BAD_F00D ^ tid);
             for _ in 0..1000 {
-                let m: u8 = rng.gen();
-                let n: u32 = rng.gen();
+                let m: u8 = rng.random();
+                let n: u32 = rng.random();
                 let result = MultisigState::validate_threshold(m, n);
                 let expected_ok = m != 0 && n != 0 && u32::from(m) <= n;
                 match result {

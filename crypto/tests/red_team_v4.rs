@@ -864,7 +864,7 @@ fn r4_soundness_oracle_10k_random_samples_no_accepts_mitigated() {
             rng.fill_bytes(s);
         }
         // Random direction bits — use two u32s to fill 20 booleans.
-        let bits: u64 = rng.r#gen();
+        let bits: u64 = rng.random();
         let mut indices = [false; MERKLE_DEPTH];
         for i in 0..MERKLE_DEPTH {
             indices[i] = (bits >> i) & 1 == 1;
@@ -918,7 +918,7 @@ fn r4_soundness_oracle_real_root_random_witness_no_accepts_mitigated() {
         for s in siblings.iter_mut() {
             rng.fill_bytes(s);
         }
-        let bits: u64 = rng.r#gen();
+        let bits: u64 = rng.random();
         let mut indices = [false; MERKLE_DEPTH];
         for i in 0..MERKLE_DEPTH {
             indices[i] = (bits >> i) & 1 == 1;

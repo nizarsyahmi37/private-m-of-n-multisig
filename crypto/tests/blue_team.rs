@@ -38,7 +38,7 @@ fn build_tree(n: usize, rng: &mut impl RngCore) -> (MerkleTree<Sha256Hasher>, Ve
 
 #[test]
 fn merkle_positive_path_accepts() {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     for &n in &[1usize, 2, 5, 17, 64] {
         let (tree, leaves) = build_tree(n, &mut rng);
         let root = tree.root();
@@ -56,7 +56,7 @@ fn merkle_positive_path_accepts() {
 
 #[test]
 fn merkle_tamper_each_sibling_byte_rejects() {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let (tree, leaves) = build_tree(17, &mut rng);
     let root = tree.root();
     // Iterate over each leaf, each sibling level, each byte: 17 * 20 * 32 = 10_880 flips.
@@ -79,7 +79,7 @@ fn merkle_tamper_each_sibling_byte_rejects() {
 
 #[test]
 fn merkle_tamper_each_direction_bit_rejects() {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     // Use a tree where the leaf has a meaningful right-or-left placement at every
     // level. n=17 means index 16 sits in a freshly-opened subtree, so every
     // direction bit interacts with a non-zero sibling for at least some indices.
@@ -108,7 +108,7 @@ fn merkle_root_stable_across_clones() {
     // a second tree — which is the only state a clone would carry anyway, and
     // is exactly how callers persist Merkle state. The behavioural property
     // (independence of two trees with shared history) is what matters.
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let mut original = MerkleTree::<Sha256Hasher>::new();
     let mut shared_leaves = Vec::new();
     for _ in 0..5 {
@@ -149,7 +149,7 @@ fn merkle_root_stable_across_clones() {
 
 #[test]
 fn nullifier_deterministic_across_many_inputs() {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     for _ in 0..100 {
         let sk = random_sk(&mut rng);
         let pid = random_hash(&mut rng);
@@ -168,7 +168,7 @@ fn nullifier_bit_distribution_looks_random() {
     // loose-but-non-trivial smoke test — well past 4σ, so a competent hash
     // shouldn't trigger this even once in practice.
     const N: usize = 256;
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let mut nulls = Vec::with_capacity(N);
     for _ in 0..N {
         let sk = random_sk(&mut rng);
@@ -260,7 +260,7 @@ fn empty_tree_root_is_nontrivial() {
 
 #[test]
 fn hasher_pair_matches_manual_concat() {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     for _ in 0..50 {
         let a = random_hash(&mut rng);
         let b = random_hash(&mut rng);
@@ -282,7 +282,7 @@ fn hasher_pair_matches_manual_concat() {
 
 #[test]
 fn outsider_cannot_forge_membership() {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     const N: usize = 8;
 
     let mut tree = MerkleTree::<Sha256Hasher>::new();

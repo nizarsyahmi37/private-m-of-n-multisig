@@ -70,7 +70,7 @@ fn rng_for(label: &str) -> StdRng {
 }
 
 fn random_bytes(r: &mut StdRng, max_len: usize) -> Vec<u8> {
-    let len = r.gen_range(0..=max_len);
+    let len = r.random_range(0..=max_len);
     let mut buf = vec![0u8; len];
     r.fill_bytes(&mut buf);
     buf
@@ -817,14 +817,14 @@ fn fuzz_all_types_with_shared_random_corpus_no_panic() {
     for i in 0..10_000 {
         // Bias length distribution toward the "interesting" zones around
         // each type's canonical size.
-        let len: usize = match r.gen_range(0..10) {
-            0 => r.gen_range(0..=4),
-            1 => r.gen_range(10..=20),
-            2 => r.gen_range(30..=50),
-            3 => r.gen_range(70..=100),
-            4 => r.gen_range(90..=110),
-            5 => r.gen_range(120..=200),
-            6 => r.gen_range(0..=2048),
+        let len: usize = match r.random_range(0..10) {
+            0 => r.random_range(0..=4),
+            1 => r.random_range(10..=20),
+            2 => r.random_range(30..=50),
+            3 => r.random_range(70..=100),
+            4 => r.random_range(90..=110),
+            5 => r.random_range(120..=200),
+            6 => r.random_range(0..=2048),
             7 => 0,
             8 => 77,
             _ => 96,

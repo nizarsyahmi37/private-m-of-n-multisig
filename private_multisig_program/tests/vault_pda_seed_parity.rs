@@ -83,10 +83,10 @@ fn manual_vault_seed_matches_spel_compute_pda_over_random_inputs() {
     let mut rng = StdRng::seed_from_u64(0xC0FFEE);
 
     for _ in 0..64 {
-        let create_key: [u8; 32] = rng.gen();
+        let create_key: [u8; 32] = rng.random();
         let mut program_words = [0u32; 8];
         for w in &mut program_words {
-            *w = rng.gen();
+            *w = rng.random();
         }
         let self_program_id: ProgramId = program_words;
 

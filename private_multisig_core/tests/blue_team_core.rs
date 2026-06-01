@@ -60,9 +60,9 @@ fn core_borsh_round_trip_proptest() {
         let state = MultisigState {
             create_key: random_array_32(&mut rng),
             members_root: random_array_32(&mut rng),
-            m: rng.gen(),
-            n: rng.gen(),
-            proposal_count: rng.gen(),
+            m: rng.random(),
+            n: rng.random(),
+            proposal_count: rng.random(),
         };
         let bytes = to_vec(&state).unwrap();
         let decoded = MultisigState::try_from_slice(&bytes).unwrap();
@@ -78,14 +78,14 @@ fn core_borsh_round_trip_proptest() {
         );
 
         // Proposal with random-length action_bytes <= MAX
-        let action_len = rng.gen_range(0..=MAX_ACTION_BYTES_LEN);
+        let action_len = rng.random_range(0..=MAX_ACTION_BYTES_LEN);
         let mut action_bytes = vec![0u8; action_len];
         rng.fill_bytes(&mut action_bytes);
         let proposal = Proposal {
             action_bytes,
             target_program: random_array_32(&mut rng),
-            approvals_count: rng.gen(),
-            executed: rng.gen(),
+            approvals_count: rng.random(),
+            executed: rng.random(),
         };
         let bytes = to_vec(&proposal).unwrap();
         let decoded = Proposal::try_from_slice(&bytes).unwrap();
@@ -134,16 +134,16 @@ fn core_borsh_round_trip_proptest() {
             0 => Instruction::CreateMultisig {
                 create_key: random_array_32(&mut rng),
                 members_root: random_array_32(&mut rng),
-                m: rng.gen(),
-                n: rng.gen(),
+                m: rng.random(),
+                n: rng.random(),
             },
             1 => {
-                let len = rng.gen_range(0..=64);
+                let len = rng.random_range(0..=64);
                 let mut ab = vec![0u8; len];
                 rng.fill_bytes(&mut ab);
                 Instruction::Propose {
                     create_key: random_array_32(&mut rng),
-                    index: rng.gen(),
+                    index: rng.random(),
                     action_bytes: ab,
                     target_program: random_array_32(&mut rng),
                 }
@@ -157,14 +157,14 @@ fn core_borsh_round_trip_proptest() {
                 };
                 Instruction::Approve {
                     create_key: random_array_32(&mut rng),
-                    index: rng.gen(),
+                    index: rng.random(),
                     nullifier: nf,
                     public_inputs: inputs.to_bytes().to_vec(),
                 }
             }
             _ => Instruction::Execute {
                 create_key: random_array_32(&mut rng),
-                index: rng.gen(),
+                index: rng.random(),
             },
         };
         let bytes = to_vec(&ix).unwrap();
@@ -360,10 +360,10 @@ fn core_proposal_id_byte_diff_hamming() {
     let mut total: u64 = 0;
     let pairs = 50u32;
     for _ in 0..pairs {
-        let chain = ChainId::from_u64(rng.gen());
+        let chain = ChainId::from_u64(rng.random());
         let state = random_array_32(&mut rng);
-        let index: u64 = rng.gen();
-        let action_len = rng.gen_range(1..=128);
+        let index: u64 = rng.random();
+        let action_len = rng.random_range(1..=128);
         let mut action = vec![0u8; action_len];
         rng.fill_bytes(&mut action);
         let target = random_array_32(&mut rng);
@@ -372,33 +372,33 @@ fn core_proposal_id_byte_diff_hamming() {
 
         // Flip a single random bit in one of the inputs (pick the input
         // class round-robin so we cover every input over the 50 pairs).
-        let pick = rng.gen_range(0..5u8);
+        let pick = rng.random_range(0..5u8);
         let id_b = match pick {
             0 => {
                 let mut c = *chain.as_bytes();
-                let bi = rng.gen_range(0..256u32) as usize;
+                let bi = rng.random_range(0..256u32) as usize;
                 c[bi / 8] ^= 1 << (bi % 8);
                 derive_proposal_id(&ChainId::new(c), &state, index, &action, &target)
             }
             1 => {
                 let mut s = state;
-                let bi = rng.gen_range(0..256u32) as usize;
+                let bi = rng.random_range(0..256u32) as usize;
                 s[bi / 8] ^= 1 << (bi % 8);
                 derive_proposal_id(&chain, &s, index, &action, &target)
             }
             2 => {
-                let bi = rng.gen_range(0..64u32) as u64;
+                let bi = rng.random_range(0..64u32) as u64;
                 derive_proposal_id(&chain, &state, index ^ (1u64 << bi), &action, &target)
             }
             3 => {
                 let mut a = action.clone();
-                let bi = rng.gen_range(0..(a.len() * 8) as u32) as usize;
+                let bi = rng.random_range(0..(a.len() * 8) as u32) as usize;
                 a[bi / 8] ^= 1 << (bi % 8);
                 derive_proposal_id(&chain, &state, index, &a, &target)
             }
             _ => {
                 let mut t = target;
-                let bi = rng.gen_range(0..256u32) as usize;
+                let bi = rng.random_range(0..256u32) as usize;
                 t[bi / 8] ^= 1 << (bi % 8);
                 derive_proposal_id(&chain, &state, index, &action, &t)
             }

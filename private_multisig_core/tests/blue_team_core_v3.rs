@@ -145,8 +145,8 @@ fn v3_validate_method_consistent_with_validate_threshold() {
     // inputs, same outputs, always. Seeded RNG so failures reproduce.
     let mut rng = StdRng::seed_from_u64(0xB1_0E_0F_03_05_C0_DE_05);
     for _ in 0..100 {
-        let m: u8 = rng.gen();
-        let n: u32 = rng.gen();
+        let m: u8 = rng.random();
+        let n: u32 = rng.random();
         let state = MultisigState {
             create_key: [0x00; 32],
             members_root: [0x00; 32],
@@ -485,7 +485,7 @@ fn v3_chain_id_distinct_from_zero() {
     for _ in 0..100 {
         // Draw uniformly in [1, u64::MAX]: gen() then map 0 to 1. Reduces
         // probability of an unlucky zero (~2^-64 anyway) to actually zero.
-        let mut id: u64 = rng.gen();
+        let mut id: u64 = rng.random();
         if id == 0 {
             id = 1;
         }

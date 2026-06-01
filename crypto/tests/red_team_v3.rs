@@ -315,7 +315,7 @@ fn r3_zero_root_never_verifies_for_any_proof_mitigated() {
         }
         let mut indices = [false; MERKLE_DEPTH];
         for b in indices.iter_mut() {
-            *b = rng.r#gen();
+            *b = rng.random();
         }
         let p = MerkleProof { siblings, indices };
         assert!(!verify_proof::<Sha256Hasher>(&ZERO, &leaf, &p));
@@ -379,7 +379,7 @@ fn r3_verify_proof_garbage_inputs_no_panic_no_spurious_accept_mitigated() {
             rng.fill_bytes(s);
         }
         // Random direction bits packed from a single u32 sample.
-        let bits: u32 = rng.r#gen();
+        let bits: u32 = rng.random();
         let mut indices = [false; MERKLE_DEPTH];
         for i in 0..MERKLE_DEPTH {
             indices[i] = (bits >> i) & 1 == 1;
@@ -547,10 +547,10 @@ fn r3_deep_tree_cross_index_substitution_rejected_mitigated() {
     // catch it.
     let mut rng = StdRng::seed_from_u64(0xCA75_4321_8765_FEDC);
     for _ in 0..50 {
-        let i: usize = rng.gen_range(0..1024);
-        let mut j: usize = rng.gen_range(0..1024);
+        let i: usize = rng.random_range(0..1024);
+        let mut j: usize = rng.random_range(0..1024);
         while j == i {
-            j = rng.gen_range(0..1024);
+            j = rng.random_range(0..1024);
         }
         let proof_i = t.proof(i).unwrap();
         let leaf_j = t.leaf(j).unwrap();
