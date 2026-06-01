@@ -49,10 +49,10 @@ use rand::rngs::StdRng;
 use rand::{Rng, RngCore, SeedableRng};
 
 use private_multisig_core::{
-    derive_multisig_state_pda, derive_nullifier_entry_pda, derive_proposal_id,
-    derive_proposal_pda, derive_vault_pda, ApprovePublicInputs, ChainId, CoreError, Instruction,
-    MultisigState, NullifierEntry, Proposal, Vault, APPROVE_PUBLIC_INPUTS_LEN,
-    MAX_ACTION_BYTES_LEN, SEED_MULTISIG_STATE, SEED_NULLIFIER, SEED_PROPOSAL, SEED_VAULT,
+    derive_multisig_state_pda, derive_nullifier_entry_pda, derive_proposal_id, derive_proposal_pda,
+    derive_vault_pda, ApprovePublicInputs, ChainId, CoreError, Instruction, MultisigState,
+    NullifierEntry, Proposal, Vault, APPROVE_PUBLIC_INPUTS_LEN, MAX_ACTION_BYTES_LEN,
+    SEED_MULTISIG_STATE, SEED_NULLIFIER, SEED_PROPOSAL, SEED_VAULT,
 };
 
 fn rng() -> StdRng {
@@ -203,20 +203,8 @@ fn v2_attack_2a_finding3_chain_id_zero_alias_is_documented_and_real() {
 fn v2_attack_2b_finding3_chain_zero_is_not_silently_broken() {
     let pda = [0xAAu8; 32];
     let target = [0xBBu8; 32];
-    let id_zero = derive_proposal_id(
-        &ChainId::from_u64(0),
-        &pda,
-        7,
-        b"action",
-        &target,
-    );
-    let id_one = derive_proposal_id(
-        &ChainId::from_u64(1),
-        &pda,
-        7,
-        b"action",
-        &target,
-    );
+    let id_zero = derive_proposal_id(&ChainId::from_u64(0), &pda, 7, b"action", &target);
+    let id_one = derive_proposal_id(&ChainId::from_u64(1), &pda, 7, b"action", &target);
     assert_ne!(
         id_zero, id_one,
         "FINDING-3: chain 0 must not collide with chain 1",
@@ -227,13 +215,8 @@ fn v2_attack_2b_finding3_chain_zero_is_not_silently_broken() {
     assert_ne!(id_zero, pda);
 
     // A different state PDA on chain 0 also separates correctly.
-    let id_zero_other_pda = derive_proposal_id(
-        &ChainId::from_u64(0),
-        &[0xCC; 32],
-        7,
-        b"action",
-        &target,
-    );
+    let id_zero_other_pda =
+        derive_proposal_id(&ChainId::from_u64(0), &[0xCC; 32], 7, b"action", &target);
     assert_ne!(id_zero, id_zero_other_pda);
 }
 
@@ -244,13 +227,7 @@ fn v2_attack_2b_finding3_chain_zero_is_not_silently_broken() {
 fn v2_attack_2c_finding3_no_zero_chain_rejection_in_core() {
     // Empty action bytes, chain 0 — derive_proposal_id is total and
     // produces a value (no rejection, no panic).
-    let id = derive_proposal_id(
-        &ChainId::new([0u8; 32]),
-        &[0u8; 32],
-        0,
-        &[],
-        &[0u8; 32],
-    );
+    let id = derive_proposal_id(&ChainId::new([0u8; 32]), &[0u8; 32], 0, &[], &[0u8; 32]);
     // It must produce *something* — we don't assert its value because
     // SHA-256 of the all-zero preimage is itself a known constant; what we
     // need is that the function did not refuse, panic, or short-circuit.
@@ -665,13 +642,7 @@ fn v2_attack_10a_proposal_id_indirect_dependence_on_create_key() {
     for _ in 0..10_000 {
         let ck = random_32(&mut r);
         let pda = derive_multisig_state_pda(&program_id, &ck);
-        let pid = derive_proposal_id(
-            &ChainId::from_u64(1),
-            &pda,
-            0,
-            b"action",
-            &target,
-        );
+        let pid = derive_proposal_id(&ChainId::from_u64(1), &pda, 0, b"action", &target);
         assert!(
             seen.insert(pid),
             "proposal_id collision across distinct create_keys",
@@ -728,7 +699,9 @@ fn v2_attack_10b_proposal_id_vs_pda_domain_separation() {
 /// rent-sensitive.
 #[test]
 fn v2_attack_10c_vault_create_key_redundancy_pin() {
-    let v = Vault { create_key: [0x77; 32] };
+    let v = Vault {
+        create_key: [0x77; 32],
+    };
     let bytes = to_vec(&v).unwrap();
     assert_eq!(
         bytes.len(),
@@ -853,10 +826,8 @@ fn v2_attack_10i_chain_id_index_swap_no_collision() {
         if a == b {
             continue;
         }
-        let pid_ab =
-            derive_proposal_id(&ChainId::from_u64(a), &pda, b, b"action", &target);
-        let pid_ba =
-            derive_proposal_id(&ChainId::from_u64(b), &pda, a, b"action", &target);
+        let pid_ab = derive_proposal_id(&ChainId::from_u64(a), &pda, b, b"action", &target);
+        let pid_ba = derive_proposal_id(&ChainId::from_u64(b), &pda, a, b"action", &target);
         assert_ne!(pid_ab, pid_ba, "swap(chain_id, index) leaked a collision");
     }
 }

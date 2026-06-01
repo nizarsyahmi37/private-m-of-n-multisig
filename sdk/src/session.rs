@@ -46,17 +46,7 @@ use crate::error::SdkError;
 use crate::member::IdentityCommitment;
 
 /// Approval session status.
-#[derive(
-    Clone,
-    Copy,
-    Debug,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    BorshSerialize,
-    BorshDeserialize,
-)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, BorshSerialize, BorshDeserialize)]
 pub enum SessionStatus {
     /// Session created but proving has not started.
     Drafted,
@@ -253,7 +243,11 @@ struct SessionKey {
 }
 
 impl SessionKey {
-    fn new(instance_pda: AccountId, proposal_id: [u8; 32], commitment: &IdentityCommitment) -> Self {
+    fn new(
+        instance_pda: AccountId,
+        proposal_id: [u8; 32],
+        commitment: &IdentityCommitment,
+    ) -> Self {
         Self {
             instance_pda,
             proposal_id,
@@ -298,8 +292,8 @@ impl SessionStore {
                 .map_err(|e| SdkError::SessionStoreOpenFailed(e.to_string()))?;
         }
 
-        let db = sled::open(&db_path)
-            .map_err(|e| SdkError::SessionStoreOpenFailed(e.to_string()))?;
+        let db =
+            sled::open(&db_path).map_err(|e| SdkError::SessionStoreOpenFailed(e.to_string()))?;
 
         let tree = db
             .open_tree("approval_sessions")
@@ -321,12 +315,12 @@ impl SessionStore {
             &session.member_commitment,
         );
         let key_bytes = key.to_vec();
-        let value_bytes = borsh::to_vec(session)
-            .map_err(|_| SdkError::BorshSerializationFailed)?;
+        let value_bytes = borsh::to_vec(session).map_err(|_| SdkError::BorshSerializationFailed)?;
 
-        let inner = self.inner.lock().map_err(|e| {
-            SdkError::SessionStoreOpenFailed(format!("mutex poisoned: {e}"))
-        })?;
+        let inner = self
+            .inner
+            .lock()
+            .map_err(|e| SdkError::SessionStoreOpenFailed(format!("mutex poisoned: {e}")))?;
         inner
             .tree
             .insert(&key_bytes, value_bytes)
@@ -347,17 +341,18 @@ impl SessionStore {
         let key = SessionKey::new(*instance_pda, *proposal_id, member_commitment);
         let key_bytes = key.to_vec();
 
-        let inner = self.inner.lock().map_err(|e| {
-            SdkError::SessionStoreOpenFailed(format!("mutex poisoned: {e}"))
-        })?;
+        let inner = self
+            .inner
+            .lock()
+            .map_err(|e| SdkError::SessionStoreOpenFailed(format!("mutex poisoned: {e}")))?;
         let value_bytes = inner
             .tree
             .get(&key_bytes)
             .map_err(|e| SdkError::SessionStoreOpenFailed(e.to_string()))?
             .ok_or(SdkError::SessionNotFound)?;
 
-        let session: ApprovalSession = borsh::from_slice(&value_bytes)
-            .map_err(|_| SdkError::SessionCorrupted)?;
+        let session: ApprovalSession =
+            borsh::from_slice(&value_bytes).map_err(|_| SdkError::SessionCorrupted)?;
 
         Ok(session)
     }
@@ -378,20 +373,21 @@ impl SessionStore {
             p
         };
 
-        let inner = self.inner.lock().map_err(|e| {
-            SdkError::SessionStoreOpenFailed(format!("mutex poisoned: {e}"))
-        })?;
+        let inner = self
+            .inner
+            .lock()
+            .map_err(|e| SdkError::SessionStoreOpenFailed(format!("mutex poisoned: {e}")))?;
 
         let mut results = alloc::vec::Vec::new();
         for item in inner.tree.range(prefix.clone()..) {
-            let (key_bytes, value_bytes) = item
-                .map_err(|e| SdkError::SessionStoreOpenFailed(e.to_string()))?;
+            let (key_bytes, value_bytes) =
+                item.map_err(|e| SdkError::SessionStoreOpenFailed(e.to_string()))?;
             // Stop when the key no longer has the prefix.
             if key_bytes.len() < prefix.len() || &key_bytes[..prefix.len()] != &prefix {
                 break;
             }
-            let session: ApprovalSession = borsh::from_slice(&value_bytes)
-                .map_err(|_| SdkError::SessionCorrupted)?;
+            let session: ApprovalSession =
+                borsh::from_slice(&value_bytes).map_err(|_| SdkError::SessionCorrupted)?;
             results.push(session);
         }
         Ok(results)
@@ -407,9 +403,10 @@ impl SessionStore {
         let key = SessionKey::new(*instance_pda, *proposal_id, member_commitment);
         let key_bytes = key.to_vec();
 
-        let inner = self.inner.lock().map_err(|e| {
-            SdkError::SessionStoreOpenFailed(format!("mutex poisoned: {e}"))
-        })?;
+        let inner = self
+            .inner
+            .lock()
+            .map_err(|e| SdkError::SessionStoreOpenFailed(format!("mutex poisoned: {e}")))?;
         inner
             .tree
             .remove(&key_bytes)
@@ -462,13 +459,8 @@ mod tests {
         let public_inputs = [0x11; 96];
         let nullifier = [0x22; 32];
 
-        let session = ApprovalSession::new(
-            instance,
-            proposal_id,
-            commitment,
-            public_inputs,
-            nullifier,
-        );
+        let session =
+            ApprovalSession::new(instance, proposal_id, commitment, public_inputs, nullifier);
         let bytes = borsh::to_vec(&session).unwrap();
         let decoded: ApprovalSession = borsh::from_slice(&bytes).unwrap();
         assert_eq!(session.instance_pda, decoded.instance_pda);
@@ -478,14 +470,14 @@ mod tests {
 
     #[test]
     fn session_key_serialization_is_96_bytes() {
-        let key = SessionKey::new(
-            [0xAA; 32],
-            [0xBB; 32],
-            &IdentityCommitment([0xCC; 32]),
-        );
+        let key = SessionKey::new([0xAA; 32], [0xBB; 32], &IdentityCommitment([0xCC; 32]));
         let bytes = borsh::to_vec(&key).unwrap();
         // 32 + 32 + 32 = 96 bytes for the three 32-byte fields
-        assert_eq!(bytes.len(), 96, "SessionKey must be 96 bytes for deterministic key spacing");
+        assert_eq!(
+            bytes.len(),
+            96,
+            "SessionKey must be 96 bytes for deterministic key spacing"
+        );
     }
 
     #[test]

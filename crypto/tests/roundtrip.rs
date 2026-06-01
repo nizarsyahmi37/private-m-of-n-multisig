@@ -4,9 +4,7 @@
 //!
 //! This is the integration test PLAN.md §Implementation order step 1 calls for.
 
-use crypto::{
-    merkle::verify_proof, Identity, MerkleTree, Sha256Hasher,
-};
+use crypto::{merkle::verify_proof, Identity, MerkleTree, Sha256Hasher};
 
 const N: usize = 8;
 const M: usize = 5;
@@ -73,7 +71,8 @@ fn member_outside_tree_cannot_forge_membership() {
     let mut tree = MerkleTree::<Sha256Hasher>::new();
     for i in 0..4 {
         let id = deterministic_identity(i);
-        tree.insert(*id.commitment::<Sha256Hasher>().as_bytes()).unwrap();
+        tree.insert(*id.commitment::<Sha256Hasher>().as_bytes())
+            .unwrap();
     }
     let root = tree.root();
 

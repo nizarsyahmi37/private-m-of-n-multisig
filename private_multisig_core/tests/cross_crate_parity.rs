@@ -338,8 +338,7 @@ fn bridge_domain_separation_constants_are_used_only_in_crypto() {
     let state_pda = [0x07u8; 32];
     let target_program = [0x08u8; 32];
     let action_bytes = b"x";
-    let via_core_pid =
-        derive_proposal_id(&chain_id, &state_pda, 0, action_bytes, &target_program);
+    let via_core_pid = derive_proposal_id(&chain_id, &state_pda, 0, action_bytes, &target_program);
     let via_manual_pid = manual_proposal_id(
         chain_id.as_bytes(),
         &state_pda,
@@ -379,13 +378,8 @@ fn bridge_action_bytes_hashed_via_crypto_sha256_hasher() {
         let mut action_bytes = vec![0u8; len];
         rng.fill_bytes(&mut action_bytes);
 
-        let via_core = derive_proposal_id(
-            &chain_id,
-            &state_pda,
-            index,
-            &action_bytes,
-            &target_program,
-        );
+        let via_core =
+            derive_proposal_id(&chain_id, &state_pda, index, &action_bytes, &target_program);
 
         // Manual recompute calling Sha256Hasher::hash on action_bytes
         // directly — proves no transformation is applied before hashing.
@@ -533,13 +527,7 @@ fn bridge_chainid_from_u64_little_endian_through_proposal_id() {
         action_bytes,
         &target_program,
     );
-    let pid_b = derive_proposal_id(
-        &via_new,
-        &state_pda,
-        index,
-        action_bytes,
-        &target_program,
-    );
+    let pid_b = derive_proposal_id(&via_new, &state_pda, index, action_bytes, &target_program);
     assert_eq!(pid_a, pid_b);
 
     // Negative: a different little-endian value (big-endian misinterpretation
@@ -582,18 +570,16 @@ fn bridge_kat_pinned() {
 
         let state_pda = derive_multisig_state_pda(&program_id, &create_key);
         // Round-5: pinned hex recomputed under SPEL-compatible derivation.
-        let expected_state_pda = hex::decode(
-            "93b8f698cd4ced03f1fa0c7bd3025552f37c6f89ae9d5b482467c264eebfabe7",
-        )
-        .unwrap();
+        let expected_state_pda =
+            hex::decode("93b8f698cd4ced03f1fa0c7bd3025552f37c6f89ae9d5b482467c264eebfabe7")
+                .unwrap();
         assert_eq!(state_pda.as_slice(), expected_state_pda.as_slice());
 
         let proposal_id =
             derive_proposal_id(&chain_id, &state_pda, index, action_bytes, &target_program);
-        let expected_proposal_id = hex::decode(
-            "011f06dfcbbc20115b121180f32972ad28edc775c7969d4ec228a979442a179c",
-        )
-        .unwrap();
+        let expected_proposal_id =
+            hex::decode("011f06dfcbbc20115b121180f32972ad28edc775c7969d4ec228a979442a179c")
+                .unwrap();
         assert_eq!(proposal_id.as_slice(), expected_proposal_id.as_slice());
     }
 
@@ -619,18 +605,16 @@ fn bridge_kat_pinned() {
         let target_program = [0xFFu8; 32];
 
         let state_pda = derive_multisig_state_pda(&program_id, &create_key);
-        let expected_state_pda = hex::decode(
-            "18d93f1fb3524fbe933f86cf2a52d09c80885d18771eefd0efc4b88f2300fd49",
-        )
-        .unwrap();
+        let expected_state_pda =
+            hex::decode("18d93f1fb3524fbe933f86cf2a52d09c80885d18771eefd0efc4b88f2300fd49")
+                .unwrap();
         assert_eq!(state_pda.as_slice(), expected_state_pda.as_slice());
 
         let proposal_id =
             derive_proposal_id(&chain_id, &state_pda, index, action_bytes, &target_program);
-        let expected_proposal_id = hex::decode(
-            "b01d89ef9e4e0d05198d11a7b31cb1cbc38868ee01d4d76456b435ef78276113",
-        )
-        .unwrap();
+        let expected_proposal_id =
+            hex::decode("b01d89ef9e4e0d05198d11a7b31cb1cbc38868ee01d4d76456b435ef78276113")
+                .unwrap();
         assert_eq!(proposal_id.as_slice(), expected_proposal_id.as_slice());
     }
 
@@ -653,18 +637,16 @@ fn bridge_kat_pinned() {
         let target_program = [0xCDu8; 32];
 
         let state_pda = derive_multisig_state_pda(&program_id, &create_key);
-        let expected_state_pda = hex::decode(
-            "6de3a5cc83e530827b5b8f150028bf92bd4260aa94b101798ad794d72c3f0bb6",
-        )
-        .unwrap();
+        let expected_state_pda =
+            hex::decode("6de3a5cc83e530827b5b8f150028bf92bd4260aa94b101798ad794d72c3f0bb6")
+                .unwrap();
         assert_eq!(state_pda.as_slice(), expected_state_pda.as_slice());
 
         let proposal_id =
             derive_proposal_id(&chain_id, &state_pda, index, action_bytes, &target_program);
-        let expected_proposal_id = hex::decode(
-            "db41d7e974dc92f89a9506a0f0cf605f88ecd0cde734a329a7b055709ec2ad8f",
-        )
-        .unwrap();
+        let expected_proposal_id =
+            hex::decode("db41d7e974dc92f89a9506a0f0cf605f88ecd0cde734a329a7b055709ec2ad8f")
+                .unwrap();
         assert_eq!(proposal_id.as_slice(), expected_proposal_id.as_slice());
     }
 }

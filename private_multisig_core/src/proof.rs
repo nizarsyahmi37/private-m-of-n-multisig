@@ -35,9 +35,7 @@ pub const APPROVE_PUBLIC_INPUTS_LEN: usize = 96;
 /// reading the journal) but a parity test asserts the Borsh encoding is
 /// byte-identical to the explicit layout — if a future Borsh release
 /// changes that, the parity test catches it.
-#[derive(
-    Clone, Copy, Debug, PartialEq, Eq, Hash, BorshSerialize, BorshDeserialize,
-)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, BorshSerialize, BorshDeserialize)]
 pub struct ApprovePublicInputs {
     pub members_root: [u8; 32],
     pub proposal_id: [u8; 32],
@@ -226,8 +224,20 @@ mod tests {
 
     #[test]
     fn proposal_id_changes_with_chain_id() {
-        let a = derive_proposal_id(&ChainId::from_u64(1), &TEST_STATE_PDA, 0, b"x", &TEST_TARGET);
-        let b = derive_proposal_id(&ChainId::from_u64(2), &TEST_STATE_PDA, 0, b"x", &TEST_TARGET);
+        let a = derive_proposal_id(
+            &ChainId::from_u64(1),
+            &TEST_STATE_PDA,
+            0,
+            b"x",
+            &TEST_TARGET,
+        );
+        let b = derive_proposal_id(
+            &ChainId::from_u64(2),
+            &TEST_STATE_PDA,
+            0,
+            b"x",
+            &TEST_TARGET,
+        );
         assert_ne!(a, b);
     }
 

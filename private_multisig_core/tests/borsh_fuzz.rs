@@ -320,12 +320,10 @@ fn fuzz_borsh_with_oversized_length_prefix_rejects() {
         buf2.push(0xAA);
         let res2 = deser_catch::<Proposal>("Proposal", &buf2);
         match res2 {
-            Err(panic_msg) => panic!(
-                "len_prefix=0x{len_prefix:08x} caused PANIC: {panic_msg}"
-            ),
-            Ok(Ok(_)) => panic!(
-                "len_prefix=0x{len_prefix:08x} unexpectedly accepted (allocated and read?)"
-            ),
+            Err(panic_msg) => panic!("len_prefix=0x{len_prefix:08x} caused PANIC: {panic_msg}"),
+            Ok(Ok(_)) => {
+                panic!("len_prefix=0x{len_prefix:08x} unexpectedly accepted (allocated and read?)")
+            }
             Ok(Err(_)) => {}
         }
     }
@@ -340,12 +338,10 @@ fn fuzz_borsh_with_oversized_length_prefix_rejects() {
         buf.extend_from_slice(&u32::MAX.to_le_bytes()); // bogus vec len
         let res = deser_catch::<Instruction>("Instruction", &buf);
         match res {
-            Err(panic_msg) => panic!(
-                "Instruction(disc={disc}) with u32::MAX vec len PANICKED: {panic_msg}"
-            ),
-            Ok(Ok(_)) => panic!(
-                "Instruction(disc={disc}) with u32::MAX vec len was ACCEPTED"
-            ),
+            Err(panic_msg) => {
+                panic!("Instruction(disc={disc}) with u32::MAX vec len PANICKED: {panic_msg}")
+            }
+            Ok(Ok(_)) => panic!("Instruction(disc={disc}) with u32::MAX vec len was ACCEPTED"),
             Ok(Err(_)) => {}
         }
     }
@@ -439,9 +435,7 @@ fn fuzz_instruction_trailing_garbage_handling() {
 
             let res = deser_catch::<Instruction>("Instruction", &buf);
             match res {
-                Err(panic_msg) => panic!(
-                    "Instruction trailing={extra} PANICKED: {panic_msg}"
-                ),
+                Err(panic_msg) => panic!("Instruction trailing={extra} PANICKED: {panic_msg}"),
                 Ok(Ok(_)) => {
                     assert_eq!(
                         extra, 0,
@@ -473,9 +467,9 @@ fn fuzz_instruction_trailing_garbage_handling() {
         let res = deser_catch::<MultisigState>("MultisigState", &buf);
         match res {
             Err(panic_msg) => panic!("MultisigState trailing={extra} PANICKED: {panic_msg}"),
-            Ok(Ok(_)) => panic!(
-                "MultisigState with {extra} trailing bytes ACCEPTED — strict-mode violated"
-            ),
+            Ok(Ok(_)) => {
+                panic!("MultisigState with {extra} trailing bytes ACCEPTED — strict-mode violated")
+            }
             Ok(Err(_)) => {}
         }
     }
@@ -565,9 +559,7 @@ fn fuzz_instruction_discriminant_in_invalid_range() {
         let res = deser_catch::<Instruction>("Instruction", &buf);
         match res {
             Err(panic_msg) => panic!("disc={disc} PANICKED: {panic_msg}"),
-            Ok(Ok(_)) => panic!(
-                "disc={disc} ACCEPTED — Instruction variants are 0..=5"
-            ),
+            Ok(Ok(_)) => panic!("disc={disc} ACCEPTED — Instruction variants are 0..=5"),
             Ok(Err(_)) => {}
         }
     }
@@ -689,7 +681,12 @@ fn fuzz_seed_corpus_no_panic_across_types() {
         .unwrap(),
     );
     corpus.push(to_vec(&sample_inputs()).unwrap());
-    corpus.push(to_vec(&Vault { create_key: [0; 32] }).unwrap());
+    corpus.push(
+        to_vec(&Vault {
+            create_key: [0; 32],
+        })
+        .unwrap(),
+    );
 
     // Maximum-size action_bytes serialization — the legal upper bound.
     let max_prop = Proposal {
@@ -744,13 +741,7 @@ fn fuzz_borsh_vec_length_prefix_attacks() {
     // a size far larger than the available bytes. Deserializer must reject
     // cleanly (never panic, never allocate the full requested size, never
     // succeed reading data that isn't there).
-    let attack_lens: &[u32] = &[
-        1 << 16,
-        1 << 20,
-        1 << 24,
-        u32::MAX - 1,
-        u32::MAX,
-    ];
+    let attack_lens: &[u32] = &[1 << 16, 1 << 20, 1 << 24, u32::MAX - 1, u32::MAX];
 
     // (a) Proposal direct: just a length prefix + 1 padding byte so the
     // reader actually attempts to read the payload.
@@ -775,12 +766,10 @@ fn fuzz_borsh_vec_length_prefix_attacks() {
         buf.extend_from_slice(&len.to_le_bytes()); // bogus vec len
         buf.push(0x00); // 1 byte of "payload"
         match deser_catch::<Instruction>("Instruction", &buf) {
-            Err(panic_msg) => panic!(
-                "Instruction::Propose vec-len 0x{len:08x} PANICKED: {panic_msg}"
-            ),
-            Ok(Ok(_)) => panic!(
-                "Instruction::Propose vec-len 0x{len:08x} ACCEPTED"
-            ),
+            Err(panic_msg) => {
+                panic!("Instruction::Propose vec-len 0x{len:08x} PANICKED: {panic_msg}")
+            }
+            Ok(Ok(_)) => panic!("Instruction::Propose vec-len 0x{len:08x} ACCEPTED"),
             Ok(Err(_)) => {}
         }
     }
@@ -796,17 +785,15 @@ fn fuzz_borsh_vec_length_prefix_attacks() {
         buf.push(2u8); // Approve discriminant
         buf.extend_from_slice(&[0xAA; 32]); // create_key
         buf.extend_from_slice(&0u64.to_le_bytes()); // index
-        // Where public_inputs (96 bytes) is expected, supply 4-byte garbage
-        // shaped like a former length prefix — exercises the "what if a
-        // future PR re-adds a Vec" regression detector.
+                                                    // Where public_inputs (96 bytes) is expected, supply 4-byte garbage
+                                                    // shaped like a former length prefix — exercises the "what if a
+                                                    // future PR re-adds a Vec" regression detector.
         buf.extend_from_slice(&len.to_le_bytes());
         match deser_catch::<Instruction>("Instruction", &buf) {
-            Err(panic_msg) => panic!(
-                "Instruction::Approve garbage 0x{len:08x} PANICKED: {panic_msg}"
-            ),
-            Ok(Ok(_)) => panic!(
-                "Instruction::Approve garbage 0x{len:08x} ACCEPTED"
-            ),
+            Err(panic_msg) => {
+                panic!("Instruction::Approve garbage 0x{len:08x} PANICKED: {panic_msg}")
+            }
+            Ok(Ok(_)) => panic!("Instruction::Approve garbage 0x{len:08x} ACCEPTED"),
             Ok(Err(_)) => {}
         }
     }

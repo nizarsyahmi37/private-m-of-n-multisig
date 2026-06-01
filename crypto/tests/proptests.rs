@@ -9,8 +9,7 @@
 //! insert many leaves stay on the default (256) to keep the suite snappy.
 
 use crypto::{
-    merkle::verify_proof, Hash, Hasher, Identity, MerkleTree, Sha256Hasher, HASH_LEN,
-    MERKLE_DEPTH,
+    merkle::verify_proof, Hash, Hasher, Identity, MerkleTree, Sha256Hasher, HASH_LEN, MERKLE_DEPTH,
 };
 use proptest::prelude::*;
 

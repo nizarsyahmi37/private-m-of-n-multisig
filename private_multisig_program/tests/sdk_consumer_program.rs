@@ -64,9 +64,7 @@ use private_multisig_core::{
     derive_multisig_state_pda, derive_proposal_id, ApprovePublicInputs, ChainId,
     APPROVE_PUBLIC_INPUTS_LEN,
 };
-use private_multisig_program::{
-    image_id_hex, APPROVE_CIRCUIT_ELF, APPROVE_CIRCUIT_IMAGE_ID,
-};
+use private_multisig_program::{image_id_hex, APPROVE_CIRCUIT_ELF, APPROVE_CIRCUIT_IMAGE_ID};
 use risc0_zkvm::{default_prover, ExecutorEnv, Receipt};
 
 // ---------------------------------------------------------------------------
@@ -124,8 +122,7 @@ fn synthetic_proposal_ctx(members_root: [u8; 32]) -> ProposalCtx {
     let target_program: [u8; 32] = [0xCD; 32];
     let action_bytes = b"treasury_withdraw(100,recipient=0xABCD)".to_vec();
     let chain_id = ChainId::from_u64(0xABCD_EF01);
-    let proposal_id =
-        derive_proposal_id(&chain_id, &state_pda, 0, &action_bytes, &target_program);
+    let proposal_id = derive_proposal_id(&chain_id, &state_pda, 0, &action_bytes, &target_program);
     ProposalCtx {
         members_root,
         proposal_id,
@@ -286,8 +283,7 @@ fn sdkp_image_id_can_be_serialized_via_borsh_for_persistence() {
     let bytes = to_vec(&APPROVE_CIRCUIT_IMAGE_ID).expect("[u32;8] must Borsh-encode");
     assert_eq!(bytes.len(), 32, "8 × u32 = 32 bytes, no length prefix");
 
-    let decoded: [u32; 8] =
-        from_slice(&bytes).expect("[u32;8] must Borsh-decode");
+    let decoded: [u32; 8] = from_slice(&bytes).expect("[u32;8] must Borsh-decode");
     assert_eq!(decoded, APPROVE_CIRCUIT_IMAGE_ID);
 }
 
@@ -313,9 +309,7 @@ fn sdkp_image_id_hex_can_be_parsed_back_to_word_array() {
 
     let mut reconstructed = [0u32; 8];
     for i in 0..8 {
-        let chunk: [u8; 4] = bytes[i * 4..(i + 1) * 4]
-            .try_into()
-            .expect("4-byte chunk");
+        let chunk: [u8; 4] = bytes[i * 4..(i + 1) * 4].try_into().expect("4-byte chunk");
         reconstructed[i] = u32::from_le_bytes(chunk);
     }
     assert_eq!(reconstructed, APPROVE_CIRCUIT_IMAGE_ID);
@@ -521,8 +515,7 @@ fn sdkp_partial_approval_state_machine_compiles() {
     // re-decoded receipt STILL verifies. This is the "user crashed mid-
     // approval, reopened the app, replayed the session" check.
     let persisted = to_vec(&session).expect("Proved state must Borsh-encode");
-    let resumed: ApprovalSession =
-        from_slice(&persisted).expect("Proved state must Borsh-decode");
+    let resumed: ApprovalSession = from_slice(&persisted).expect("Proved state must Borsh-decode");
     assert_eq!(resumed, session);
 
     if let ApprovalSession::Proved {

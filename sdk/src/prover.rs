@@ -48,8 +48,7 @@ use crate::multisig::MultisigStateSnapshot;
 /// toolchain). `sdk/tests/image_id_pin_parity.rs` cross-checks this against
 /// `private_multisig_program::APPROVE_CIRCUIT_IMAGE_ID` so any drift fails CI.
 pub(crate) const APPROVE_CIRCUIT_IMAGE_ID_PINNED: [u32; 8] = [
-    763539168, 1016753994, 1524795730, 877238783, 502029817, 1373722446,
-    3332462251, 4034702986,
+    763539168, 1016753994, 1524795730, 877238783, 502029817, 1373722446, 3332462251, 4034702986,
 ];
 
 /// Risc0 guest proof generator for the approval circuit.
@@ -202,14 +201,13 @@ impl ApprovalProver {
             return Ok(cached.clone());
         }
 
-        let proposal_id = self
-            .snapshot
-            .derive_proposal_id(self.index, &self.action_bytes, &self.target_program);
+        let proposal_id =
+            self.snapshot
+                .derive_proposal_id(self.index, &self.action_bytes, &self.target_program);
 
         let receipt = self.run_risc0_prover(proposal_id)?;
-        let encoded = bincode::serialize(&receipt).map_err(|e| {
-            SdkError::ProofGenerationFailed(format!("bincode encode failed: {e}"))
-        })?;
+        let encoded = bincode::serialize(&receipt)
+            .map_err(|e| SdkError::ProofGenerationFailed(format!("bincode encode failed: {e}")))?;
         self.receipt = Some(encoded.clone());
         Ok(encoded)
     }
@@ -232,9 +230,9 @@ impl ApprovalProver {
     /// The nullifier is `H(sk || proposal_id)`, recomputed from the owned
     /// witness so no receipt deserialization is needed.
     pub fn public_inputs(&self) -> ApprovePublicInputs {
-        let proposal_id = self
-            .snapshot
-            .derive_proposal_id(self.index, &self.action_bytes, &self.target_program);
+        let proposal_id =
+            self.snapshot
+                .derive_proposal_id(self.index, &self.action_bytes, &self.target_program);
         let nullifier = self.compute_nullifier(proposal_id);
         ApprovePublicInputs {
             members_root: self.snapshot.members_root,
@@ -245,9 +243,9 @@ impl ApprovalProver {
 
     /// The member's nullifier for the current proposal.
     pub fn nullifier(&self) -> [u8; 32] {
-        let proposal_id = self
-            .snapshot
-            .derive_proposal_id(self.index, &self.action_bytes, &self.target_program);
+        let proposal_id =
+            self.snapshot
+                .derive_proposal_id(self.index, &self.action_bytes, &self.target_program);
         self.compute_nullifier(proposal_id)
     }
 
@@ -284,16 +282,14 @@ impl ApprovalProver {
 
         let image_id = Self::image_id();
 
-        let prove_info = default_prover().prove(env, self.elf).map_err(|e| {
-            SdkError::ProofGenerationFailed(format!("risc0 prove() failed: {e}"))
-        })?;
+        let prove_info = default_prover()
+            .prove(env, self.elf)
+            .map_err(|e| SdkError::ProofGenerationFailed(format!("risc0 prove() failed: {e}")))?;
         let receipt = prove_info.receipt;
 
         if !Self::is_dev_mode() {
             receipt.verify(image_id).map_err(|e| {
-                SdkError::ReceiptVerificationFailed(format!(
-                    "local receipt verify() failed: {e}"
-                ))
+                SdkError::ReceiptVerificationFailed(format!("local receipt verify() failed: {e}"))
             })?;
         }
 
@@ -309,14 +305,13 @@ impl ApprovalProver {
 
     /// True if `RISC0_DEV_MODE` is set to a truthy value.
     fn is_dev_mode() -> bool {
-        matches!(
-            env::var("RISC0_DEV_MODE").as_deref(),
-            Ok("1") | Ok("true")
-        )
+        matches!(env::var("RISC0_DEV_MODE").as_deref(), Ok("1") | Ok("true"))
     }
 
     /// Extract flattened siblings and directions from a MerkleProof.
-    fn flatten_proof(proof: &MerkleProof) -> ([[u8; HASH_LEN]; MERKLE_DEPTH], [bool; MERKLE_DEPTH]) {
+    fn flatten_proof(
+        proof: &MerkleProof,
+    ) -> ([[u8; HASH_LEN]; MERKLE_DEPTH], [bool; MERKLE_DEPTH]) {
         let mut siblings = [[0u8; HASH_LEN]; MERKLE_DEPTH];
         let mut directions = [false; MERKLE_DEPTH];
         for level in 0..MERKLE_DEPTH {
@@ -369,15 +364,9 @@ mod tests {
         let m2 = Member::new().unwrap();
         builder.add_member(m2.commitment()).unwrap();
         let finalized = builder.finalize().unwrap();
-        let snap = MultisigStateSnapshot::new(
-            [0xA1; 32],
-            [0xB2; 32],
-            finalized.members_root,
-            2,
-            2,
-            1,
-        )
-        .unwrap();
+        let snap =
+            MultisigStateSnapshot::new([0xA1; 32], [0xB2; 32], finalized.members_root, 2, 2, 1)
+                .unwrap();
         let proof = finalized.merkle_proof(&member.commitment()).unwrap();
 
         let prover = ApprovalProver::new(
@@ -395,29 +384,14 @@ mod tests {
     #[test]
     fn prover_rejects_large_action_bytes() {
         let member = Member::new().unwrap();
-        let snap = MultisigStateSnapshot::new(
-            [0xA1; 32],
-            [0xB2; 32],
-            [0xBB; 32],
-            2,
-            2,
-            0,
-        )
-        .unwrap();
+        let snap = MultisigStateSnapshot::new([0xA1; 32], [0xB2; 32], [0xBB; 32], 2, 2, 0).unwrap();
         let oversized = vec![0xFE; 4097];
         let proof = MerkleProof {
             siblings: [[0u8; 32]; MERKLE_DEPTH],
             indices: [false; MERKLE_DEPTH],
         };
-        let result = ApprovalProver::new(
-            &member,
-            &snap,
-            0,
-            &oversized,
-            &[0xCC; 32],
-            &proof,
-            STUB_ELF,
-        );
+        let result =
+            ApprovalProver::new(&member, &snap, 0, &oversized, &[0xCC; 32], &proof, STUB_ELF);
         assert!(matches!(result, Err(SdkError::ActionBytesTooLarge)));
     }
 
@@ -425,28 +399,12 @@ mod tests {
     fn prover_rejects_invalid_merkle_proof() {
         let member = Member::new().unwrap();
         let wrong_root = [0xFF; 32]; // Does not match the member's commitment
-        let snap = MultisigStateSnapshot::new(
-            [0xA1; 32],
-            [0xB2; 32],
-            wrong_root,
-            2,
-            2,
-            1,
-        )
-        .unwrap();
+        let snap = MultisigStateSnapshot::new([0xA1; 32], [0xB2; 32], wrong_root, 2, 2, 1).unwrap();
         let proof = MerkleProof {
             siblings: [[0u8; 32]; MERKLE_DEPTH],
             indices: [false; MERKLE_DEPTH],
         };
-        let result = ApprovalProver::new(
-            &member,
-            &snap,
-            0,
-            b"test",
-            &[0xCC; 32],
-            &proof,
-            STUB_ELF,
-        );
+        let result = ApprovalProver::new(&member, &snap, 0, b"test", &[0xCC; 32], &proof, STUB_ELF);
         assert!(matches!(result, Err(SdkError::MerkleProofInvalid)));
     }
 
@@ -455,28 +413,17 @@ mod tests {
         let member = Member::new().unwrap();
         let mut builder = crate::multisig::MultisigBuilder::new(2);
         builder.add_member(member.commitment()).unwrap();
-        builder.add_member(Member::new().unwrap().commitment()).unwrap();
+        builder
+            .add_member(Member::new().unwrap().commitment())
+            .unwrap();
         let finalized = builder.finalize().unwrap();
-        let snap = MultisigStateSnapshot::new(
-            [0xA1; 32],
-            [0xB2; 32],
-            finalized.members_root,
-            2,
-            2,
-            1,
-        )
-        .unwrap();
+        let snap =
+            MultisigStateSnapshot::new([0xA1; 32], [0xB2; 32], finalized.members_root, 2, 2, 1)
+                .unwrap();
         let proof = finalized.merkle_proof(&member.commitment()).unwrap();
-        let prover = ApprovalProver::new(
-            &member,
-            &snap,
-            0,
-            b"action",
-            &[0xCC; 32],
-            &proof,
-            STUB_ELF,
-        )
-        .unwrap();
+        let prover =
+            ApprovalProver::new(&member, &snap, 0, b"action", &[0xCC; 32], &proof, STUB_ELF)
+                .unwrap();
 
         let public_inputs = prover.public_inputs();
         let nullifier_direct = prover.nullifier();

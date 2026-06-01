@@ -23,9 +23,9 @@ use rand::rngs::StdRng;
 use rand::{Rng, RngCore, SeedableRng};
 
 use private_multisig_core::{
-    derive_multisig_state_pda, derive_nullifier_entry_pda, derive_proposal_id,
-    derive_proposal_pda, derive_vault_pda, ApprovePublicInputs, ChainId, CoreError, Instruction,
-    MultisigState, Proposal, APPROVE_PUBLIC_INPUTS_LEN, MAX_ACTION_BYTES_LEN,
+    derive_multisig_state_pda, derive_nullifier_entry_pda, derive_proposal_id, derive_proposal_pda,
+    derive_vault_pda, ApprovePublicInputs, ChainId, CoreError, Instruction, MultisigState,
+    Proposal, APPROVE_PUBLIC_INPUTS_LEN, MAX_ACTION_BYTES_LEN,
 };
 
 const PROGRAM_ID: [u8; 32] = [0x99; 32];
@@ -139,11 +139,7 @@ fn build_propose_ix_bytes(
     bytes
 }
 
-fn build_approve_ix_bytes(
-    inst: &Instance,
-    index: u64,
-    inputs: ApprovePublicInputs,
-) -> Vec<u8> {
+fn build_approve_ix_bytes(inst: &Instance, index: u64, inputs: ApprovePublicInputs) -> Vec<u8> {
     let ix = Instruction::Approve {
         create_key: inst.create_key,
         index,
@@ -207,8 +203,13 @@ fn e2e_single_multisig_threshold_3_of_5_happy_path() {
     assert!(Proposal::validate_action_bytes(&action_bytes).is_ok());
 
     let chain_id = ChainId::from_u64(DEFAULT_CHAIN_ID_U64);
-    let proposal_id =
-        derive_proposal_id(&chain_id, &inst.state_pda, 0, &action_bytes, &target_program);
+    let proposal_id = derive_proposal_id(
+        &chain_id,
+        &inst.state_pda,
+        0,
+        &action_bytes,
+        &target_program,
+    );
     assert_ne!(proposal_id, [0u8; 32]);
 
     let proposal_pda = derive_proposal_pda(&PROGRAM_ID, &inst.create_key, 0);
@@ -360,10 +361,7 @@ fn e2e_hundred_multisigs_complete_lifecycle() {
                 // Cross-check Borsh = explicit layout.
                 let via_borsh = to_vec(&inputs).unwrap();
                 assert_eq!(via_borsh, canonical.to_vec());
-                assert_eq!(
-                    ApprovePublicInputs::from_bytes(&canonical),
-                    inputs
-                );
+                assert_eq!(ApprovePublicInputs::from_bytes(&canonical), inputs);
                 all_public_inputs_bytes.push(canonical);
 
                 assert!(
@@ -416,9 +414,8 @@ fn e2e_many_proposals_in_one_instance() {
     let mut all_pdas = HashSet::new();
 
     // For each of the first 3 members, collect (proposal_index → nullifier).
-    let mut per_member_nullifiers: Vec<Vec<[u8; 32]>> = (0..3)
-        .map(|_| Vec::with_capacity(PROPOSALS))
-        .collect();
+    let mut per_member_nullifiers: Vec<Vec<[u8; 32]>> =
+        (0..3).map(|_| Vec::with_capacity(PROPOSALS)).collect();
 
     for k in 0..PROPOSALS {
         let mut action = b"action-".to_vec();
@@ -429,8 +426,13 @@ fn e2e_many_proposals_in_one_instance() {
 
         let _ = build_propose_ix_bytes(&inst, k as u64, &action, &DEFAULT_TARGET_PROGRAM);
 
-        let proposal_id =
-            derive_proposal_id(&chain_id, &inst.state_pda, k as u64, &action, &DEFAULT_TARGET_PROGRAM);
+        let proposal_id = derive_proposal_id(
+            &chain_id,
+            &inst.state_pda,
+            k as u64,
+            &action,
+            &DEFAULT_TARGET_PROGRAM,
+        );
         assert!(proposal_id_set.insert(proposal_id), "duplicate proposal_id");
         proposal_ids.push(proposal_id);
 
@@ -627,8 +629,13 @@ fn e2e_instance_with_m_eq_n_requires_unanimous() {
     let _ = build_propose_ix_bytes(&inst, 0, &action, &DEFAULT_TARGET_PROGRAM);
 
     let chain_id = ChainId::from_u64(DEFAULT_CHAIN_ID_U64);
-    let proposal_id =
-        derive_proposal_id(&chain_id, &inst.state_pda, 0, &action, &DEFAULT_TARGET_PROGRAM);
+    let proposal_id = derive_proposal_id(
+        &chain_id,
+        &inst.state_pda,
+        0,
+        &action,
+        &DEFAULT_TARGET_PROGRAM,
+    );
     let proposal_pda = derive_proposal_pda(&PROGRAM_ID, &inst.create_key, 0);
 
     let mut nullifiers = HashSet::new();
@@ -708,8 +715,13 @@ fn e2e_action_bytes_at_max_size_works() {
     assert!(Proposal::validate_action_bytes(&action).is_ok());
 
     let chain_id = ChainId::from_u64(DEFAULT_CHAIN_ID_U64);
-    let proposal_id =
-        derive_proposal_id(&chain_id, &inst.state_pda, 0, &action, &DEFAULT_TARGET_PROGRAM);
+    let proposal_id = derive_proposal_id(
+        &chain_id,
+        &inst.state_pda,
+        0,
+        &action,
+        &DEFAULT_TARGET_PROGRAM,
+    );
     assert_ne!(proposal_id, [0u8; 32]);
 
     let propose_bytes = build_propose_ix_bytes(&inst, 0, &action, &DEFAULT_TARGET_PROGRAM);
@@ -790,8 +802,7 @@ fn e2e_thousand_random_full_lifecycles() {
     let mut rng = StdRng::seed_from_u64(0x1234_5678_9ABC_DEF0);
 
     // (m, n) options the random sampler picks from.
-    let mn_options: [(u8, u32); 6] =
-        [(1, 1), (1, 5), (2, 3), (3, 5), (5, 7), (10, 10)];
+    let mn_options: [(u8, u32); 6] = [(1, 1), (1, 5), (2, 3), (3, 5), (5, 7), (10, 10)];
 
     let mut state_pdas = HashSet::new();
     let mut proposal_ids = HashSet::new();

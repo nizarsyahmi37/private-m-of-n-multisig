@@ -119,7 +119,10 @@ mod tests {
         let mut expected = [0u8; 1 + HASH_LEN];
         expected[0] = DOMAIN_LEAF;
         expected[1..].copy_from_slice(&leaf);
-        assert_eq!(Sha256Hasher::hash_leaf(&leaf), Sha256Hasher::hash(&expected));
+        assert_eq!(
+            Sha256Hasher::hash_leaf(&leaf),
+            Sha256Hasher::hash(&expected)
+        );
     }
 
     #[test]
@@ -130,7 +133,10 @@ mod tests {
         expected[0] = DOMAIN_NODE;
         expected[1..1 + HASH_LEN].copy_from_slice(&l);
         expected[1 + HASH_LEN..].copy_from_slice(&r);
-        assert_eq!(Sha256Hasher::hash_node(&l, &r), Sha256Hasher::hash(&expected));
+        assert_eq!(
+            Sha256Hasher::hash_node(&l, &r),
+            Sha256Hasher::hash(&expected)
+        );
     }
 
     #[test]

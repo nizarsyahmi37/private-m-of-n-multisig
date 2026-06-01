@@ -266,7 +266,10 @@ fn red4_pack_witness_parity_with_5_writeslice_path() {
     hand_flat[96..128].copy_from_slice(&approver.salt);
     hand_flat[128..768].copy_from_slice(&siblings_flat);
     hand_flat[768..788].copy_from_slice(&direction_bytes);
-    assert_eq!(hand_flat, packed, "helper output diverges from hand-flatten");
+    assert_eq!(
+        hand_flat, packed,
+        "helper output diverges from hand-flatten"
+    );
 }
 
 // ===========================================================================
@@ -681,9 +684,18 @@ fn red4_pack_witness_helper_purity_does_not_mutate_inputs() {
     // Snapshots AFTER.
     assert_eq!(approver.sk, snap_sk, "FINDING: helper mutated sk");
     assert_eq!(approver.salt, snap_salt, "FINDING: helper mutated salt");
-    assert_eq!(proof.siblings, snap_siblings, "FINDING: helper mutated siblings");
-    assert_eq!(proof.indices, snap_indices, "FINDING: helper mutated indices");
-    assert_eq!(members_root, snap_root, "FINDING: helper mutated members_root");
+    assert_eq!(
+        proof.siblings, snap_siblings,
+        "FINDING: helper mutated siblings"
+    );
+    assert_eq!(
+        proof.indices, snap_indices,
+        "FINDING: helper mutated indices"
+    );
+    assert_eq!(
+        members_root, snap_root,
+        "FINDING: helper mutated members_root"
+    );
     assert_eq!(pid, snap_pid, "FINDING: helper mutated proposal_id");
 
     // And: call it again and confirm same output (purity).
@@ -904,13 +916,22 @@ fn red4_creative_pack_witness_field_collision_search() {
     // No 0x42 byte must appear in the divider regions: bytes
     // [32..64) = pid (0xFE), [96..128) = salt (0xFD), [128..160) = sib0 (0xE0).
     for off in 32..64 {
-        assert_ne!(buf[off], 0x42, "FINDING: stray 0x42 in proposal_id region at offset {off}");
+        assert_ne!(
+            buf[off], 0x42,
+            "FINDING: stray 0x42 in proposal_id region at offset {off}"
+        );
     }
     for off in 96..128 {
-        assert_ne!(buf[off], 0x42, "FINDING: stray 0x42 in salt region at offset {off}");
+        assert_ne!(
+            buf[off], 0x42,
+            "FINDING: stray 0x42 in salt region at offset {off}"
+        );
     }
     for off in 128..160 {
-        assert_ne!(buf[off], 0x42, "FINDING: stray 0x42 in siblings[0] region at offset {off}");
+        assert_ne!(
+            buf[off], 0x42,
+            "FINDING: stray 0x42 in siblings[0] region at offset {off}"
+        );
     }
     for off in 192..768 {
         assert_ne!(

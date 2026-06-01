@@ -100,8 +100,7 @@ fn build_witness(
 
     let proof = tree.proof(approver_index).unwrap();
 
-    let proposal_id =
-        derive_proposal_id(chain_id, state_pda, index, action_bytes, target_program);
+    let proposal_id = derive_proposal_id(chain_id, state_pda, index, action_bytes, target_program);
 
     let mut siblings_flat = [0u8; MERKLE_DEPTH * HASH_LEN];
     for (level, sibling) in proof.siblings.iter().enumerate() {

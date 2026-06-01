@@ -682,8 +682,15 @@ fn red2_all_zero_members_root_circuit_accepts_if_witness_climbs() {
                 <Sha256Hasher as Hasher>::hash_node(&current, &p.siblings[level])
             };
         }
-        assert_eq!(current, tree.root(), "member {i}: honest walk must hit real root");
-        assert_ne!(current, [0u8; 32], "honest walk MUST NOT terminate on [0;32]");
+        assert_eq!(
+            current,
+            tree.root(),
+            "member {i}: honest walk must hit real root"
+        );
+        assert_ne!(
+            current, [0u8; 32],
+            "honest walk MUST NOT terminate on [0;32]"
+        );
     }
 }
 
@@ -858,21 +865,22 @@ fn red2_creative_chained_journal_swap() {
         .expect("untouched receipt must verify");
 
     // Helper: clone receipt, splice in a mutated journal, expect rejection.
-    let swap_and_check = |a_range: std::ops::Range<usize>, b_range: std::ops::Range<usize>, label: &str| {
-        let mut r2 = receipt.clone();
-        let mut new_journal = original.clone();
-        let len = a_range.end - a_range.start;
-        assert_eq!(len, b_range.end - b_range.start);
-        let mut tmp = vec![0u8; len];
-        tmp.copy_from_slice(&original[a_range.clone()]);
-        new_journal[a_range.clone()].copy_from_slice(&original[b_range.clone()]);
-        new_journal[b_range.clone()].copy_from_slice(&tmp);
-        r2.journal.bytes = new_journal;
-        assert!(
-            r2.verify(APPROVE_CIRCUIT_IMAGE_ID).is_err(),
-            "FINDING: {label} swap in journal did not break verification"
-        );
-    };
+    let swap_and_check =
+        |a_range: std::ops::Range<usize>, b_range: std::ops::Range<usize>, label: &str| {
+            let mut r2 = receipt.clone();
+            let mut new_journal = original.clone();
+            let len = a_range.end - a_range.start;
+            assert_eq!(len, b_range.end - b_range.start);
+            let mut tmp = vec![0u8; len];
+            tmp.copy_from_slice(&original[a_range.clone()]);
+            new_journal[a_range.clone()].copy_from_slice(&original[b_range.clone()]);
+            new_journal[b_range.clone()].copy_from_slice(&tmp);
+            r2.journal.bytes = new_journal;
+            assert!(
+                r2.verify(APPROVE_CIRCUIT_IMAGE_ID).is_err(),
+                "FINDING: {label} swap in journal did not break verification"
+            );
+        };
 
     // Swap root↔pid.
     swap_and_check(0..32, 32..64, "root<->pid");

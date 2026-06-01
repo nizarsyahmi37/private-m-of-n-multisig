@@ -68,6 +68,4 @@ pub use proof::{
     DEPLOYMENT_CHAIN_ID_U64,
 };
 #[cfg(feature = "std")]
-pub use state::{
-    MultisigState, NullifierEntry, Proposal, Vault, MAX_ACTION_BYTES_LEN,
-};
+pub use state::{MultisigState, NullifierEntry, Proposal, Vault, MAX_ACTION_BYTES_LEN};

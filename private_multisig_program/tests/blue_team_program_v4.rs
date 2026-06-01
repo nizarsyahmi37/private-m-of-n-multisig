@@ -128,8 +128,7 @@ fn build_witness_bundle(
     }
     let members_root = tree.root();
     let proof = tree.proof(approver_index).expect("proof must exist");
-    let proposal_id =
-        derive_proposal_id(chain_id, state_pda, index, action_bytes, target_program);
+    let proposal_id = derive_proposal_id(chain_id, state_pda, index, action_bytes, target_program);
     WitnessBundle {
         identity: members[approver_index].clone(),
         proof,
@@ -178,8 +177,7 @@ fn prove_via_five_calls(w: &WitnessBundle) -> Receipt {
 /// Prove via the NEW helper + a single `write_slice(&packed)`. Returns the
 /// verified receipt.
 fn prove_via_packed_helper(w: &WitnessBundle) -> Receipt {
-    let packed =
-        pack_approve_witness(&w.identity, &w.proof, &w.members_root, &w.proposal_id);
+    let packed = pack_approve_witness(&w.identity, &w.proof, &w.members_root, &w.proposal_id);
     let env_builder = ExecutorEnv::builder()
         .write_slice(&packed)
         .build()
@@ -277,16 +275,10 @@ fn v4_pack_approve_witness_is_deterministic_100x() {
         &ctx.target_program,
     );
 
-    let baseline =
-        pack_approve_witness(&w.identity, &w.proof, &w.members_root, &w.proposal_id);
+    let baseline = pack_approve_witness(&w.identity, &w.proof, &w.members_root, &w.proposal_id);
 
     for i in 0..100 {
-        let again = pack_approve_witness(
-            &w.identity,
-            &w.proof,
-            &w.members_root,
-            &w.proposal_id,
-        );
+        let again = pack_approve_witness(&w.identity, &w.proof, &w.members_root, &w.proposal_id);
         assert_eq!(
             baseline, again,
             "pack_approve_witness drifted on iteration {i} (non-deterministic packing)"
@@ -412,7 +404,8 @@ fn v4_pack_approve_witness_layout_byte_for_byte() {
         let start = 128 + level * HASH_LEN;
         for off in 0..HASH_LEN {
             assert_eq!(
-                buf[start + off], marker,
+                buf[start + off],
+                marker,
                 "siblings[level={level}][{off}] = 0x{:02x}, expected marker 0x{marker:02x}",
                 buf[start + off],
             );
@@ -455,8 +448,7 @@ fn v4_pack_approve_witness_then_prove_then_verify_full_flow() {
     let target_program: [u8; 32] = [0xCC; 32];
     let action_bytes = b"v4_full_flow_action".to_vec();
     let chain_id = ChainId::from_u64(0xDEAD_BEEF);
-    let proposal_id =
-        derive_proposal_id(&chain_id, &state_pda, 0, &action_bytes, &target_program);
+    let proposal_id = derive_proposal_id(&chain_id, &state_pda, 0, &action_bytes, &target_program);
 
     // Pick an approving member and derive its Merkle proof.
     let approver_index = 4usize;
@@ -532,10 +524,18 @@ fn v4_pack_approve_witness_same_member_different_proposals_different_journals() 
     assert_ne!(w_a.proposal_id, w_b.proposal_id);
 
     // Pack each via the helper.
-    let packed_a =
-        pack_approve_witness(&w_a.identity, &w_a.proof, &w_a.members_root, &w_a.proposal_id);
-    let packed_b =
-        pack_approve_witness(&w_b.identity, &w_b.proof, &w_b.members_root, &w_b.proposal_id);
+    let packed_a = pack_approve_witness(
+        &w_a.identity,
+        &w_a.proof,
+        &w_a.members_root,
+        &w_a.proposal_id,
+    );
+    let packed_b = pack_approve_witness(
+        &w_b.identity,
+        &w_b.proof,
+        &w_b.members_root,
+        &w_b.proposal_id,
+    );
     // They share root and sk/salt regions but differ on proposal_id.
     assert_eq!(&packed_a[..32], &packed_b[..32], "members_root regions");
     assert_ne!(&packed_a[32..64], &packed_b[32..64], "proposal_id regions");
@@ -582,8 +582,7 @@ fn v4_pack_approve_witness_with_helper_buffer_in_executor_env() {
         &ctx.target_program,
     );
 
-    let packed =
-        pack_approve_witness(&w.identity, &w.proof, &w.members_root, &w.proposal_id);
+    let packed = pack_approve_witness(&w.identity, &w.proof, &w.members_root, &w.proposal_id);
 
     // 1) Pass `packed` directly into `ExecutorEnv::builder().write_slice` —
     //    the helper's output must be acceptable to the prover unmodified.
@@ -653,8 +652,7 @@ fn v4_approve_witness_len_consistent_across_crates() {
         APPROVE_WITNESS_LEN, reconstructed,
         "APPROVE_WITNESS_LEN ({}) ≠ 64 + crypto::SK_LEN ({}) + crypto::SALT_LEN ({}) + \
          crypto::MERKLE_DEPTH ({}) * crypto::HASH_LEN ({}) + crypto::MERKLE_DEPTH ({}) = {}",
-        APPROVE_WITNESS_LEN, SK_LEN, SALT_LEN, MERKLE_DEPTH, HASH_LEN, MERKLE_DEPTH,
-        reconstructed,
+        APPROVE_WITNESS_LEN, SK_LEN, SALT_LEN, MERKLE_DEPTH, HASH_LEN, MERKLE_DEPTH, reconstructed,
     );
 
     // Pin the individual crypto constants too — each contributes to the
@@ -694,13 +692,7 @@ fn v4_existing_5_call_approve_circuit_test_path_still_works() {
     let target_program: [u8; 32] = [0xCD; 32];
     let action_bytes = b"treasury_withdraw(100,recipient=0xABCD)".to_vec();
     let chain_id = ChainId::from_u64(0xABCD_EF01);
-    let proposal_id = derive_proposal_id(
-        &chain_id,
-        &state_pda,
-        0,
-        &action_bytes,
-        &target_program,
-    );
+    let proposal_id = derive_proposal_id(&chain_id, &state_pda, 0, &action_bytes, &target_program);
 
     let expected_nullifier = approver.nullifier::<Sha256Hasher>(&proposal_id);
     let expected_bundle = ApprovePublicInputs {
@@ -759,8 +751,14 @@ fn v4_pack_approve_witness_documentation_is_accurate() {
     let src: &str = include_str!("../src/lib.rs");
 
     // Doc-block markers — every documented offset range.
-    let required_ranges =
-        ["[0..32)", "[32..64)", "[64..96)", "[96..128)", "[128..768)", "[768..788)"];
+    let required_ranges = [
+        "[0..32)",
+        "[32..64)",
+        "[64..96)",
+        "[96..128)",
+        "[128..768)",
+        "[768..788)",
+    ];
     for marker in &required_ranges {
         assert!(
             src.contains(marker),
@@ -771,7 +769,14 @@ fn v4_pack_approve_witness_documentation_is_accurate() {
 
     // Field names mentioned in the doc-block — they must match the actual
     // parameter list / impl-side `out[..].copy_from_slice(...)` choices.
-    let required_field_names = ["members_root", "proposal_id", "sk", "salt", "siblings", "directions"];
+    let required_field_names = [
+        "members_root",
+        "proposal_id",
+        "sk",
+        "salt",
+        "siblings",
+        "directions",
+    ];
     for name in &required_field_names {
         assert!(
             src.contains(name),
@@ -1015,7 +1020,8 @@ fn v4_pack_approve_witness_uses_le_index_bit_extraction_implicitly() {
     );
     for level in 3..MERKLE_DEPTH {
         assert_eq!(
-            packed[768 + level], 0u8,
+            packed[768 + level],
+            0u8,
             "direction[{level}] should be 0 (index 5 only has bits 0 and 2 set), got {}",
             packed[768 + level],
         );

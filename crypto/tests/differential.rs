@@ -150,7 +150,11 @@ fn ref_hash_pair_matches() {
         let mut concat = [0u8; 2 * HASH_LEN];
         concat[..HASH_LEN].copy_from_slice(&l);
         concat[HASH_LEN..].copy_from_slice(&rt);
-        assert_eq!(got, ref_hash(&concat), "iter {i}: hash_pair layout is not raw concat");
+        assert_eq!(
+            got,
+            ref_hash(&concat),
+            "iter {i}: hash_pair layout is not raw concat"
+        );
         assert_eq!(concat.len(), 64, "hash_pair input must be exactly 64 bytes");
     }
 }
@@ -173,7 +177,11 @@ fn ref_hash_leaf_matches() {
         let mut buf = [0u8; 1 + HASH_LEN];
         buf[0] = 0x00;
         buf[1..].copy_from_slice(&leaf);
-        assert_eq!(got, ref_hash(&buf), "iter {i}: hash_leaf domain byte is not 0x00");
+        assert_eq!(
+            got,
+            ref_hash(&buf),
+            "iter {i}: hash_leaf domain byte is not 0x00"
+        );
         assert_eq!(DOMAIN_LEAF, 0x00, "DOMAIN_LEAF constant must equal 0x00");
     }
 }
@@ -198,7 +206,11 @@ fn ref_hash_node_matches() {
         buf[0] = 0x01;
         buf[1..1 + HASH_LEN].copy_from_slice(&l);
         buf[1 + HASH_LEN..].copy_from_slice(&rt);
-        assert_eq!(got, ref_hash(&buf), "iter {i}: hash_node domain byte is not 0x01");
+        assert_eq!(
+            got,
+            ref_hash(&buf),
+            "iter {i}: hash_node domain byte is not 0x01"
+        );
         assert_eq!(DOMAIN_NODE, 0x01, "DOMAIN_NODE constant must equal 0x01");
     }
 }
@@ -218,7 +230,10 @@ fn ref_commitment_matches() {
             .commitment::<Sha256Hasher>()
             .as_bytes();
         let expected = ref_commitment(&sk, &salt);
-        assert_eq!(got, expected, "iter {i}: commitment diverges from reference");
+        assert_eq!(
+            got, expected,
+            "iter {i}: commitment diverges from reference"
+        );
 
         // Ordering check: sk-then-salt. Swap the order in the reference and
         // confirm that produces a *different* digest — guards against a future
@@ -353,15 +368,13 @@ fn ref_proof_walk_matches() {
 fn ref_known_answer_vectors() {
     // KAT1: empty-input SHA-256. RFC 6234 test vector; if this drifts the
     // underlying `sha2` crate itself has broken.
-    let kat1: [u8; 32] = hex_literal_arr(
-        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    );
+    let kat1: [u8; 32] =
+        hex_literal_arr("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
     assert_eq!(Sha256Hasher::hash(b""), kat1, "KAT1 hash(\"\") drift");
 
     // KAT2: level-0 empty marker — `hash_leaf(&[0;32])`.
-    let kat2: [u8; 32] = hex_literal_arr(
-        "7f9c9e31ac8256ca2f258583df262dbc7d6f68f2a03043d5c99a4ae5a7396ce9",
-    );
+    let kat2: [u8; 32] =
+        hex_literal_arr("7f9c9e31ac8256ca2f258583df262dbc7d6f68f2a03043d5c99a4ae5a7396ce9");
     assert_eq!(
         Sha256Hasher::hash_leaf(&[0u8; 32]),
         kat2,
@@ -369,9 +382,8 @@ fn ref_known_answer_vectors() {
     );
 
     // KAT3: `hash_node([1;32], [2;32])`.
-    let kat3: [u8; 32] = hex_literal_arr(
-        "b331da6ec49d4547d9942a6727e5123f69bed5a0b97ac171cfbfd6201431fcfa",
-    );
+    let kat3: [u8; 32] =
+        hex_literal_arr("b331da6ec49d4547d9942a6727e5123f69bed5a0b97ac171cfbfd6201431fcfa");
     assert_eq!(
         Sha256Hasher::hash_node(&[1u8; 32], &[2u8; 32]),
         kat3,
@@ -379,9 +391,8 @@ fn ref_known_answer_vectors() {
     );
 
     // KAT4: commitment for sk=[0x11;32], salt=[0x22;32].
-    let kat4: [u8; 32] = hex_literal_arr(
-        "5189c77d29fe5d546a045ec46986852785fea5c13ac7da9c115ff5fb6edf817c",
-    );
+    let kat4: [u8; 32] =
+        hex_literal_arr("5189c77d29fe5d546a045ec46986852785fea5c13ac7da9c115ff5fb6edf817c");
     assert_eq!(
         *Identity::new([0x11; 32], [0x22; 32])
             .commitment::<Sha256Hasher>()
@@ -391,9 +402,8 @@ fn ref_known_answer_vectors() {
     );
 
     // KAT5: nullifier for sk=[0x33;32], pid=[0x44;32].
-    let kat5: [u8; 32] = hex_literal_arr(
-        "71cdd0136a799e7ef615ddd2aaeee3d0bae2eb8dbcac7b88ceb70ff131ecce55",
-    );
+    let kat5: [u8; 32] =
+        hex_literal_arr("71cdd0136a799e7ef615ddd2aaeee3d0bae2eb8dbcac7b88ceb70ff131ecce55");
     assert_eq!(
         nullifier::<Sha256Hasher>(&[0x33; 32], &[0x44; 32]),
         kat5,
@@ -402,9 +412,8 @@ fn ref_known_answer_vectors() {
 
     // KAT6: depth-20 empty tree root. This is the value the on-chain verifier
     // and the Risc0 guest must both bake in as the genesis members_root.
-    let kat6: [u8; 32] = hex_literal_arr(
-        "ac5b1c358a294dec99146ebb2fea0c8a528fc4dad578485d7f279c2b359099f3",
-    );
+    let kat6: [u8; 32] =
+        hex_literal_arr("ac5b1c358a294dec99146ebb2fea0c8a528fc4dad578485d7f279c2b359099f3");
     assert_eq!(
         MerkleTree::<Sha256Hasher>::new().root(),
         kat6,
@@ -465,7 +474,10 @@ fn leaf_domain_byte_is_zero_node_domain_byte_is_one() {
     // but a sentinel pair-check still catches a future widening bug.
     let leaf_h = Sha256Hasher::hash_leaf(&[0u8; 32]);
     let node_h = Sha256Hasher::hash_node(&[0u8; 32], &[0u8; 32]);
-    assert_ne!(leaf_h, node_h, "leaf and node domains must produce disjoint digests");
+    assert_ne!(
+        leaf_h, node_h,
+        "leaf and node domains must produce disjoint digests"
+    );
 }
 
 // Compile-time guard: keep `Hasher` in scope so the `hash` trait method can be

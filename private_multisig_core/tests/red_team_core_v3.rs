@@ -176,7 +176,11 @@ fn v3_attack_2a_instruction_discriminants_each_pinned() {
         m: 0,
         n: 0,
     };
-    assert_eq!(to_vec(&create).unwrap()[0], 0u8, "v3: CreateMultisig disc != 0");
+    assert_eq!(
+        to_vec(&create).unwrap()[0],
+        0u8,
+        "v3: CreateMultisig disc != 0"
+    );
 
     // Propose = 1
     let propose = Instruction::Propose {
@@ -250,7 +254,10 @@ fn v3_attack_2c_disc_4_currently_rejects() {
     // Bare disc 4 must error today (no variant exists at that disc).
     let buf = [4u8];
     let res = Instruction::try_from_slice(&buf);
-    assert!(res.is_err(), "v3: disc 4 must error today — fifth variant not yet added");
+    assert!(
+        res.is_err(),
+        "v3: disc 4 must error today — fifth variant not yet added"
+    );
 
     // A longer body with disc 4 still errors today.
     let mut long = vec![4u8];
@@ -303,7 +310,10 @@ fn v3_attack_3a_derive_proposal_id_index_is_little_endian_per_byte() {
     let mut alt = preimage;
     alt[64..72].copy_from_slice(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08]); // BE
     let alt_hash = crypto::Sha256Hasher::hash(&alt);
-    assert_ne!(actual, alt_hash, "v3: BE-encoded index must NOT match LE result");
+    assert_ne!(
+        actual, alt_hash,
+        "v3: BE-encoded index must NOT match LE result"
+    );
 }
 
 // ============================================================================
@@ -348,7 +358,10 @@ fn v3_attack_4a_target_program_hashed_natural_order() {
     preimage.extend_from_slice(&target_hash);
     assert_eq!(preimage.len(), 136);
     let expected = crypto::Sha256Hasher::hash(&preimage);
-    assert_eq!(actual, expected, "v3: target_program hashed in natural order");
+    assert_eq!(
+        actual, expected,
+        "v3: target_program hashed in natural order"
+    );
 
     // Negative: hashing the REVERSED target must yield a different result.
     let mut reversed = target;
@@ -407,7 +420,10 @@ fn v3_attack_5a_validate_threshold_widening_not_truncating() {
     // (m=200, n=256): widening accepts (200 <= 256). Truncating: n_as_u8=0,
     //                 200 > 0 → rejects. Current must accept.
     let res = MultisigState::validate_threshold(200, 256);
-    assert!(res.is_ok(), "v3: validate_threshold(200, 256) must be Ok under widening");
+    assert!(
+        res.is_ok(),
+        "v3: validate_threshold(200, 256) must be Ok under widening"
+    );
 
     // (m=255, n=u32::MAX): widening 255 <= u32::MAX → Ok.
     let res = MultisigState::validate_threshold(255, u32::MAX);
@@ -422,7 +438,10 @@ fn v3_attack_5a_validate_threshold_widening_not_truncating() {
 #[test]
 fn v3_attack_6a_validate_threshold_corner_pins() {
     // m=1, n=1 → Ok (degenerate single-member-1-of-1).
-    assert!(MultisigState::validate_threshold(1, 1).is_ok(), "v3: (1,1) Ok");
+    assert!(
+        MultisigState::validate_threshold(1, 1).is_ok(),
+        "v3: (1,1) Ok"
+    );
 
     // m=255, n=255 → Ok (255 == 255, not greater).
     assert!(
@@ -566,7 +585,10 @@ fn v3_attack_8a_derive_pda_multi_seed_combine_is_sha256_concat() {
     outer[64..96].copy_from_slice(&combined);
     let expected: [u8; 32] = crypto::Sha256Hasher::hash(&outer);
 
-    assert_eq!(actual, expected, "v3: multi-seed combine must be SHA-256 concat");
+    assert_eq!(
+        actual, expected,
+        "v3: multi-seed combine must be SHA-256 concat"
+    );
 }
 
 /// (8b) Single-seed input passes through WITHOUT a SHA-256 over the seed
@@ -638,7 +660,10 @@ fn v3_attack_9a_equal_chainids_same_proposal_id() {
     let target = [0x84u8; 32];
     let pid_a = derive_proposal_id(&via_from_u64, &state_pda, 0, b"x", &target);
     let pid_b = derive_proposal_id(&via_new, &state_pda, 0, b"x", &target);
-    assert_eq!(pid_a, pid_b, "v3: equal ChainIds must produce equal proposal_ids");
+    assert_eq!(
+        pid_a, pid_b,
+        "v3: equal ChainIds must produce equal proposal_ids"
+    );
 
     // Test with the all-zero alias path too (FINDING-3 sentinel).
     let zero_a = ChainId::from_u64(0);
@@ -646,7 +671,10 @@ fn v3_attack_9a_equal_chainids_same_proposal_id() {
     assert_eq!(zero_a, zero_b);
     let pid_za = derive_proposal_id(&zero_a, &state_pda, 0, b"x", &target);
     let pid_zb = derive_proposal_id(&zero_b, &state_pda, 0, b"x", &target);
-    assert_eq!(pid_za, pid_zb, "v3: equal zero-ChainIds must produce equal proposal_ids");
+    assert_eq!(
+        pid_za, pid_zb,
+        "v3: equal zero-ChainIds must produce equal proposal_ids"
+    );
 }
 
 /// And distinct-but-equal-on-bytes constructions never diverge over 1000
@@ -757,7 +785,10 @@ fn v3_attack_11a_proposal_empty_action_bytes_accepted_at_core() {
     let chain = ChainId::from_u64(1);
     let state_pda = [0xAA; 32];
     let pid = derive_proposal_id(&chain, &state_pda, 0, b"", &[0xBB; 32]);
-    assert_ne!(pid, [0u8; 32], "v3: pid over empty action must be non-zero (SHA-256 of nonzero preimage)");
+    assert_ne!(
+        pid, [0u8; 32],
+        "v3: pid over empty action must be non-zero (SHA-256 of nonzero preimage)"
+    );
 }
 
 // ============================================================================
@@ -897,11 +928,17 @@ fn v3_attack_14a_reexports_callable_and_consistent() {
         private_multisig_core::pda::SEED_MULTISIG_STATE as *const _,
         "v3: SEED_MULTISIG_STATE pointer identity (same const)",
     );
-    assert_eq!(SEED_MULTISIG_STATE, private_multisig_core::pda::SEED_MULTISIG_STATE);
+    assert_eq!(
+        SEED_MULTISIG_STATE,
+        private_multisig_core::pda::SEED_MULTISIG_STATE
+    );
     assert_eq!(SEED_PROPOSAL, private_multisig_core::pda::SEED_PROPOSAL);
     assert_eq!(SEED_VAULT, private_multisig_core::pda::SEED_VAULT);
     assert_eq!(SEED_NULLIFIER, private_multisig_core::pda::SEED_NULLIFIER);
-    assert_eq!(MAX_ACTION_BYTES_LEN, private_multisig_core::state::MAX_ACTION_BYTES_LEN);
+    assert_eq!(
+        MAX_ACTION_BYTES_LEN,
+        private_multisig_core::state::MAX_ACTION_BYTES_LEN
+    );
     assert_eq!(
         APPROVE_PUBLIC_INPUTS_LEN,
         private_multisig_core::proof::APPROVE_PUBLIC_INPUTS_LEN,
@@ -932,7 +969,9 @@ fn v3_attack_14b_type_reexports_constructible_at_crate_root() {
         approvals_count: 0,
         executed: false,
     };
-    let _vault = Vault { create_key: [0; 32] };
+    let _vault = Vault {
+        create_key: [0; 32],
+    };
     let _ne = NullifierEntry;
     let _pi = ApprovePublicInputs {
         members_root: [0; 32],
@@ -1123,7 +1162,10 @@ fn v3_attack_16a_instruction_discriminant_is_single_u8() {
     // first byte of `create_key`.
     assert_eq!(bytes[0], 3, "v3: disc is one byte");
     // Byte 1 is the first byte of create_key (all-zero in this fixture).
-    assert_eq!(bytes[1], 0u8, "v3: byte 1 starts create_key, not a wider disc");
+    assert_eq!(
+        bytes[1], 0u8,
+        "v3: byte 1 starts create_key, not a wider disc"
+    );
     // The whole encoding is 1 + 32 + 8 = 41 bytes; if disc were >1 byte
     // the total would exceed 41.
     assert_eq!(bytes.len(), 41);
@@ -1193,7 +1235,10 @@ fn v3_attack_16d_outer_hash_length_extension_safety() {
     extended.extend_from_slice(&(24u64.to_be_bytes())); // bit-length 3*8 = 24
 
     let extended_pid = derive_proposal_id(&chain, &state, 0, &extended, &target);
-    assert_ne!(base, extended_pid, "v3: padding-shape extension must not collide");
+    assert_ne!(
+        base, extended_pid,
+        "v3: padding-shape extension must not collide"
+    );
 }
 
 /// (16e) ChainId is `Hash` (derive) — confirm hashing it via std `Hasher`
@@ -1284,7 +1329,10 @@ fn v3_attack_16g_derive_proposal_pda_index_is_little_endian() {
     outer[32..64].copy_from_slice(&program_id);
     outer[64..96].copy_from_slice(&combined);
     let expected: [u8; 32] = crypto::Sha256Hasher::hash(&outer);
-    assert_eq!(actual, expected, "v3: derive_proposal_pda index slot must be LE");
+    assert_eq!(
+        actual, expected,
+        "v3: derive_proposal_pda index slot must be LE"
+    );
 }
 
 /// (16h) Cross-class derivation: a `MultisigState` PDA from `create_key=A`
@@ -1303,8 +1351,7 @@ fn v3_attack_16h_state_vs_vault_class_separation_5k() {
         state_set.insert(derive_multisig_state_pda(&program_id, &ck_a));
         vault_set.insert(derive_vault_pda(&program_id, &ck_b));
     }
-    let overlap: HashSet<[u8; 32]> =
-        state_set.intersection(&vault_set).copied().collect();
+    let overlap: HashSet<[u8; 32]> = state_set.intersection(&vault_set).copied().collect();
     assert!(
         overlap.is_empty(),
         "v3: state-PDA and vault-PDA classes overlap — domain separation hole",
@@ -1326,7 +1373,10 @@ fn v3_attack_16i_proposal_count_at_u64_max_round_trips_silently() {
         proposal_count: u64::MAX,
     };
     // validate() only inspects (m, n) — it does NOT touch proposal_count.
-    assert!(s.validate().is_ok(), "v3: validate() ignores proposal_count");
+    assert!(
+        s.validate().is_ok(),
+        "v3: validate() ignores proposal_count"
+    );
     let bytes = to_vec(&s).unwrap();
     let decoded: MultisigState = MultisigState::try_from_slice(&bytes).unwrap();
     assert_eq!(decoded.proposal_count, u64::MAX);

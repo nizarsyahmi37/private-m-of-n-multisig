@@ -14,10 +14,7 @@
 //! Each test below confirms ONE post-fix property the rest of the system
 //! relies on. Failures here invalidate the FINDING-1 mitigation.
 
-#![allow(
-    clippy::manual_memcpy,
-    clippy::doc_lazy_continuation
-)]
+#![allow(clippy::manual_memcpy, clippy::doc_lazy_continuation)]
 
 use crypto::{
     hash::{DOMAIN_LEAF, DOMAIN_NODE},
@@ -129,7 +126,8 @@ fn hash_leaf_and_hash_node_differ_for_same_payload() {
         let l = Sha256Hasher::hash_leaf(x);
         let n = Sha256Hasher::hash_node(x, x);
         assert_ne!(
-            l, n,
+            l,
+            n,
             "hash_leaf and hash_node collided for payload {:02x?}",
             &x[..4]
         );

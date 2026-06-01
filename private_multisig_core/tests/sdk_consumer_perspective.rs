@@ -17,9 +17,9 @@ use std::collections::{BTreeMap, HashMap};
 use borsh::{to_vec, BorshDeserialize, BorshSerialize};
 use crypto::{Hasher, Identity, IdentityCommitment, MerkleTree, Sha256Hasher};
 use private_multisig_core::{
-    derive_multisig_state_pda, derive_nullifier_entry_pda, derive_proposal_id,
-    derive_proposal_pda, derive_vault_pda, ApprovePublicInputs, ChainId, CoreError, Instruction,
-    MultisigState, Proposal, APPROVE_PUBLIC_INPUTS_LEN, MAX_ACTION_BYTES_LEN,
+    derive_multisig_state_pda, derive_nullifier_entry_pda, derive_proposal_id, derive_proposal_pda,
+    derive_vault_pda, ApprovePublicInputs, ChainId, CoreError, Instruction, MultisigState,
+    Proposal, APPROVE_PUBLIC_INPUTS_LEN, MAX_ACTION_BYTES_LEN,
 };
 use rand::{rngs::StdRng, RngCore, SeedableRng};
 
@@ -53,7 +53,8 @@ fn build_member_set(n: usize, rng: &mut StdRng) -> (Vec<Identity>, MerkleTree<Sh
         // returns `&[u8; 32]` so we have to dereference (`*`) at every call
         // site. The SDK will probably wrap this as
         // `tree.insert_commitment(&commitment)` to hide the dereference.
-        tree.insert(*m.commitment::<Sha256Hasher>().as_bytes()).unwrap();
+        tree.insert(*m.commitment::<Sha256Hasher>().as_bytes())
+            .unwrap();
     }
     (members, tree)
 }
@@ -160,8 +161,7 @@ fn sdk_consumer_can_derive_all_needed_pdas() {
 
     // Nullifier-entry PDA for proposal 0, one fake nullifier value.
     let fake_nullifier = [0x77u8; 32];
-    let nullifier_pda =
-        derive_nullifier_entry_pda(&PROGRAM_ID, &proposal_pdas[0], &fake_nullifier);
+    let nullifier_pda = derive_nullifier_entry_pda(&PROGRAM_ID, &proposal_pdas[0], &fake_nullifier);
     assert_ne!(nullifier_pda, state_pda);
     assert_ne!(nullifier_pda, proposal_pdas[0]);
 
@@ -195,14 +195,24 @@ fn sdk_consumer_compute_proposal_id_with_string_chain_id() {
     let cid = ChainId::new(Sha256Hasher::hash(b"lez-testnet-v1"));
     let state_pda = derive_multisig_state_pda(&PROGRAM_ID, &CREATE_KEY);
 
-    let pid =
-        derive_proposal_id(&cid, &state_pda, 0, b"treasury_withdraw(100)", &TARGET_PROGRAM);
+    let pid = derive_proposal_id(
+        &cid,
+        &state_pda,
+        0,
+        b"treasury_withdraw(100)",
+        &TARGET_PROGRAM,
+    );
     assert_ne!(pid, [0u8; 32]);
 
     // Sanity: a different chain string must yield a different proposal_id.
     let other = ChainId::new(Sha256Hasher::hash(b"lez-mainnet-v1"));
-    let pid_other =
-        derive_proposal_id(&other, &state_pda, 0, b"treasury_withdraw(100)", &TARGET_PROGRAM);
+    let pid_other = derive_proposal_id(
+        &other,
+        &state_pda,
+        0,
+        b"treasury_withdraw(100)",
+        &TARGET_PROGRAM,
+    );
     assert_ne!(pid, pid_other);
 }
 
@@ -525,7 +535,9 @@ fn sdk_consumer_can_inspect_error_codes_from_chain() {
     assert_eq!(CoreError::from_code(u32::MAX), None);
 
     // Display strings carry the `E…` code so log greps work.
-    assert!(CoreError::NullifierAlreadyUsed.to_string().contains("E3000"));
+    assert!(CoreError::NullifierAlreadyUsed
+        .to_string()
+        .contains("E3000"));
 }
 
 // ---------------------------------------------------------------------------
@@ -590,7 +602,10 @@ fn sdk_consumer_doc_audit() {
 
     fn has_doc_above(source: &str, needle: &str) -> bool {
         let lines: Vec<&str> = source.lines().collect();
-        let Some(idx) = lines.iter().position(|l| l.trim_start().starts_with(needle)) else {
+        let Some(idx) = lines
+            .iter()
+            .position(|l| l.trim_start().starts_with(needle))
+        else {
             return false;
         };
         // Walk upward, looking for `///` while transparently consuming
@@ -640,15 +655,35 @@ fn sdk_consumer_doc_audit() {
         (pda, "pub const SEED_VAULT", "SEED_VAULT"),
         (pda, "pub const SEED_NULLIFIER", "SEED_NULLIFIER"),
         (pda, "pub fn derive_pda", "derive_pda"),
-        (pda, "pub fn derive_multisig_state_pda", "derive_multisig_state_pda"),
+        (
+            pda,
+            "pub fn derive_multisig_state_pda",
+            "derive_multisig_state_pda",
+        ),
         (pda, "pub fn derive_proposal_pda", "derive_proposal_pda"),
         (pda, "pub fn derive_vault_pda", "derive_vault_pda"),
-        (pda, "pub fn derive_nullifier_entry_pda", "derive_nullifier_entry_pda"),
-        (proof, "pub const APPROVE_PUBLIC_INPUTS_LEN", "APPROVE_PUBLIC_INPUTS_LEN"),
-        (proof, "pub struct ApprovePublicInputs", "ApprovePublicInputs"),
+        (
+            pda,
+            "pub fn derive_nullifier_entry_pda",
+            "derive_nullifier_entry_pda",
+        ),
+        (
+            proof,
+            "pub const APPROVE_PUBLIC_INPUTS_LEN",
+            "APPROVE_PUBLIC_INPUTS_LEN",
+        ),
+        (
+            proof,
+            "pub struct ApprovePublicInputs",
+            "ApprovePublicInputs",
+        ),
         (proof, "pub struct ChainId", "ChainId"),
         (proof, "pub fn derive_proposal_id", "derive_proposal_id"),
-        (state, "pub const MAX_ACTION_BYTES_LEN", "MAX_ACTION_BYTES_LEN"),
+        (
+            state,
+            "pub const MAX_ACTION_BYTES_LEN",
+            "MAX_ACTION_BYTES_LEN",
+        ),
         (state, "pub struct MultisigState", "MultisigState"),
         (state, "pub struct Proposal", "Proposal"),
         (state, "pub struct NullifierEntry", "NullifierEntry"),
@@ -690,8 +725,7 @@ fn sdk_consumer_doc_audit() {
     // that removes a docstring shows up here.
     let empty: Vec<&str> = Vec::new();
     assert_eq!(
-        still_missing,
-        empty,
+        still_missing, empty,
         "doc-gap set drifted; update sdk_consumer_doc_audit"
     );
 }

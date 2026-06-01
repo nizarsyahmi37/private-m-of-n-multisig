@@ -185,7 +185,10 @@ fn r4_insert_doc_no_dedupe_check_mitigated() {
     assert!(verify_proof::<Sha256Hasher>(&root, &leaf, &p1));
     // Crucially, the two proofs are DIFFERENT (different paths) — so dedupe
     // would have lost information.
-    assert_ne!(p0, p1, "doc drift: insert deduplicated when it should not have");
+    assert_ne!(
+        p0, p1,
+        "doc drift: insert deduplicated when it should not have"
+    );
 }
 
 /// `verify_proof` doc says "Returns `false` if `leaf == [0; HASH_LEN]`".
@@ -300,7 +303,10 @@ fn r4_nullifier_doc_avalanche_proptest_mitigated() {
         min_distance = min_distance.min(dist);
         max_distance = max_distance.max(dist);
         sum_distance += dist;
-        assert_ne!(null, base_null, "single-bit pid flip produced same nullifier");
+        assert_ne!(
+            null, base_null,
+            "single-bit pid flip produced same nullifier"
+        );
     }
     let avg = sum_distance / trials;
     // SHA-256 single-bit-flip avalanche has mean ≈ 128, std-dev ≈ 8. A
@@ -339,9 +345,14 @@ fn r4_merkle_depth_well_below_shift_overflow_mitigated() {
         "MERKLE_DEPTH = {MERKLE_DEPTH} would overflow `1usize << MERKLE_DEPTH` on 64-bit"
     );
     // Also: enforce a sane upper ceiling for our use case (1M members).
-    assert!(MERKLE_DEPTH <= 32, "MERKLE_DEPTH bumped past 2^32 ceiling — review PLAN.md");
+    assert!(
+        MERKLE_DEPTH <= 32,
+        "MERKLE_DEPTH bumped past 2^32 ceiling — review PLAN.md"
+    );
     // And the literal MAX_LEAVES does not overflow.
-    let _check = (MAX_LEAVES as u128).checked_mul(2).expect("MAX_LEAVES * 2 overflowed u128");
+    let _check = (MAX_LEAVES as u128)
+        .checked_mul(2)
+        .expect("MAX_LEAVES * 2 overflowed u128");
     // Cross-check vs computed.
     assert_eq!(MAX_LEAVES, 1usize << MERKLE_DEPTH);
 }
@@ -429,8 +440,14 @@ fn r4_index_xor_one_yields_valid_sibling_at_every_level_mitigated() {
             // Both `current` and `sibling` must be within the legal pos
             // range for this level: `pos < MAX_LEAVES / (1 << level) = 2^(20-level)`.
             let level_cap = 1usize << (MERKLE_DEPTH - level);
-            assert!(current < level_cap, "current {current} >= cap {level_cap} at level {level}");
-            assert!(sibling < level_cap, "sibling {sibling} >= cap {level_cap} at level {level}");
+            assert!(
+                current < level_cap,
+                "current {current} >= cap {level_cap} at level {level}"
+            );
+            assert!(
+                sibling < level_cap,
+                "sibling {sibling} >= cap {level_cap} at level {level}"
+            );
             current >>= 1;
         }
     }
@@ -466,7 +483,10 @@ fn r4_no_unicode_separator_in_hash_inputs_mitigated() {
     trojan.extend_from_slice(separator.as_bytes());
     trojan.extend_from_slice(&pid);
     let trojan_hash: [u8; HASH_LEN] = Sha256::digest(&trojan).into();
-    assert_ne!(canonical, trojan_hash, "Trojan-source separator landed in hash input!");
+    assert_ne!(
+        canonical, trojan_hash,
+        "Trojan-source separator landed in hash input!"
+    );
 
     // Same for commitment.
     let salt = [0x33u8; SALT_LEN];
@@ -547,11 +567,17 @@ fn r4_root_recomputed_each_call_insert_root_insert_root_mitigated() {
     let roots = [r0, r1, r2, r3];
     for i in 0..roots.len() {
         for j in (i + 1)..roots.len() {
-            assert_ne!(roots[i], roots[j], "roots[{i}] == roots[{j}] after distinct inserts");
+            assert_ne!(
+                roots[i], roots[j],
+                "roots[{i}] == roots[{j}] after distinct inserts"
+            );
         }
     }
     // Idempotence of root() within the same logical state.
-    assert_eq!(r1, r1_again, "root() returned different values for the same state");
+    assert_eq!(
+        r1, r1_again,
+        "root() returned different values for the same state"
+    );
 }
 
 /// If `MerkleProof` is constructed via public fields directly, can an
@@ -855,7 +881,10 @@ fn r4_soundness_oracle_10k_random_samples_no_accepts_mitigated() {
             );
         }
     }
-    assert_eq!(accepts, 0, "soundness oracle: {accepts} acceptances in 10k random samples");
+    assert_eq!(
+        accepts, 0,
+        "soundness oracle: {accepts} acceptances in 10k random samples"
+    );
 }
 
 /// Soundness oracle variant 2: random (leaf, proof) against a REAL root
@@ -940,10 +969,7 @@ fn r4_merkle_tree_leaf_out_of_range_returns_none_no_panic_mitigated() {
 /// Outcome: mitigated (text format pinned).
 #[test]
 fn r4_merkle_error_index_out_of_range_display_pinned_mitigated() {
-    let e = MerkleError::IndexOutOfRange {
-        index: 42,
-        next: 7,
-    };
+    let e = MerkleError::IndexOutOfRange { index: 42, next: 7 };
     let rendered = format!("{e}");
     assert_eq!(rendered, "index 42 is out of range (next free slot is 7)");
 }

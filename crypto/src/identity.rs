@@ -86,14 +86,20 @@ mod tests {
     fn different_salt_yields_different_commitment() {
         let id1 = Identity::new([1u8; 32], [2u8; 32]);
         let id2 = Identity::new([1u8; 32], [3u8; 32]);
-        assert_ne!(id1.commitment::<Sha256Hasher>(), id2.commitment::<Sha256Hasher>());
+        assert_ne!(
+            id1.commitment::<Sha256Hasher>(),
+            id2.commitment::<Sha256Hasher>()
+        );
     }
 
     #[test]
     fn different_sk_yields_different_commitment() {
         let id1 = Identity::new([1u8; 32], [2u8; 32]);
         let id2 = Identity::new([9u8; 32], [2u8; 32]);
-        assert_ne!(id1.commitment::<Sha256Hasher>(), id2.commitment::<Sha256Hasher>());
+        assert_ne!(
+            id1.commitment::<Sha256Hasher>(),
+            id2.commitment::<Sha256Hasher>()
+        );
     }
 
     #[test]

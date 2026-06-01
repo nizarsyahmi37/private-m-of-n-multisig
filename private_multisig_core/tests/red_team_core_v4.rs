@@ -79,10 +79,10 @@ use rand::rngs::StdRng;
 use rand::{Rng, RngCore, SeedableRng};
 
 use private_multisig_core::{
-    derive_multisig_state_pda, derive_nullifier_entry_pda, derive_proposal_id,
-    derive_proposal_pda, derive_vault_pda, ApprovePublicInputs, ChainId, CoreError, Instruction,
-    MultisigState, NullifierEntry, Proposal, Vault, APPROVE_PUBLIC_INPUTS_LEN,
-    MAX_ACTION_BYTES_LEN, SEED_MULTISIG_STATE, SEED_NULLIFIER, SEED_PROPOSAL, SEED_VAULT,
+    derive_multisig_state_pda, derive_nullifier_entry_pda, derive_proposal_id, derive_proposal_pda,
+    derive_vault_pda, ApprovePublicInputs, ChainId, CoreError, Instruction, MultisigState,
+    NullifierEntry, Proposal, Vault, APPROVE_PUBLIC_INPUTS_LEN, MAX_ACTION_BYTES_LEN,
+    SEED_MULTISIG_STATE, SEED_NULLIFIER, SEED_PROPOSAL, SEED_VAULT,
 };
 
 fn rng() -> StdRng {
@@ -109,7 +109,10 @@ fn random_32(r: &mut StdRng) -> [u8; 32] {
 #[test]
 fn v4_attack_1a_approve_public_inputs_size_is_96() {
     assert_eq!(mem::size_of::<ApprovePublicInputs>(), 96);
-    assert_eq!(mem::size_of::<ApprovePublicInputs>(), APPROVE_PUBLIC_INPUTS_LEN);
+    assert_eq!(
+        mem::size_of::<ApprovePublicInputs>(),
+        APPROVE_PUBLIC_INPUTS_LEN
+    );
     // Three [u8; 32] fields → alignment 1.
     assert_eq!(mem::align_of::<ApprovePublicInputs>(), 1);
 }
@@ -153,7 +156,10 @@ fn v4_attack_1e_multisig_state_alignment_natural() {
     // padding the in-memory size rounds up. Allow up to 96 (3 alignment
     // pads of u64 = 24 worst case).
     let s = mem::size_of::<MultisigState>();
-    assert!((77..=96).contains(&s), "MultisigState in-memory size {s} outside [77, 96]");
+    assert!(
+        (77..=96).contains(&s),
+        "MultisigState in-memory size {s} outside [77, 96]"
+    );
 }
 
 /// `CoreError` is `Copy` and is a fieldless enum at the on-chain ABI layer
@@ -182,10 +188,19 @@ fn v4_attack_1f_core_error_is_small_fieldless_enum() {
 /// suddenly carries cleanup logic.
 #[test]
 fn v4_attack_2a_pod_types_no_drop() {
-    assert!(!mem::needs_drop::<MultisigState>(), "MultisigState gained Drop");
+    assert!(
+        !mem::needs_drop::<MultisigState>(),
+        "MultisigState gained Drop"
+    );
     assert!(!mem::needs_drop::<Vault>(), "Vault gained Drop");
-    assert!(!mem::needs_drop::<NullifierEntry>(), "NullifierEntry gained Drop");
-    assert!(!mem::needs_drop::<ApprovePublicInputs>(), "ApprovePublicInputs gained Drop");
+    assert!(
+        !mem::needs_drop::<NullifierEntry>(),
+        "NullifierEntry gained Drop"
+    );
+    assert!(
+        !mem::needs_drop::<ApprovePublicInputs>(),
+        "ApprovePublicInputs gained Drop"
+    );
     assert!(!mem::needs_drop::<ChainId>(), "ChainId gained Drop");
     assert!(!mem::needs_drop::<CoreError>(), "CoreError gained Drop");
 }
@@ -307,7 +322,7 @@ fn v4_attack_5a_borsh_cautious_capacity_under_u32_max() {
     buf2.push(2u8); // Approve disc
     buf2.extend_from_slice(&[0xAA; 32]); // create_key
     buf2.extend_from_slice(&0u64.to_le_bytes()); // index
-    // Intentionally omit the 96-byte public_inputs payload.
+                                                 // Intentionally omit the 96-byte public_inputs payload.
 
     let start = Instant::now();
     let res2: Result<Instruction, _> = Instruction::try_from_slice(&buf2);
@@ -547,7 +562,9 @@ fn v4_attack_10a_public_surface_is_complete() {
         approvals_count: 0,
         executed: false,
     };
-    let _v: Vault = Vault { create_key: [0; 32] };
+    let _v: Vault = Vault {
+        create_key: [0; 32],
+    };
     let _ne: NullifierEntry = NullifierEntry;
     let _api: ApprovePublicInputs = ApprovePublicInputs {
         members_root: [0; 32],
@@ -668,7 +685,10 @@ fn v4_attack_12a_replacement_for_random_2k_byte_blobs() {
         "v4: {accepted}/{total} random blobs decoded as Instruction (> 5%)"
     );
     // Every accepted decoded blob must round-trip.
-    assert_eq!(accepted, accepted_roundtrip, "v4: bijectivity gap on decoded blobs");
+    assert_eq!(
+        accepted, accepted_roundtrip,
+        "v4: bijectivity gap on decoded blobs"
+    );
 }
 
 /// REPLACEMENT for round-3
@@ -700,7 +720,11 @@ fn v4_attack_12b_replacement_for_type_reexports_constructible() {
         n: 3,
         proposal_count: 7,
     };
-    assert_eq!(to_vec(&state).unwrap().len(), 77, "MultisigState wire size drifted");
+    assert_eq!(
+        to_vec(&state).unwrap().len(),
+        77,
+        "MultisigState wire size drifted"
+    );
 
     let prop = Proposal {
         action_bytes: vec![0xAA; 4],
@@ -708,13 +732,22 @@ fn v4_attack_12b_replacement_for_type_reexports_constructible() {
         approvals_count: 1,
         executed: false,
     };
-    assert_eq!(to_vec(&prop).unwrap().len(), 4 + 4 + 32 + 4 + 1, "Proposal wire size drifted");
+    assert_eq!(
+        to_vec(&prop).unwrap().len(),
+        4 + 4 + 32 + 4 + 1,
+        "Proposal wire size drifted"
+    );
 
-    let v = Vault { create_key: [0x42; 32] };
+    let v = Vault {
+        create_key: [0x42; 32],
+    };
     assert_eq!(to_vec(&v).unwrap().len(), 32, "Vault wire size drifted");
 
     let ne = NullifierEntry;
-    assert!(to_vec(&ne).unwrap().is_empty(), "NullifierEntry wire size drifted");
+    assert!(
+        to_vec(&ne).unwrap().is_empty(),
+        "NullifierEntry wire size drifted"
+    );
 
     let api = ApprovePublicInputs {
         members_root: [1; 32],
@@ -748,7 +781,10 @@ fn v4_attack_13a_approve_public_inputs_bijection_compositional() {
         r.fill_bytes(&mut buf);
         let bundle = ApprovePublicInputs::from_bytes(&buf);
         let round = bundle.to_bytes();
-        assert_eq!(buf, round, "v4: bytes -> from_bytes -> to_bytes not identity");
+        assert_eq!(
+            buf, round,
+            "v4: bytes -> from_bytes -> to_bytes not identity"
+        );
     }
 
     // (ii) bundle -> to_bytes -> from_bytes must be identity.
@@ -760,7 +796,10 @@ fn v4_attack_13a_approve_public_inputs_bijection_compositional() {
         };
         let bytes = bundle.to_bytes();
         let back = ApprovePublicInputs::from_bytes(&bytes);
-        assert_eq!(bundle, back, "v4: bundle -> to_bytes -> from_bytes not identity");
+        assert_eq!(
+            bundle, back,
+            "v4: bundle -> to_bytes -> from_bytes not identity"
+        );
     }
 }
 
@@ -817,9 +856,8 @@ fn v4_attack_13c_instruction_approve_embeds_public_inputs_byvalue() {
                     public_inputs, public_inputs_bytes,
                     "v4: embedded public_inputs drifted after round-trip"
                 );
-                let decoded = ApprovePublicInputs::from_bytes(
-                    &public_inputs[..].try_into().unwrap(),
-                );
+                let decoded =
+                    ApprovePublicInputs::from_bytes(&public_inputs[..].try_into().unwrap());
                 assert_eq!(decoded, inputs, "v4: typed re-decode drifted");
             }
             _ => panic!("v4: variant changed on round-trip"),
@@ -879,7 +917,10 @@ fn v4_attack_13e_validate_threshold_error_variant_is_constant() {
     }
     // Sanity: we should reject at least SOMETHING out of 256 random pairs
     // (the m == 0 path alone has probability 1/256 hits).
-    assert!(rejected > 0, "v4: zero rejections out of 256 random (m, n) — sweep broken");
+    assert!(
+        rejected > 0,
+        "v4: zero rejections out of 256 random (m, n) — sweep broken"
+    );
 }
 
 /// (13f) Seed constants are *content-addressed* — their byte values appear
@@ -918,10 +959,7 @@ fn v4_attack_13f_seed_constants_no_byte_alias_under_rotation() {
             // Reverse.
             let mut reversed = a;
             reversed.reverse();
-            assert_ne!(
-                reversed, b,
-                "v4: reverse(seeds[{i}]) equals seeds[{j}]"
-            );
+            assert_ne!(reversed, b, "v4: reverse(seeds[{i}]) equals seeds[{j}]");
         }
     }
 }
@@ -1050,7 +1088,9 @@ fn v4_attack_13j_copy_split_pinned() {
         t.clone()
     }
 
-    let v = Vault { create_key: [0x55; 32] };
+    let v = Vault {
+        create_key: [0x55; 32],
+    };
     requires_copy(v); // Vault is Copy.
     let _v2 = v; // copy, not move.
     let _v3 = v; // still usable.
@@ -1201,7 +1241,10 @@ fn v4_attack_13n_proposal_id_known_answer_under_zero_inputs() {
     preimage[104..136].copy_from_slice(&target_hash);
     let expected = crypto::Sha256Hasher::hash(&preimage);
     assert_eq!(actual, expected, "v4: proposal_id zero-inputs KAT drifted");
-    assert_ne!(actual, [0u8; 32], "v4: proposal_id over zeros is itself zero");
+    assert_ne!(
+        actual, [0u8; 32],
+        "v4: proposal_id over zeros is itself zero"
+    );
 }
 
 /// (13o) Final paranoia: in the entire 0..=65535 u32 range, the only codes
@@ -1220,7 +1263,10 @@ fn v4_attack_13o_from_code_sparse_over_65k() {
         if documented.contains(&code) {
             assert!(got.is_some(), "v4: documented code {code} returned None");
         } else {
-            assert!(got.is_none(), "v4: undocumented code {code} mapped to {got:?}");
+            assert!(
+                got.is_none(),
+                "v4: undocumented code {code} mapped to {got:?}"
+            );
         }
     }
 }

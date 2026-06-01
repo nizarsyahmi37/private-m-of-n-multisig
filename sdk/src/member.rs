@@ -129,7 +129,11 @@ impl Member {
         let argon_params = argon2::Params::new(65536, 3, 4, None)
             .map_err(|_| SdkError::KeystoreSerializationFailed)?;
 
-        let argon2id = argon2::Argon2::new(argon2::Algorithm::Argon2id, argon2::Version::V0x13, argon_params);
+        let argon2id = argon2::Argon2::new(
+            argon2::Algorithm::Argon2id,
+            argon2::Version::V0x13,
+            argon_params,
+        );
         let mut kek = [0u8; 32];
         argon2id
             .hash_password_into(password.as_bytes(), &argon_salt, &mut kek)
@@ -180,13 +184,17 @@ impl Member {
     /// to prevent oracle attacks.
     pub fn from_keystore(blob: &[u8], password: &str) -> Result<Self, SdkError> {
         let mut cursor = &blob[..];
-        let ks = Keystore::deserialize(&mut cursor)
-            .map_err(|_| SdkError::KeystoreDecryptionFailed)?;
+        let ks =
+            Keystore::deserialize(&mut cursor).map_err(|_| SdkError::KeystoreDecryptionFailed)?;
 
         let argon_params = argon2::Params::new(65536, 3, 4, None)
             .map_err(|_| SdkError::KeystoreDecryptionFailed)?;
 
-        let argon2id = argon2::Argon2::new(argon2::Algorithm::Argon2id, argon2::Version::V0x13, argon_params);
+        let argon2id = argon2::Argon2::new(
+            argon2::Algorithm::Argon2id,
+            argon2::Version::V0x13,
+            argon_params,
+        );
         let mut kek = [0u8; 32];
         argon2id
             .hash_password_into(password.as_bytes(), &ks.argon_salt, &mut kek)
@@ -286,8 +294,8 @@ impl Drop for Member {
 
 #[cfg(test)]
 mod tests {
-    use secrecy::ExposeSecret;
     use super::*;
+    use secrecy::ExposeSecret;
 
     #[test]
     fn new_member_produces_valid_commitment() {
@@ -333,7 +341,13 @@ mod tests {
     fn debug_redacts_identity() {
         let member = Member::new().unwrap();
         let rendered = format!("{:?}", member);
-        assert!(rendered.contains("[REDACTED]"), "Debug should redact sk/salt");
-        assert!(!rendered.contains("0x"), "Debug should not expose raw bytes");
+        assert!(
+            rendered.contains("[REDACTED]"),
+            "Debug should redact sk/salt"
+        );
+        assert!(
+            !rendered.contains("0x"),
+            "Debug should not expose raw bytes"
+        );
     }
 }

@@ -147,7 +147,10 @@ fn r3_identity_nullifier_byte_layout_pinned_mitigated() {
         bad1.extend_from_slice(&salt);
         bad1.extend_from_slice(&pid);
         let bad_hash1: [u8; 32] = Sha256::new().chain_update(&bad1).finalize().into();
-        assert_ne!(got, bad_hash1, "nullifier helper accidentally including salt");
+        assert_ne!(
+            got, bad_hash1,
+            "nullifier helper accidentally including salt"
+        );
 
         let mut bad2 = Vec::new();
         bad2.extend_from_slice(&sk);
@@ -338,7 +341,8 @@ fn r3_correlated_siblings_no_panic_mitigated() {
                 a[i] = i % 2 == 0;
             }
             a
-        } as _];
+        }
+            as _];
         for indices in patterns {
             let p = MerkleProof {
                 siblings,
@@ -447,7 +451,11 @@ fn r3_identity_commitment_hashmap_key_distribution_mitigated() {
         }
         map.insert(c, i);
     }
-    assert_eq!(map.len(), seen.len(), "HashMap dropped entries unexpectedly");
+    assert_eq!(
+        map.len(),
+        seen.len(),
+        "HashMap dropped entries unexpectedly"
+    );
     // Re-lookup: every inserted commitment must round-trip back to its index.
     let mut rng2 = StdRng::seed_from_u64(0xC0FFEE_F0_0D_BABE);
     for i in 0..1_000 {
@@ -486,7 +494,10 @@ fn r3_identity_commitment_partial_eq_byte_sensitive_mitigated() {
             sk2[pos] ^= 0x01;
             let id2 = Identity::new(sk2, salt);
             let c2 = id2.commitment::<Sha256Hasher>();
-            assert_ne!(c, c2, "single-byte sk flip at pos {pos} produced equal commitment");
+            assert_ne!(
+                c, c2,
+                "single-byte sk flip at pos {pos} produced equal commitment"
+            );
         }
         // Flip one byte of salt.
         for pos in [0usize, 1, 15, 16, 30, 31] {
@@ -494,7 +505,10 @@ fn r3_identity_commitment_partial_eq_byte_sensitive_mitigated() {
             salt2[pos] ^= 0x80;
             let id2 = Identity::new(sk, salt2);
             let c2 = id2.commitment::<Sha256Hasher>();
-            assert_ne!(c, c2, "single-byte salt flip at pos {pos} produced equal commitment");
+            assert_ne!(
+                c, c2,
+                "single-byte salt flip at pos {pos} produced equal commitment"
+            );
         }
     }
 }
@@ -679,7 +693,10 @@ fn r3_merkle_proof_clone_and_move_semantics_mitigated() {
     let mut clone = p.clone();
     assert_eq!(clone, p, "clone differs from original");
     clone.siblings[0][0] ^= 0xFF;
-    assert_ne!(clone, p, "mutating clone affected original — Clone is shallow?");
+    assert_ne!(
+        clone, p,
+        "mutating clone affected original — Clone is shallow?"
+    );
     assert!(verify_proof::<Sha256Hasher>(&root, &leaf, &p));
     assert!(!verify_proof::<Sha256Hasher>(&root, &leaf, &clone));
 
@@ -783,7 +800,11 @@ fn r3_commitment_does_not_use_hash_node_or_hash_leaf_mitigated() {
     let c = id.commitment::<Sha256Hasher>();
 
     // Expected: c = SHA-256(sk || salt) — 64 bytes, no domain byte.
-    let expected: [u8; 32] = Sha256::new().chain_update(sk).chain_update(salt).finalize().into();
+    let expected: [u8; 32] = Sha256::new()
+        .chain_update(sk)
+        .chain_update(salt)
+        .finalize()
+        .into();
     assert_eq!(*c.as_bytes(), expected);
 
     // Distinct from hash_node(sk, salt) = SHA-256(0x01 || sk || salt).
@@ -908,8 +929,8 @@ fn r3_domain_bytes_pinned_redundant_sentinel_mitigated() {
 /// Outcome: mitigated.
 #[test]
 fn r3_sha256_empty_input_kat_mitigated() {
-    let want = hex::decode("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
-        .unwrap();
+    let want =
+        hex::decode("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855").unwrap();
     let mut want_arr = [0u8; 32];
     want_arr.copy_from_slice(&want);
     assert_eq!(Sha256Hasher::hash(&[]), want_arr);
@@ -936,7 +957,9 @@ fn r3_misdomained_commitment_never_equals_real_commitment_mitigated() {
         let mut salt = [0u8; SALT_LEN];
         rng.fill_bytes(&mut sk);
         rng.fill_bytes(&mut salt);
-        let real = *Identity::new(sk, salt).commitment::<Sha256Hasher>().as_bytes();
+        let real = *Identity::new(sk, salt)
+            .commitment::<Sha256Hasher>()
+            .as_bytes();
         let misdomained_node = Sha256Hasher::hash_node(&sk, &salt);
         // SHA-256(sk||salt) = 64-byte input. SHA-256(0x01||sk||salt) = 65-byte
         // input. Different message lengths in SHA-256 → no collision short of
@@ -1026,8 +1049,8 @@ fn r3_proof_idx_neighborhood_errors_typed_mitigated() {
 /// Outcome: mitigated.
 #[test]
 fn r3_depth_20_empty_root_kat_mitigated() {
-    let want = hex::decode("ac5b1c358a294dec99146ebb2fea0c8a528fc4dad578485d7f279c2b359099f3")
-        .unwrap();
+    let want =
+        hex::decode("ac5b1c358a294dec99146ebb2fea0c8a528fc4dad578485d7f279c2b359099f3").unwrap();
     let mut want_arr = [0u8; 32];
     want_arr.copy_from_slice(&want);
     let t = MerkleTree::<Sha256Hasher>::new();
