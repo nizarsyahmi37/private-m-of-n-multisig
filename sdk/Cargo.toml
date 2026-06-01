@@ -39,7 +39,7 @@ risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["client
 bincode = { version = "1.3", optional = true }
 
 # Secret management: wraps sk in Secret<T>, auto-Zeroize on drop
-secrecy = "0.8"
+secrecy = "0.10"
 
 # Local key-value store for resumable ApprovalSession persistence
 sled = "0.34"
