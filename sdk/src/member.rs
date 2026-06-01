@@ -30,7 +30,7 @@ use chacha20poly1305::aead::AeadInPlace;
 use chacha20poly1305::KeyInit;
 use rand::rngs::OsRng;
 use rand::RngCore;
-use secrecy::Secret;
+use secrecy::SecretBox;
 use zeroize::Zeroize;
 
 use crypto::hash::Sha256Hasher;
@@ -79,21 +79,22 @@ impl Member {
         self.identity.nullifier::<Sha256Hasher>(proposal_id)
     }
 
-    /// Access the raw secret key as a `Secret<[u8; 32]>`.
+    /// Access the raw secret key as a `SecretBox<[u8; 32]>`.
     ///
-    /// `Secret<T>` redacts the value from `Debug` output and zeroizes on drop.
-    /// Callers should use `expose_secret()` only in contexts where the bytes
-    /// are passed directly to the Risc0 prover or to the keystore encryptor.
-    pub fn secret_key(&self) -> Secret<[u8; 32]> {
-        Secret::new(self.identity.sk)
+    /// `SecretBox<T>` redacts the value from `Debug` output and zeroizes on
+    /// drop (renamed from `Secret<T>` in `secrecy` 0.10). Callers should use
+    /// `expose_secret()` only in contexts where the bytes are passed
+    /// directly to the Risc0 prover or to the keystore encryptor.
+    pub fn secret_key(&self) -> SecretBox<[u8; 32]> {
+        SecretBox::new(Box::new(self.identity.sk))
     }
 
-    /// Access the salt as a `Secret<[u8; 32]>`.
+    /// Access the salt as a `SecretBox<[u8; 32]>`.
     ///
-    /// Salt is not as sensitive as sk but keeping it in `Secret` ensures it
-    /// is not accidentally logged.
-    pub fn salt(&self) -> Secret<[u8; 32]> {
-        Secret::new(self.identity.salt)
+    /// Salt is not as sensitive as sk but keeping it in `SecretBox` ensures
+    /// it is not accidentally logged.
+    pub fn salt(&self) -> SecretBox<[u8; 32]> {
+        SecretBox::new(Box::new(self.identity.salt))
     }
 
     /// Extract the `(sk, salt)` raw bytes for Risc0 guest input.

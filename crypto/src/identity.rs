@@ -4,9 +4,10 @@
 //! public commitment is `H(sk ‖ salt)` — what gets enrolled as a Merkle leaf.
 //!
 //! This crate keeps `sk` as raw bytes; the SDK is responsible for wrapping it
-//! in `secrecy::Secret` with `Zeroize` on drop (per PLAN.md §SDK + THREAT_MODEL.md
-//! T6.1 / T6.2). Keeping the crypto core dependency-free preserves portability
-//! into the Risc0 guest, where `secrecy` adds avoidable weight.
+//! in `secrecy::SecretBox` with `Zeroize` on drop (per PLAN.md §SDK +
+//! THREAT_MODEL.md T6.1 / T6.2). Keeping the crypto core dependency-free
+//! preserves portability into the Risc0 guest, where `secrecy` adds avoidable
+//! weight.
 
 use crate::hash::{Hash, Hasher, HASH_LEN};
 use crate::nullifier;
