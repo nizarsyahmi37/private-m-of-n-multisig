@@ -299,21 +299,16 @@ fn api_cargo_toml_dep_versions_are_pinned_appropriately() {
     let guest_manifest = format!("{manifest_dir}/../methods/guest/Cargo.toml");
     let sdk_manifest = format!("{manifest_dir}/../sdk/Cargo.toml");
 
-    assert_risc0_zkvm_pinned(
-        "private_multisig_program/Cargo.toml",
-        CARGO_TOML,
-    );
+    assert_risc0_zkvm_pinned("private_multisig_program/Cargo.toml", CARGO_TOML);
     assert_risc0_zkvm_pinned(
         "methods/guest/Cargo.toml",
-        &std::fs::read_to_string(&guest_manifest).unwrap_or_else(|e| {
-            panic!("could not read {guest_manifest}: {e}")
-        }),
+        &std::fs::read_to_string(&guest_manifest)
+            .unwrap_or_else(|e| panic!("could not read {guest_manifest}: {e}")),
     );
     assert_risc0_zkvm_pinned(
         "sdk/Cargo.toml",
-        &std::fs::read_to_string(&sdk_manifest).unwrap_or_else(|e| {
-            panic!("could not read {sdk_manifest}: {e}")
-        }),
+        &std::fs::read_to_string(&sdk_manifest)
+            .unwrap_or_else(|e| panic!("could not read {sdk_manifest}: {e}")),
     );
 }
 
