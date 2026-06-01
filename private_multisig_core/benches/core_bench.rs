@@ -6,8 +6,10 @@
 //!
 //! Run with: `cargo bench -p private_multisig_core`.
 
+use std::hint::black_box;
+
 use borsh::{to_vec, BorshDeserialize};
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 
 use private_multisig_core::proof::ChainId;
 use private_multisig_core::{
