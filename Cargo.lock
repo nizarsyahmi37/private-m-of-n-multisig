@@ -2066,6 +2066,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "nssa_core"
+version = "0.1.0"
+source = "git+https://github.com/logos-blockchain/logos-execution-zone.git?tag=v0.2.0-rc4#332bd29e938b8787fc1ce62a2a2987d20ad837f8"
+dependencies = [
+ "base58",
+ "borsh",
+ "bytemuck",
+ "bytesize",
+ "chacha20 0.10.0",
+ "risc0-zkvm",
+ "serde",
+ "serde_with",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "num-bigint"
 version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2388,7 +2404,7 @@ dependencies = [
  "crypto",
  "hex",
  "methods",
- "nssa_core",
+ "nssa_core 0.1.0 (git+https://github.com/logos-blockchain/logos-execution-zone.git?tag=v0.2.0-rc4)",
  "private_multisig_core",
  "rand 0.9.4",
  "risc0-zkvm",
@@ -3425,7 +3441,7 @@ version = "0.3.0"
 source = "git+https://github.com/logos-co/spel?rev=84f50d4aa473a70b72a16a7fb468c5618277cdd7#84f50d4aa473a70b72a16a7fb468c5618277cdd7"
 dependencies = [
  "borsh",
- "nssa_core",
+ "nssa_core 0.1.0 (git+https://github.com/logos-blockchain/logos-execution-zone.git?tag=v0.2.0-rc3)",
  "serde_json",
  "spel-framework-core",
  "spel-framework-macros",
@@ -3437,7 +3453,7 @@ version = "0.3.0"
 source = "git+https://github.com/logos-co/spel?rev=84f50d4aa473a70b72a16a7fb468c5618277cdd7#84f50d4aa473a70b72a16a7fb468c5618277cdd7"
 dependencies = [
  "borsh",
- "nssa_core",
+ "nssa_core 0.1.0 (git+https://github.com/logos-blockchain/logos-execution-zone.git?tag=v0.2.0-rc3)",
  "proc-macro2",
  "serde",
  "serde_json",
@@ -4161,7 +4177,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
