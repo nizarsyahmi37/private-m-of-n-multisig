@@ -1,0 +1,9 @@
+# Keep the risc0 reproducible-guest-build Docker context small and
+# deterministic. risc0-build copies the whole `root_dir` into the build
+# image; `noop_guest`'s context is the guest crate itself, but without
+# this filter Cargo's `target/` (multi-GB after a host build) and `.git/`
+# state would be shipped in, slowing the build and risking image-id
+# drift from incidental local artifacts.
+target/
+**/target/
+.git/
