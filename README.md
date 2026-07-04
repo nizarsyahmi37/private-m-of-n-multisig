@@ -9,8 +9,15 @@ The threshold proof is a Risc0 zkVM circuit. The on-chain verifier is a SPEL `#[
 Single command, ~30 s on a warm cache, no on-chain dependencies:
 
 ```bash
+./demo.sh                 # wraps the quickstart binary below
+# or, equivalently:
 cargo run --manifest-path e2e_tests/Cargo.toml --bin quickstart
 ```
+
+`demo.sh` is the reproducible end-to-end demo script: dev-mode proofs by
+default, or `./demo.sh --real` for real proofs under `RISC0_DEV_MODE=0`
+(Docker guest build). Override the multisig shape with `M=3 N=5 ACTION="…"
+./demo.sh`; run `./demo.sh --help` for the full flag list.
 
 This runs the SDK in-process: builds a 2-of-3 multisig, generates three demo members, proves two approvals against the bundled noop ChainedCall target, verifies each receipt against `APPROVE_CIRCUIT_IMAGE_ID`, and demonstrates the double-vote rejection invariant. Output is structured for adopter consumption — see [`e2e_tests/src/bin/quickstart.rs`](./e2e_tests/src/bin/quickstart.rs) for the source.
 
@@ -80,4 +87,4 @@ CI invokes the same commands plus `cargo fmt --check`, `cargo clippy --workspace
 
 ## License
 
-Dual-licensed under either [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0) or [MIT](http://opensource.org/licenses/MIT) at your option (matches the `license = "MIT OR Apache-2.0"` declaration on every crate's `Cargo.toml`). Top-level `LICENSE-APACHE` and `LICENSE-MIT` files are added as part of the prize-submission follow-on plan.
+Dual-licensed under either [Apache License, Version 2.0](./LICENSE-APACHE) or [MIT](./LICENSE-MIT) at your option (matches the `license = "MIT OR Apache-2.0"` declaration on every crate's `Cargo.toml`).
