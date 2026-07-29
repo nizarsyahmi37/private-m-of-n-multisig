@@ -840,7 +840,7 @@ dependencies = [
  "proptest",
  "rand 0.10.1",
  "sha2",
- "thiserror 1.0.69",
+ "thiserror 2.0.18",
 ]
 
 [[package]]
@@ -2351,7 +2351,7 @@ dependencies = [
  "hex",
  "rand 0.10.1",
  "serde",
- "thiserror 1.0.69",
+ "thiserror 2.0.18",
 ]
 
 [[package]]
@@ -2393,7 +2393,7 @@ dependencies = [
  "secrecy",
  "sled",
  "tempfile",
- "thiserror 1.0.69",
+ "thiserror 2.0.18",
  "zeroize",
 ]
 
